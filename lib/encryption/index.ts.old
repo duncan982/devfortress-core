@@ -1,0 +1,23 @@
+/**
+ * Encryption Module
+ *
+ * Provides encryption utilities for sensitive data storage.
+ *
+ * @module lib/encryption
+ */
+
+export {
+  encryptApiKey,
+  decryptApiKey,
+  generateKeyHint,
+  validateApiKeyFormat,
+  SUPPORTED_PROVIDERS,
+  type SupportedProvider,
+} from './api-key-encryption';
+
+export {
+  getUserApiKey,
+  markApiKeyInvalid,
+  hasValidApiKey,
+  getUserValidProviders,
+} from './user-api-key-service';

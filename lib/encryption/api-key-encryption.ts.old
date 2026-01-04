@@ -1,0 +1,249 @@
+/**
+ * API Key Encryption Utilities
+ *
+ * Provides AES-256-GCM encryption for storing user API keys securely.
+ * Keys are encrypted at rest and decrypted only when needed for API calls.
+ *
+ * @module lib/encryption/api-key-encryption
+ */
+
+import crypto from 'crypto';
+import { logError, logWarn } from '@/lib/logger';
+
+// Encryption algorithm configuration
+const ALGORITHM = 'aes-256-gcm';
+const IV_LENGTH = 16; // 128 bits for GCM
+const KEY_LENGTH = 32; // 256 bits for AES-256
+// Note: Auth tag is 16 bytes (128 bits) for GCM, handled internally by crypto
+
+/**
+ * Get the encryption key from environment variables.
+ * Falls back to a derived key from NEXTAUTH_SECRET if ENCRYPTION_KEY is not set.
+ */
+function getEncryptionKey(): Buffer {
+  const encryptionKey = process.env.ENCRYPTION_KEY;
+
+  if (encryptionKey) {
+    // Use provided encryption key (should be 64 hex characters = 32 bytes)
+    if (encryptionKey.length === 64) {
+      return Buffer.from(encryptionKey, 'hex');
+    }
+    // If it's a string, derive a key from it
+    return crypto.scryptSync(encryptionKey, 'vortexsecure-salt', KEY_LENGTH);
+  }
+
+  // Fall back to deriving from NEXTAUTH_SECRET
+  const nextAuthSecret = process.env.NEXTAUTH_SECRET;
+  if (!nextAuthSecret) {
+    throw new Error(
+      'Neither ENCRYPTION_KEY nor NEXTAUTH_SECRET is set. Cannot encrypt API keys.'
+    );
+  }
+
+  logWarn(
+    'Using NEXTAUTH_SECRET for API key encryption. Consider setting a dedicated ENCRYPTION_KEY.',
+    { source: 'api-key-encryption' }
+  );
+
+  return crypto.scryptSync(
+    nextAuthSecret,
+    'vortexsecure-api-key-salt',
+    KEY_LENGTH
+  );
+}
+
+/**
+ * Encrypts an API key using AES-256-GCM.
+ *
+ * @param plaintext - The API key to encrypt
+ * @returns Encrypted string in format: iv:authTag:ciphertext (all base64)
+ * @throws Error if encryption fails
+ */
+export function encryptApiKey(plaintext: string): string {
+  try {
+    const key = getEncryptionKey();
+    const iv = crypto.randomBytes(IV_LENGTH);
+
+    const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+
+    let encrypted = cipher.update(plaintext, 'utf8', 'base64');
+    encrypted += cipher.final('base64');
+
+    const authTag = cipher.getAuthTag();
+
+    // Format: iv:authTag:ciphertext (all base64 encoded)
+    return `${iv.toString('base64')}:${authTag.toString('base64')}:${encrypted}`;
+  } catch (error) {
+    logError('Failed to encrypt API key', { error });
+    throw new Error('Failed to encrypt API key');
+  }
+}
+
+/**
+ * Decrypts an encrypted API key.
+ *
+ * @param encrypted - Encrypted string in format: iv:authTag:ciphertext
+ * @returns The original API key
+ * @throws Error if decryption fails or data is tampered
+ */
+export function decryptApiKey(encrypted: string): string {
+  try {
+    const key = getEncryptionKey();
+    const parts = encrypted.split(':');
+
+    if (parts.length !== 3) {
+      throw new Error('Invalid encrypted key format');
+    }
+
+    const [ivBase64, authTagBase64, ciphertext] = parts;
+    const iv = Buffer.from(ivBase64, 'base64');
+    const authTag = Buffer.from(authTagBase64, 'base64');
+
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+    decipher.setAuthTag(authTag);
+
+    let decrypted = decipher.update(ciphertext, 'base64', 'utf8');
+    decrypted += decipher.final('utf8');
+
+    return decrypted;
+  } catch (error) {
+    logError('Failed to decrypt API key', { error });
+    throw new Error(
+      'Failed to decrypt API key. Key may be invalid or tampered.'
+    );
+  }
+}
+
+/**
+ * Generates a hint for displaying the API key (last 4 characters).
+ *
+ * @param apiKey - The full API key
+ * @returns A hint string like "...sk-1234" or null if key is too short
+ */
+export function generateKeyHint(apiKey: string): string | null {
+  if (apiKey.length < 8) {
+    return null;
+  }
+
+  const lastFour = apiKey.slice(-4);
+  return `...${lastFour}`;
+}
+
+/**
+ * Validates API key format for common providers.
+ *
+ * @param provider - The API provider (openai, anthropic, etc.)
+ * @param apiKey - The API key to validate
+ * @returns Object with isValid boolean and optional error message
+ */
+export function validateApiKeyFormat(
+  provider: string,
+  apiKey: string
+): { isValid: boolean; error?: string } {
+  const trimmedKey = apiKey.trim();
+
+  if (!trimmedKey) {
+    return { isValid: false, error: 'API key cannot be empty' };
+  }
+
+  switch (provider.toLowerCase()) {
+    case 'openai':
+      // OpenAI keys start with 'sk-' and are typically 51 characters
+      if (!trimmedKey.startsWith('sk-')) {
+        return {
+          isValid: false,
+          error: 'OpenAI API keys should start with "sk-"',
+        };
+      }
+      if (trimmedKey.length < 20) {
+        return { isValid: false, error: 'OpenAI API key appears too short' };
+      }
+      break;
+
+    case 'anthropic':
+      // Anthropic keys start with 'sk-ant-'
+      if (!trimmedKey.startsWith('sk-ant-')) {
+        return {
+          isValid: false,
+          error: 'Anthropic API keys should start with "sk-ant-"',
+        };
+      }
+      break;
+
+    case 'huggingface':
+      // Hugging Face tokens start with 'hf_'
+      if (!trimmedKey.startsWith('hf_')) {
+        return {
+          isValid: false,
+          error: 'Hugging Face tokens should start with "hf_"',
+        };
+      }
+      break;
+
+    case 'google':
+    case 'gemini':
+      // Google AI keys are typically 39 characters
+      if (trimmedKey.length < 30) {
+        return { isValid: false, error: 'Google AI API key appears too short' };
+      }
+      break;
+
+    case 'cohere':
+      // Cohere keys are alphanumeric, typically 40 characters
+      if (trimmedKey.length < 20) {
+        return { isValid: false, error: 'Cohere API key appears too short' };
+      }
+      break;
+
+    default:
+      // For unknown providers, just check minimum length
+      if (trimmedKey.length < 10) {
+        return { isValid: false, error: 'API key appears too short' };
+      }
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * Supported API key providers.
+ */
+export const SUPPORTED_PROVIDERS = [
+  {
+    id: 'openai',
+    name: 'OpenAI',
+    description: 'GPT-4, GPT-3.5, and other OpenAI models',
+    docUrl: 'https://platform.openai.com/api-keys',
+    keyPrefix: 'sk-',
+  },
+  {
+    id: 'anthropic',
+    name: 'Anthropic',
+    description: 'Claude models',
+    docUrl: 'https://console.anthropic.com/settings/keys',
+    keyPrefix: 'sk-ant-',
+  },
+  {
+    id: 'huggingface',
+    name: 'Hugging Face',
+    description: 'Open-source models',
+    docUrl: 'https://huggingface.co/settings/tokens',
+    keyPrefix: 'hf_',
+  },
+  {
+    id: 'google',
+    name: 'Google AI (Gemini)',
+    description: 'Gemini and other Google AI models',
+    docUrl: 'https://aistudio.google.com/app/apikey',
+    keyPrefix: '',
+  },
+  {
+    id: 'cohere',
+    name: 'Cohere',
+    description: 'Command and Embed models',
+    docUrl: 'https://dashboard.cohere.com/api-keys',
+    keyPrefix: '',
+  },
+] as const;
+
+export type SupportedProvider = (typeof SUPPORTED_PROVIDERS)[number]['id'];
