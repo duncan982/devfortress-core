@@ -163,8 +163,8 @@ export const SUBSCRIPTION_PRICING: Record<
   },
   [SubscriptionTier.PRO]: {
     tier: SubscriptionTier.PRO,
-    price: 229,
-    monthlyPrice: 229,
+    price: 199,
+    monthlyPrice: 199,
     seats: 5,
     apiGenerations: 60, // 60 API generations per month
     honeypots: 3,
