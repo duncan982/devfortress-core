@@ -272,30 +272,19 @@ export const createLocalAuthClientForTesting = (): LocalAuthClient => {
   return new LocalAuthClient();
 };
 
-// Helper to safely get env vars - NEXT_PUBLIC_* are inlined at build time
-// but we need this wrapper to handle edge cases in certain bundling scenarios
+// Helper to safely get env vars - NEXT_PUBLIC_* are inlined at build time by Next.js
+// For client-side code, we MUST use direct access to process.env.NEXT_PUBLIC_*
+// because Next.js replaces these at build time, not runtime
 const getSupabaseConfig = (): { url?: string; key?: string } => {
-  // Check if we have the global process object
-  // This is safer than direct access which can throw ReferenceError
-  const hasProcess =
-    typeof globalThis !== 'undefined' &&
-    'process' in globalThis &&
-    globalThis.process &&
-    typeof globalThis.process === 'object' &&
-    'env' in globalThis.process;
+  // CRITICAL: Next.js inlines NEXT_PUBLIC_* at build time
+  // We must use direct string access, NOT dynamic property access
+  // Dynamic access like process.env[varName] will NOT work on client
 
-  if (hasProcess) {
-    const env = (
-      globalThis as { process: { env: Record<string, string | undefined> } }
-    ).process.env;
-    return {
-      url: env.NEXT_PUBLIC_SUPABASE_URL,
-      key: env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    };
-  }
+  // These will be replaced with actual values at build time by Next.js
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  // Fallback: No process.env available
-  return { url: undefined, key: undefined };
+  return { url, key };
 };
 
 // Check if we should use local auth
