@@ -52,11 +52,15 @@ export async function checkSupabaseConnection(): Promise<boolean> {
     }
 
     // At this point, we know supabase is a Supabase client
-    const supabaseClient = supabase as any;  
-    const { error } = await supabaseClient
-      .from('profiles')
-      .select('id')
-      .limit(1);
+    const supabaseClient = supabase as any;
+    // Try with proper RLS context - use service role if available
+    const { error } = await supabaseClient.from('User').select('id').limit(1);
+    // Even if there's an RLS error, the connection works
+    // We just care that we can reach Supabase, not that the query succeeds
+    if (error && error.message.includes('permission denied')) {
+      // RLS is working, connection is fine
+      return true;
+    }
     // Even if there's an error (e.g., table doesn't exist), we know the connection works
     // We just care that we can reach Supabase, not that the query succeeds
     return !error || error.message !== 'fetch failed';
@@ -479,7 +483,7 @@ export async function getServerSession(): Promise<DevFortressSession | null> {
       }
 
       // At this point, we know supabase is a Supabase client
-      const supabaseClient = supabase as any;  
+      const supabaseClient = supabase as any;
       return await withTimeout(
         buildSession(supabaseClient),
         SESSION_FETCH_TIMEOUT_MS
@@ -533,7 +537,7 @@ export async function getRouteSession(): Promise<DevFortressSession | null> {
       }
 
       // At this point, we know supabase is a Supabase client
-      const supabaseClient = supabase as any;  
+      const supabaseClient = supabase as any;
       return await withTimeout(
         buildSession(supabaseClient),
         SESSION_FETCH_TIMEOUT_MS

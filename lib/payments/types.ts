@@ -12,6 +12,7 @@ export enum PaymentProvider {
 }
 
 export enum SubscriptionTier {
+  FREE = 'FREE',
   STARTER = 'STARTER',
   PRO = 'PRO',
   ENTERPRISE = 'ENTERPRISE',
@@ -27,10 +28,12 @@ export enum SubscriptionEventType {
 
 export interface SubscriptionPricing {
   tier: SubscriptionTier;
-  monthlyPrice: number;
+  price: number; // Changed from monthlyPrice for consistency
+  monthlyPrice: number; // Keep for backwards compatibility
   seats: number;
   apiGenerations: number;
   honeypots: number;
+  dataRetentionDays: number;
   features: string[];
 }
 
@@ -123,12 +126,31 @@ export const SUBSCRIPTION_PRICING: Record<
   SubscriptionTier,
   SubscriptionPricing
 > = {
+  [SubscriptionTier.FREE]: {
+    tier: SubscriptionTier.FREE,
+    price: 0,
+    monthlyPrice: 0,
+    seats: 1,
+    apiGenerations: 0, // No paid API generations - self-host via GitHub
+    honeypots: 1,
+    dataRetentionDays: 7, // 7 days for free tier
+    features: [
+      'Self-hosted deployment via GitHub',
+      '1 honeypot for threat intelligence',
+      'Community support & discussions',
+      'Basic threat data aggregation',
+      'AI security insights (limited)',
+      'Open source - contribute & customize',
+    ],
+  },
   [SubscriptionTier.STARTER]: {
     tier: SubscriptionTier.STARTER,
+    price: 99,
     monthlyPrice: 99,
     seats: 1,
     apiGenerations: 25, // 25 API generations per month
     honeypots: 1,
+    dataRetentionDays: 30, // 30 days for starter tier
     features: [
       'AI-powered API generation',
       '25 API generations per month',
@@ -141,10 +163,12 @@ export const SUBSCRIPTION_PRICING: Record<
   },
   [SubscriptionTier.PRO]: {
     tier: SubscriptionTier.PRO,
-    monthlyPrice: 199,
+    price: 229,
+    monthlyPrice: 229,
     seats: 5,
     apiGenerations: 60, // 60 API generations per month
     honeypots: 3,
+    dataRetentionDays: 60, // 60 days for pro tier
     features: [
       'Everything in Starter',
       '60 API generations per month',
@@ -158,10 +182,12 @@ export const SUBSCRIPTION_PRICING: Record<
   },
   [SubscriptionTier.ENTERPRISE]: {
     tier: SubscriptionTier.ENTERPRISE,
+    price: 499,
     monthlyPrice: 499,
     seats: 10,
     apiGenerations: 250, // 250 API generations per month
     honeypots: 10,
+    dataRetentionDays: 90, // 90 days for enterprise tier
     features: [
       'Everything in Pro',
       '250 API generations per month',

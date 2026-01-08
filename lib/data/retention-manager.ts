@@ -1,12 +1,12 @@
 /**
  * Data Retention Manager
  * Implements tier-based data retention policies and GDPR compliance
- * 
+ *
  * Retention Policies:
  * - FREE/STARTER: 7 days
- * - PRO: 30 days  
+ * - PRO: 30 days
  * - ENTERPRISE: 90 days
- * 
+ *
  * GDPR Compliance:
  * - Data export
  * - Data deletion
@@ -21,7 +21,7 @@ import { logInfo, logError } from '@core/lib/logger';
  * Retention policy configuration by tier
  */
 const RETENTION_DAYS: Record<SubscriptionTier, number> = {
-  // FREE: 7, // Commented out - FREE tier removed
+  [SubscriptionTier.FREE]: 7,
   [SubscriptionTier.STARTER]: 7,
   [SubscriptionTier.PRO]: 30,
   [SubscriptionTier.ENTERPRISE]: 90,
@@ -78,7 +78,7 @@ async function getRetentionDays(userId: string): Promise<number> {
     },
   });
 
-  const tier = subscription?.plan as SubscriptionTier || 'FREE';
+  const tier = (subscription?.plan as SubscriptionTier) || 'FREE';
   return RETENTION_DAYS[tier];
 }
 
@@ -426,7 +426,7 @@ export async function deleteUserData(userId: string): Promise<void> {
     logInfo('Deleting user data', { userId });
 
     // Delete in correct order to respect foreign key constraints
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async tx => {
       // Get project and honeypot IDs
       const projects = await tx.apiProject.findMany({
         where: { createdById: userId },
@@ -475,7 +475,7 @@ export async function deleteUserData(userId: string): Promise<void> {
         select: { id: true },
       });
       const balanceIds = balances.map(b => b.id);
-      
+
       await tx.creditTransaction.deleteMany({
         where: { balanceId: { in: balanceIds } },
       });

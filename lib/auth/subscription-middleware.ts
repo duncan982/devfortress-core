@@ -30,7 +30,7 @@ const PRIVILEGED_ROLES: UserRole[] = ['ADMIN', 'OWNER', 'DEVELOPER'];
  * Tier order for comparison (higher = more privileges)
  */
 const TIER_ORDER: Record<SubscriptionTier, number> = {
-  // FREE: 0, // Commented out - FREE tier removed
+  [SubscriptionTier.FREE]: 0,
   [SubscriptionTier.STARTER]: 1,
   [SubscriptionTier.PRO]: 2,
   [SubscriptionTier.ENTERPRISE]: 3,

@@ -1,9 +1,9 @@
 'use client';
 
+// Version: v4.0.1 - 2026-01-07 - Fix client-side env import causing process.env bundling issues
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { createSupabaseClientComponentClient } from '@core/lib/supabase/client';
-import { env } from '@core/lib/env';
 import { logError, logWarn, logInfo } from '@core/lib/logger/client';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { shouldUseLocalAuth } from '@core/lib/auth/local-auth';
@@ -106,11 +106,15 @@ export function SignInForm({
       return 'An authentication error occurred. Please try again or contact support if the issue persists.';
     }
 
-    if (!isGitHubConfigured && process.env.NODE_ENV !== 'development') {
+    // Check if in development mode using runtime detection (avoid process.env on client)
+    const isDevelopment =
+      typeof window !== 'undefined' && window.location.hostname === 'localhost';
+
+    if (!isGitHubConfigured && !isDevelopment) {
       return 'No authentication providers are configured. Please contact support.';
     }
 
-    if (!isGitHubConfigured && process.env.NODE_ENV === 'development') {
+    if (!isGitHubConfigured && isDevelopment) {
       return 'GitHub authentication is not configured. Use the Dev Login button for development access.';
     }
 
@@ -470,7 +474,7 @@ export function SignInForm({
           <div>
             <Turnstile
               ref={captchaRef}
-              siteKey={env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ''}
+              siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ''}
               onSuccess={token => setCaptchaToken(token)}
               onExpire={() => setCaptchaToken('')}
               onError={() => setCaptchaToken('')}
@@ -546,7 +550,7 @@ export function SignInForm({
                 ? 'Continue with GitHub'
                 : 'GitHub sign-in unavailable'}
           </button>
-          {(process.env.NODE_ENV === 'development' || useLocalAuth) && (
+          {useLocalAuth && (
             <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-950">
               <div className="mb-3 flex items-center gap-2">
                 <svg

@@ -51,25 +51,28 @@ const ROLE_RATE_LIMITS: Record<string, RoleRateLimitConfig> = {
 //   abuseThreshold: 5,
 // };
 
-const PLAN_RATE_LIMITS: Record<SubscriptionTier, RoleRateLimitConfig> =
-  {
-    // FREE: FREE_TIER_RATE_LIMIT, // Commented out - FREE tier removed
-    [SubscriptionTier.STARTER]: {
-      windowMs: 60 * 1000,
-      maxRequests: 50,
-      abuseThreshold: 25,
-    },
-    [SubscriptionTier.PRO]: {
-      windowMs: 60 * 1000,
-      maxRequests: 200,
-      abuseThreshold: 100,
-    },
-    [SubscriptionTier.ENTERPRISE]: {
-      windowMs: 60 * 1000,
-      maxRequests: 500,
-      abuseThreshold: 250,
-    },
-  };
+const PLAN_RATE_LIMITS: Record<SubscriptionTier, RoleRateLimitConfig> = {
+  [SubscriptionTier.FREE]: {
+    windowMs: 24 * 60 * 60 * 1000, // 24 hours
+    maxRequests: 10, // 10 requests per day
+    abuseThreshold: 5,
+  },
+  [SubscriptionTier.STARTER]: {
+    windowMs: 60 * 1000,
+    maxRequests: 50,
+    abuseThreshold: 25,
+  },
+  [SubscriptionTier.PRO]: {
+    windowMs: 60 * 1000,
+    maxRequests: 200,
+    abuseThreshold: 100,
+  },
+  [SubscriptionTier.ENTERPRISE]: {
+    windowMs: 60 * 1000,
+    maxRequests: 500,
+    abuseThreshold: 250,
+  },
+};
 
 const HONEYPOT_DAILY_LIMIT = 5; // Admin honeypot creation limit per day
 

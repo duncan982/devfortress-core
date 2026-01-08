@@ -35,10 +35,19 @@ export async function createCheckoutSession(params: {
   const client = getStripeClient();
 
   const prices = {
-    [SubscriptionTier.STARTER]: process.env.STRIPE_PRICE_STARTER || 'price_starter_placeholder',
-    [SubscriptionTier.PRO]: process.env.STRIPE_PRICE_PRO || 'price_pro_placeholder',
-    [SubscriptionTier.ENTERPRISE]: process.env.STRIPE_PRICE_ENTERPRISE || 'price_enterprise_placeholder',
+    [SubscriptionTier.FREE]: '', // No Stripe price for FREE tier
+    [SubscriptionTier.STARTER]:
+      process.env.STRIPE_PRICE_STARTER || 'price_starter_placeholder',
+    [SubscriptionTier.PRO]:
+      process.env.STRIPE_PRICE_PRO || 'price_pro_placeholder',
+    [SubscriptionTier.ENTERPRISE]:
+      process.env.STRIPE_PRICE_ENTERPRISE || 'price_enterprise_placeholder',
   };
+
+  // FREE tier cannot create checkout sessions
+  if (params.tier === SubscriptionTier.FREE) {
+    throw new Error('Cannot create checkout session for FREE tier');
+  }
 
   const session = await client.checkout.sessions.create({
     mode: 'subscription',
@@ -111,7 +120,10 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
   const customerId = invoice.customer;
 
   // Handle failed payment - could suspend access or notify user
-  logError('Subscription payment failed', { customerId, invoiceId: invoice.id });
+  logError('Subscription payment failed', {
+    customerId,
+    invoiceId: invoice.id,
+  });
 
   // TODO: Handle failed payment
 }

@@ -16,6 +16,7 @@ declare global {
       targetId: string,
       config?: Record<string, unknown>
     ) => void;
+    GA_MEASUREMENT_ID?: string;
   }
 }
 
@@ -28,6 +29,11 @@ export function GoogleAnalytics({ gaId }: GoogleAnalyticsProps) {
   const searchParams = useSearchParams();
 
   useEffect(() => {
+    // Cache GA ID on the window for any late consumers
+    if (gaId) {
+      window.GA_MEASUREMENT_ID = gaId;
+    }
+
     if (!gaId || !window.gtag) return;
 
     const url =
@@ -83,9 +89,18 @@ export function trackEvent(
  * Track page view
  */
 export function trackPageView(url: string) {
-  if (typeof window !== 'undefined' && window.gtag) {
-    window.gtag('config', process.env.NEXT_PUBLIC_GA_ID || '', {
-      page_path: url,
-    });
+  if (typeof window === 'undefined' || !window.gtag) {
+    return;
   }
+
+  // Resolve GA ID from caller or global context to avoid relying on process.env in the browser
+  const resolvedGaId = window.GA_MEASUREMENT_ID;
+
+  if (!resolvedGaId || typeof resolvedGaId !== 'string') {
+    return;
+  }
+
+  window.gtag('config', resolvedGaId, {
+    page_path: url,
+  });
 }

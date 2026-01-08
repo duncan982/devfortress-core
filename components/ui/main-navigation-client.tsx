@@ -35,7 +35,9 @@ export function MainNavigationClient({
   const { session, status, isInitialized, signOut } = useAuthSession();
 
   // Use client-side session status, fallback to server-side during initialization
-  const isAuthenticated = isInitialized ? (status === 'authenticated') : serverAuthenticated;
+  const isAuthenticated = isInitialized
+    ? status === 'authenticated'
+    : serverAuthenticated;
 
   // Close user menu when clicking outside
   useEffect(() => {
@@ -64,6 +66,7 @@ export function MainNavigationClient({
     return ['true', '1', 'yes', 'y', 'on'].includes(normalized);
   };
 
+  // NEXT_PUBLIC_ env vars are replaced at build time, safe for client components
   const isPortalFeatureEnabled = parseBooleanFlag(
     process.env.NEXT_PUBLIC_PORTAL_ENABLED
   );
@@ -135,9 +138,8 @@ export function MainNavigationClient({
         </svg>
       ),
     },
-    // Community link for users with active subscriptions (STARTER+ tier) - commented out to hide from customer-facing view
-    /*
-    ...(hasActiveSubscription
+    // Community link - shown for free tier users (those without active subscriptions)
+    ...(!hasActiveSubscription
       ? [
           {
             href: 'https://github.com/duncan982/devfortress/discussions',
@@ -161,7 +163,6 @@ export function MainNavigationClient({
           },
         ]
       : []),
-    */
     // Priority Support link for paid tier users
     ...(hasActiveSubscription
       ? [
@@ -211,9 +212,6 @@ export function MainNavigationClient({
       : []),
   ];
 
-  const primaryLinks = navLinks.filter(link => link.href !== '/help');
-  const helpLink = navLinks.find(link => link.href === '/help');
-
   const isActive = (href: string) => {
     if (href === '/') {
       return pathname === '/';
@@ -237,9 +235,9 @@ export function MainNavigationClient({
             </Link>
           </div>
 
-          {/* Desktop Navigation */}
+          {/* Desktop Navigation - All Links Rendered Directly */}
           <div className="hidden items-center gap-2 md:flex">
-            {primaryLinks.map(link =>
+            {navLinks.map(link =>
               link.external ? (
                 <a
                   key={link.href}
@@ -279,16 +277,6 @@ export function MainNavigationClient({
                 </Link>
               )
             )}
-
-            {helpLink ? (
-              <Link
-                href={helpLink.href}
-                className="inline-flex items-center space-x-2 rounded-xl border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:border-primary-200 hover:text-primary-600 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-primary-500 dark:hover:text-primary-300"
-              >
-                {helpLink.icon}
-                <span>{helpLink.label}</span>
-              </Link>
-            ) : null}
 
             {/* Auth Section */}
             {!isInitialized ? (

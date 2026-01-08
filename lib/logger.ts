@@ -53,7 +53,6 @@ const createServerLogger = async (): Promise<LoggerLike> => {
       )
     );
 
-     
     const transportList: any[] = [
       new winston.transports.Console({
         format: winston.format.combine(
@@ -67,9 +66,8 @@ const createServerLogger = async (): Promise<LoggerLike> => {
 
     // Only add file transports in non-serverless environments
     if (!isServerless) {
-      const { default: DailyRotateFile } = await import(
-        'winston-daily-rotate-file'
-      );
+      const { default: DailyRotateFile } =
+        await import('winston-daily-rotate-file');
 
       const logsDir = path.join(process.cwd(), 'logs');
 
@@ -155,45 +153,91 @@ export default logger;
 
 /**
  * Logs an error message with optional error details.
+ * Enhanced with security audit fields: timestamp, source IP, session token.
  * @param message - The error message to log.
  * @param error - Optional error object or details.
+ * @param context - Optional context including IP, sessionToken, userId for security auditing.
  */
-export const logError = async (message: string, error?: unknown) => {
+export const logError = async (
+  message: string,
+  error?: unknown,
+  context?: { ip?: string; sessionToken?: string; userId?: string }
+) => {
   const loggerInstance = await getLogger();
   loggerInstance.error(message, {
+    timestamp: new Date().toISOString(),
     error: error instanceof Error ? error.message : error,
     stack: error instanceof Error ? error.stack : undefined,
+    sourceIp: context?.ip,
+    sessionToken: context?.sessionToken,
+    userId: context?.userId,
   });
 };
 
 /**
  * Logs a warning message with optional data.
+ * Enhanced with security audit fields: timestamp, source IP, session token.
  * @param message - The warning message to log.
  * @param data - Optional additional data to log.
+ * @param context - Optional context including IP, sessionToken, userId for security auditing.
  */
-export const logWarn = async (message: string, data?: unknown) => {
+export const logWarn = async (
+  message: string,
+  data?: unknown,
+  context?: { ip?: string; sessionToken?: string; userId?: string }
+) => {
   const loggerInstance = await getLogger();
-  loggerInstance.warn(message, data);
+  loggerInstance.warn(message, {
+    timestamp: new Date().toISOString(),
+    data,
+    sourceIp: context?.ip,
+    sessionToken: context?.sessionToken,
+    userId: context?.userId,
+  });
 };
 
 /**
  * Logs an info message with optional data.
+ * Enhanced with security audit fields: timestamp, source IP, session token.
  * @param message - The info message to log.
  * @param data - Optional additional data to log.
+ * @param context - Optional context including IP, sessionToken, userId for security auditing.
  */
-export const logInfo = async (message: string, data?: unknown) => {
+export const logInfo = async (
+  message: string,
+  data?: unknown,
+  context?: { ip?: string; sessionToken?: string; userId?: string }
+) => {
   const loggerInstance = await getLogger();
-  loggerInstance.info(message, data);
+  loggerInstance.info(message, {
+    timestamp: new Date().toISOString(),
+    data,
+    sourceIp: context?.ip,
+    sessionToken: context?.sessionToken,
+    userId: context?.userId,
+  });
 };
 
 /**
  * Logs a debug message with optional data.
+ * Enhanced with security audit fields: timestamp, source IP, session token.
  * @param message - The debug message to log.
  * @param data - Optional additional data to log.
+ * @param context - Optional context including IP, sessionToken, userId for security auditing.
  */
-export const logDebug = async (message: string, data?: unknown) => {
+export const logDebug = async (
+  message: string,
+  data?: unknown,
+  context?: { ip?: string; sessionToken?: string; userId?: string }
+) => {
   const loggerInstance = await getLogger();
-  loggerInstance.debug(message, data);
+  loggerInstance.debug(message, {
+    timestamp: new Date().toISOString(),
+    data,
+    sourceIp: context?.ip,
+    sessionToken: context?.sessionToken,
+    userId: context?.userId,
+  });
 };
 
 /**

@@ -272,11 +272,35 @@ export const createLocalAuthClientForTesting = (): LocalAuthClient => {
   return new LocalAuthClient();
 };
 
+// Helper to safely get env vars - NEXT_PUBLIC_* are inlined at build time
+// but we need this wrapper to handle edge cases in certain bundling scenarios
+const getSupabaseConfig = (): { url?: string; key?: string } => {
+  // Check if we have the global process object
+  // This is safer than direct access which can throw ReferenceError
+  const hasProcess =
+    typeof globalThis !== 'undefined' &&
+    'process' in globalThis &&
+    globalThis.process &&
+    typeof globalThis.process === 'object' &&
+    'env' in globalThis.process;
+
+  if (hasProcess) {
+    const env = (
+      globalThis as { process: { env: Record<string, string | undefined> } }
+    ).process.env;
+    return {
+      url: env.NEXT_PUBLIC_SUPABASE_URL,
+      key: env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    };
+  }
+
+  // Fallback: No process.env available
+  return { url: undefined, key: undefined };
+};
+
 // Check if we should use local auth
 export const shouldUseLocalAuth = async (): Promise<boolean> => {
-  const env = process.env;
-  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const { url: supabaseUrl, key: supabaseKey } = getSupabaseConfig();
 
   // Use local auth if Supabase is not configured or is using placeholder values
   if (

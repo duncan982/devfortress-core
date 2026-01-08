@@ -3,6 +3,11 @@
 /**
  * Web Vitals tracking component
  * Monitors Core Web Vitals and sends metrics to analytics endpoint
+ *
+ * Version: v4.0.0 - 2026-01-07 15:50 UTC - FINAL cache invalidation
+ * CRITICAL FIX (2026-01-07): Removed process.env.NODE_ENV client-side usage
+ * Now uses runtime hostname detection for development environment checks
+ * This prevents "process is not defined" errors in production builds
  */
 
 import { useReportWebVitals } from 'next/web-vitals';
@@ -10,6 +15,7 @@ import { useReportWebVitals } from 'next/web-vitals';
 export function WebVitals() {
   useReportWebVitals(metric => {
     // Only track important metrics
+    // Cache bust: v3.0.0 - Fix profiles table + CDN cache (2026-01-07 15:30 UTC)
     const vitals = ['FCP', 'LCP', 'CLS', 'FID', 'TTFB', 'INP'];
     if (vitals.includes(metric.name)) {
       // Rate the metric
@@ -63,8 +69,11 @@ export function WebVitals() {
         });
       }
 
-      // Log in development
-      if (process.env.NODE_ENV === 'development') {
+      // Log in development (check at runtime, not process.env)
+      if (
+        typeof window !== 'undefined' &&
+        window.location.hostname === 'localhost'
+      ) {
         // eslint-disable-next-line no-console
         console.log(`[Web Vitals] ${metric.name}:`, {
           value: metric.value,

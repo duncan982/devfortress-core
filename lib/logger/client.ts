@@ -1,8 +1,24 @@
 import type { LogLevel, LoggerLike } from './types';
 
-const LOG_ENDPOINT = process.env.NEXT_PUBLIC_LOG_ENDPOINT || '/api/system/logs';
+// CRITICAL FIX: Do NOT use process.env at module level - it causes
+// "process is not defined" errors in the browser.
+// Instead, resolve the endpoint lazily inside the function.
+const getLogEndpoint = (): string => {
+  // In browser, check for globally injected config first
+  if (typeof window !== 'undefined') {
+    const win = window as typeof window & {
+      __LOG_ENDPOINT__?: string;
+    };
+    if (win.__LOG_ENDPOINT__) {
+      return win.__LOG_ENDPOINT__;
+    }
+  }
+  // Default fallback - relative URL works in both environments
+  return '/api/system/logs';
+};
 
 const resolveLogEndpoint = (): string | null => {
+  const LOG_ENDPOINT = getLogEndpoint();
   if (
     LOG_ENDPOINT.startsWith('http://') ||
     LOG_ENDPOINT.startsWith('https://')
@@ -32,6 +48,15 @@ type LogPayload = {
   timestamp: string;
 };
 
+const hasSupabaseSession = (): boolean => {
+  if (typeof document === 'undefined') {
+    return false;
+  }
+
+  // Supabase auth cookies follow the pattern sb-<project-ref>-auth-token
+  return /sb-[^=]+-auth-token=/.test(document.cookie);
+};
+
 const enqueueLog = (level: LogLevel, message: string, data?: unknown) => {
   if (typeof window === 'undefined') {
     return;
@@ -39,6 +64,11 @@ const enqueueLog = (level: LogLevel, message: string, data?: unknown) => {
 
   const endpoint = resolveLogEndpoint();
   if (!endpoint) {
+    return;
+  }
+
+  // Avoid spamming unauthenticated users with 401s when no session cookie exists
+  if (!hasSupabaseSession() && endpoint.endsWith('/api/system/logs')) {
     return;
   }
 
