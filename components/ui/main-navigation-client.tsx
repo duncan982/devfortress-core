@@ -236,7 +236,7 @@ export function MainNavigationClient({
           </div>
 
           {/* Desktop Navigation - All Links Rendered Directly */}
-          <div className="hidden items-center gap-2 md:flex">
+          <div className="hidden items-center gap-1 lg:flex">
             {navLinks.map(link =>
               link.external ? (
                 <a
@@ -244,9 +244,9 @@ export function MainNavigationClient({
                   href={link.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center space-x-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-900 dark:hover:text-neutral-100"
+                  className="inline-flex items-center space-x-1.5 rounded-xl px-2.5 py-1.5 text-sm font-medium transition-colors text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-900 dark:hover:text-neutral-100"
                 >
-                  {link.icon}
+                  {link.icon && <span className="h-4 w-4">{link.icon}</span>}
                   <span>{link.label}</span>
                   <svg
                     className="h-3 w-3 opacity-50"
@@ -266,13 +266,13 @@ export function MainNavigationClient({
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`inline-flex items-center space-x-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
+                  className={`inline-flex items-center space-x-1.5 rounded-xl px-2.5 py-1.5 text-sm font-medium transition-colors ${
                     isActive(link.href)
                       ? 'bg-neutral-100 text-primary-600 dark:bg-neutral-800 dark:text-primary-300'
                       : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-900 dark:hover:text-neutral-100'
                   }`}
                 >
-                  {link.icon}
+                  {link.icon && <span className="h-4 w-4">{link.icon}</span>}
                   <span>{link.label}</span>
                 </Link>
               )
@@ -317,6 +317,14 @@ export function MainNavigationClient({
 
                 {userMenuOpen && (
                   <div className="absolute right-0 z-50 mt-2 w-48 rounded-lg border border-neutral-200 bg-white py-1 shadow-lg dark:border-neutral-700 dark:bg-neutral-800">
+                    <div className="px-3 py-2 border-b border-neutral-200 dark:border-neutral-700">
+                      <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                        {session?.user?.name || 'User'}
+                      </p>
+                      <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                        {session?.user?.email}
+                      </p>
+                    </div>
                     <button
                       onClick={() => {
                         setUserMenuOpen(false);
@@ -345,13 +353,13 @@ export function MainNavigationClient({
             )}
 
             {/* Theme Toggle */}
-            <div className="ml-3 border-l border-neutral-200 pl-3 dark:border-neutral-800">
+            <div className="ml-2 border-l border-neutral-200 pl-2 dark:border-neutral-800">
               <ThemeToggleButton />
             </div>
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="flex md:hidden">
+          <div className="flex lg:hidden">
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -395,7 +403,7 @@ export function MainNavigationClient({
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="border-t border-neutral-200 md:hidden dark:border-neutral-800">
+        <div className="border-t border-neutral-200 lg:hidden dark:border-neutral-800">
           <div className="space-y-1 px-4 pb-3 pt-2">
             {navLinks.map(link =>
               link.external ? (
