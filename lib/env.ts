@@ -3,7 +3,8 @@ import { z } from 'zod';
 // Use console for env diagnostics since logger depends on env
 /* eslint-disable no-console */
 
-const isNonProduction = typeof window === 'undefined' && process.env.NODE_ENV !== 'production';
+const isNonProduction =
+  typeof window === 'undefined' && process.env.NODE_ENV !== 'production';
 
 export const normalizeBooleanString = (value: string) => {
   const normalized = value.trim().toLowerCase();
@@ -26,40 +27,43 @@ const booleanSchema = z
   );
 
 // Filter out invalid placeholder values from environment (like --value from build systems)
-const filteredEnv = typeof window === 'undefined' ? Object.fromEntries(
-  Object.entries(process.env).filter(([key, value]) => {
-    // Don't filter sensitive API keys and secrets - preserve them even if they look like placeholders
-    if (
-      key.includes('API_KEY') ||
-      key.includes('SECRET') ||
-      key.includes('TOKEN') ||
-      key.includes('KEY')
-    ) {
-      return true;
-    }
+const filteredEnv =
+  typeof window === 'undefined'
+    ? Object.fromEntries(
+        Object.entries(process.env).filter(([key, value]) => {
+          // Don't filter sensitive API keys and secrets - preserve them even if they look like placeholders
+          if (
+            key.includes('API_KEY') ||
+            key.includes('SECRET') ||
+            key.includes('TOKEN') ||
+            key.includes('KEY')
+          ) {
+            return true;
+          }
 
-    // Filter out placeholder values that start with -- (common in build systems)
-    if (typeof value !== 'string') return true;
-    const trimmed = value.trim();
+          // Filter out placeholder values that start with -- (common in build systems)
+          if (typeof value !== 'string') return true;
+          const trimmed = value.trim();
 
-    // Handle quoted placeholder values (e.g., "--value\n" from Vercel)
-    const unquoted = trimmed.replace(/^["']|["']$/g, '').trim();
+          // Handle quoted placeholder values (e.g., "--value\n" from Vercel)
+          const unquoted = trimmed.replace(/^["']|["']$/g, '').trim();
 
-    // Filter out various forms of placeholder values
-    return !(
-      trimmed.startsWith('--') ||
-      trimmed === '--value' ||
-      unquoted.startsWith('--') ||
-      unquoted === '--value' ||
-      unquoted === '' ||
-      unquoted.toLowerCase() === 'null' ||
-      unquoted.toLowerCase() === 'undefined' ||
-      // Additional Vercel-specific placeholders
-      unquoted === 'placeholder' ||
-      trimmed.includes('placeholder')
-    );
-  })
-) : {};
+          // Filter out various forms of placeholder values
+          return !(
+            trimmed.startsWith('--') ||
+            trimmed === '--value' ||
+            unquoted.startsWith('--') ||
+            unquoted === '--value' ||
+            unquoted === '' ||
+            unquoted.toLowerCase() === 'null' ||
+            unquoted.toLowerCase() === 'undefined' ||
+            // Additional Vercel-specific placeholders
+            unquoted === 'placeholder' ||
+            trimmed.includes('placeholder')
+          );
+        })
+      )
+    : {};
 
 // OpenAI validation and fallback constants
 const VALID_OPENAI_MODELS = [
@@ -90,14 +94,19 @@ const isValidMaxTokens = (tokens: string | number): boolean => {
 const rawEnv = {
   // Start with filtered environment to preserve API keys and filter placeholders
   ...filteredEnv,
+  // CRITICAL: NEXT_PUBLIC_* vars are inlined at build time by Next.js
+  // We must always try to read them, not conditionally based on window
+  // The trim/replace handles Vercel env vars with trailing newlines
   NEXT_PUBLIC_SUPABASE_URL:
-    typeof window === 'undefined' ? process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/[\r\n]+$/, '') : undefined,
+    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/[\r\n]+/g, ''),
   NEXT_PUBLIC_SUPABASE_ANON_KEY:
-    typeof window === 'undefined' ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim().replace(/[\r\n]+$/, '') : undefined,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim().replace(/[\r\n]+/g, ''),
   PORTAL_ENABLED:
-    typeof window === 'undefined' ? (process.env.PORTAL_ENABLED ??
-    process.env.NEXT_PUBLIC_PORTAL_ENABLED ??
-    'false') : 'false',
+    typeof window === 'undefined'
+      ? (process.env.PORTAL_ENABLED ??
+        process.env.NEXT_PUBLIC_PORTAL_ENABLED ??
+        'false')
+      : 'false',
   DEV_LOGIN_ENABLED:
     process.env.DEV_LOGIN_ENABLED ?? (isNonProduction ? 'true' : 'false'),
   // Only set defaults for dev login in actual development environment
@@ -181,9 +190,11 @@ export const envSchema = z.object({
     'LOG_INGESTION_TOKEN must be at least 32 characters'
   ),
   // Supabase URLs - use real values if set, otherwise use placeholders for build
+  // CRITICAL: trim() to handle Vercel env vars with trailing newlines/whitespace
   NEXT_PUBLIC_SUPABASE_URL: z
     .string()
-    .url()
+    .transform(val => val.trim().replace(/[\r\n]+/g, ''))
+    .pipe(z.string().url())
     .refine(url => {
       // Warn if using placeholder in production
       if (
@@ -200,6 +211,7 @@ export const envSchema = z.object({
     .default('https://placeholder.supabase.co'),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z
     .string()
+    .transform(val => val.trim().replace(/[\r\n]+/g, ''))
     .refine(key => {
       // Warn if using placeholder in production
       if (
@@ -277,8 +289,10 @@ export const env = new Proxy({} as Env, {
 });
 
 // Safe exports that don't trigger validation at module load time
-export const isProduction = typeof window === 'undefined' && process.env.NODE_ENV === 'production';
-export const isDevelopment = typeof window === 'undefined' && process.env.NODE_ENV === 'development';
+export const isProduction =
+  typeof window === 'undefined' && process.env.NODE_ENV === 'production';
+export const isDevelopment =
+  typeof window === 'undefined' && process.env.NODE_ENV === 'development';
 
 // These access env lazily through the proxy
 export const getIsPortalEnabled = (): boolean => {
