@@ -246,7 +246,11 @@ export function MainNavigationClient({
                   rel="noopener noreferrer"
                   className="inline-flex items-center space-x-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-900 dark:hover:text-neutral-100"
                 >
-                  {link.icon && <span className="h-4 w-4">{link.icon}</span>}
+                  {link.icon && (
+                    <span className="flex h-5 w-5 items-center justify-center">
+                      {link.icon}
+                    </span>
+                  )}
                   <span>{link.label}</span>
                   <svg
                     className="h-3 w-3 opacity-50"
@@ -272,7 +276,11 @@ export function MainNavigationClient({
                       : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-900 dark:hover:text-neutral-100'
                   }`}
                 >
-                  {link.icon && <span className="h-4 w-4">{link.icon}</span>}
+                  {link.icon && (
+                    <span className="flex h-5 w-5 items-center justify-center">
+                      {link.icon}
+                    </span>
+                  )}
                   <span>{link.label}</span>
                 </Link>
               )
