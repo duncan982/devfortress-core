@@ -74,9 +74,9 @@ export class ErrorBoundary extends Component<Props, State> {
       const { errorInfo } = this.state;
 
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-          <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6">
-            <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-neutral-900 px-4">
+          <div className="max-w-md w-full bg-white dark:bg-neutral-800 rounded-lg shadow-lg dark:shadow-neutral-900/50 p-6">
+            <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 dark:bg-red-900/50 rounded-full mb-4">
               <svg
                 className="w-6 h-6 text-red-600"
                 fill="none"
@@ -90,50 +90,53 @@ export class ErrorBoundary extends Component<Props, State> {
               </svg>
             </div>
 
-            <h2 className="text-xl font-bold text-gray-900 text-center mb-2">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-neutral-100 text-center mb-2">
               Something went wrong
             </h2>
 
-            <p className="text-gray-600 text-center mb-4">
+            <p className="text-gray-600 dark:text-neutral-400 text-center mb-4">
               {errorInfo?.userMessage || 'An unexpected error occurred'}
             </p>
 
             {errorInfo?.trackingId && (
-              <div className="bg-gray-50 rounded p-3 mb-4">
-                <p className="text-xs text-gray-500">Error ID:</p>
-                <p className="text-sm font-mono text-gray-700">
+              <div className="bg-gray-50 dark:bg-neutral-700 rounded p-3 mb-4">
+                <p className="text-xs text-gray-500 dark:text-neutral-400">
+                  Error ID:
+                </p>
+                <p className="text-sm font-mono text-gray-700 dark:text-neutral-300">
                   {errorInfo.trackingId}
                 </p>
               </div>
             )}
 
-            {errorInfo?.recoveryStrategies && errorInfo.recoveryStrategies.length > 0 && (
-              <div className="mb-4">
-                <p className="text-sm font-medium text-gray-700 mb-2">
-                  What you can do:
-                </p>
-                <ul className="space-y-2">
-                  {errorInfo.recoveryStrategies.map((strategy, index) => (
-                    <li key={index} className="flex items-start">
-                      <svg
-                        className="w-4 h-4 text-blue-500 mt-0.5 mr-2 flex-shrink-0"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      <span className="text-sm text-gray-600">
-                        {strategy.description}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            {errorInfo?.recoveryStrategies &&
+              errorInfo.recoveryStrategies.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-sm font-medium text-gray-700 dark:text-neutral-300 mb-2">
+                    What you can do:
+                  </p>
+                  <ul className="space-y-2">
+                    {errorInfo.recoveryStrategies.map((strategy, index) => (
+                      <li key={index} className="flex items-start">
+                        <svg
+                          className="w-4 h-4 text-blue-500 mt-0.5 mr-2 flex-shrink-0"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        <span className="text-sm text-gray-600 dark:text-neutral-400">
+                          {strategy.description}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
             <div className="flex gap-3">
               <button
@@ -152,7 +155,8 @@ export class ErrorBoundary extends Component<Props, State> {
 
             {errorInfo?.severity === ErrorSeverity.CRITICAL && (
               <p className="text-xs text-center text-gray-500 mt-4">
-                This is a critical error. Our team has been automatically notified.
+                This is a critical error. Our team has been automatically
+                notified.
               </p>
             )}
           </div>

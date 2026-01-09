@@ -89,16 +89,16 @@ export function MFASetup({ onComplete }: MFASetupProps) {
 
   if (step === 'init') {
     return (
-      <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+      <div className="bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg p-6 shadow-sm">
         <div className="flex items-start gap-4">
-          <div className="p-3 bg-blue-100 rounded-lg">
-            <Shield className="h-6 w-6 text-blue-600" />
+          <div className="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
+            <Shield className="h-6 w-6 text-blue-600 dark:text-blue-400" />
           </div>
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-neutral-100 mb-2">
               Two-Factor Authentication
             </h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-gray-600 dark:text-neutral-400 mb-4">
               Add an extra layer of security to your account by requiring a
               verification code in addition to your password.
             </p>
@@ -117,14 +117,14 @@ export function MFASetup({ onComplete }: MFASetupProps) {
 
   if (step === 'qr') {
     return (
-      <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+      <div className="bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg p-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-neutral-100 mb-4">
           Scan QR Code
         </h3>
 
         <div className="space-y-6">
           <div>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-gray-600 dark:text-neutral-400 mb-4">
               Scan this QR code with your authenticator app (Authy, Microsoft
               Authenticator, etc.):
             </p>
@@ -135,40 +135,40 @@ export function MFASetup({ onComplete }: MFASetupProps) {
                   alt="MFA QR Code"
                   width={200}
                   height={200}
-                  className="border border-gray-300 rounded"
+                  className="border border-gray-300 dark:border-neutral-600 rounded"
                 />
               )}
             </div>
           </div>
 
           <div>
-            <p className="text-sm text-gray-600 mb-2">
+            <p className="text-sm text-gray-600 dark:text-neutral-400 mb-2">
               Or enter this secret key manually:
             </p>
             <div className="flex items-center gap-2">
-              <code className="flex-1 px-3 py-2 bg-gray-100 rounded font-mono text-sm">
+              <code className="flex-1 px-3 py-2 bg-gray-100 dark:bg-neutral-700 rounded font-mono text-sm dark:text-neutral-300">
                 {secret}
               </code>
               <button
                 onClick={() => copyToClipboard(secret, 'secret')}
-                className="p-2 hover:bg-gray-100 rounded"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded"
                 title="Copy secret"
               >
                 {copiedSecret ? (
                   <Check className="h-5 w-5 text-green-600" />
                 ) : (
-                  <Copy className="h-5 w-5 text-gray-600" />
+                  <Copy className="h-5 w-5 text-gray-600 dark:text-neutral-400" />
                 )}
               </button>
             </div>
           </div>
 
           <div>
-            <p className="text-sm font-medium text-gray-900 mb-2">
+            <p className="text-sm font-medium text-gray-900 dark:text-neutral-100 mb-2">
               Save these backup codes:
             </p>
-            <div className="bg-gray-50 border border-gray-200 rounded p-3 mb-2">
-              <div className="grid grid-cols-2 gap-2 font-mono text-sm">
+            <div className="bg-gray-50 dark:bg-neutral-700 border border-gray-200 dark:border-neutral-600 rounded p-3 mb-2">
+              <div className="grid grid-cols-2 gap-2 font-mono text-sm dark:text-neutral-300">
                 {backupCodes.map((code, i) => (
                   <div key={i}>{code}</div>
                 ))}
@@ -203,12 +203,12 @@ export function MFASetup({ onComplete }: MFASetupProps) {
 
   if (step === 'verify') {
     return (
-      <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+      <div className="bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg p-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-neutral-100 mb-4">
           Verify Setup
         </h3>
 
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-sm text-gray-600 dark:text-neutral-400 mb-4">
           Enter the 6-digit code from your authenticator app to complete setup:
         </p>
 
@@ -220,7 +220,7 @@ export function MFASetup({ onComplete }: MFASetupProps) {
               setToken(e.target.value.replace(/\D/g, '').slice(0, 6))
             }
             placeholder="000000"
-            className="w-full px-4 py-2 border border-gray-300 rounded-md text-center text-2xl tracking-widest font-mono"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-100 rounded-md text-center text-2xl tracking-widest font-mono"
             maxLength={6}
           />
 
@@ -245,15 +245,15 @@ export function MFASetup({ onComplete }: MFASetupProps) {
 
   if (step === 'complete') {
     return (
-      <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+      <div className="bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg p-6 shadow-sm">
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-            <Check className="h-8 w-8 text-green-600" />
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900/50 rounded-full mb-4">
+            <Check className="h-8 w-8 text-green-600 dark:text-green-400" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-neutral-100 mb-2">
             2FA Enabled Successfully!
           </h3>
-          <p className="text-sm text-gray-600 mb-6">
+          <p className="text-sm text-gray-600 dark:text-neutral-400 mb-6">
             Your account is now protected with two-factor authentication.
           </p>
           <button
