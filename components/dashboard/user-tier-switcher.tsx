@@ -109,7 +109,7 @@ export function UserTierSwitcher({ currentTier }: UserTierSwitcherProps) {
               value={tier.value}
               checked={selectedTier === tier.value}
               onChange={() => handleTierChange(tier.value)}
-              className="text-orange-600 focus:ring-orange-500 dark:text-orange-400 dark:focus:ring-orange-400"
+              className="h-4 w-4 accent-orange-500 dark:accent-orange-300"
             />
             <div>
               <div className="font-medium text-orange-900 dark:text-orange-200">
