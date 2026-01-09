@@ -225,9 +225,9 @@ export function MFASetup({ onComplete }: MFASetupProps) {
           />
 
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded flex items-center gap-2">
-              <X className="h-4 w-4 text-red-600" />
-              <p className="text-sm text-red-800">{error}</p>
+            <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded flex items-center gap-2">
+              <X className="h-4 w-4 text-red-600 dark:text-red-400" />
+              <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
             </div>
           )}
 

@@ -235,8 +235,8 @@ export function MainNavigationClient({
             </Link>
           </div>
 
-          {/* Desktop Navigation - All Links Rendered Directly - Shows on md+ screens (768px+) */}
-          <div className="hidden items-center gap-1 md:flex">
+          {/* Desktop Navigation - All Links Always Visible */}
+          <div className="flex items-center gap-1">
             {navLinks.map(link =>
               link.external ? (
                 <a
@@ -358,8 +358,8 @@ export function MainNavigationClient({
             </div>
           </div>
 
-          {/* Mobile Menu Button - Only shows on small screens (< 768px) */}
-          <div className="flex md:hidden">
+          {/* Mobile Menu Button - Hidden (all links shown directly) */}
+          <div className="hidden">
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -401,9 +401,9 @@ export function MainNavigationClient({
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu - Hidden (all links shown directly in header) */}
       {mobileMenuOpen && (
-        <div className="border-t border-neutral-200 md:hidden dark:border-neutral-800">
+        <div className="hidden border-t border-neutral-200 dark:border-neutral-800">
           <div className="space-y-1 px-4 pb-3 pt-2">
             {navLinks.map(link =>
               link.external ? (

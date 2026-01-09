@@ -64,9 +64,9 @@ export function UserTierSwitcher({ currentTier }: UserTierSwitcherProps) {
   ];
 
   return (
-    <div className="rounded-2xl border border-orange-200 bg-orange-50 p-6 dark:border-orange-700 dark:bg-orange-950/30">
+    <div className="rounded-2xl border border-orange-200 bg-orange-50 p-6 dark:border-orange-700 dark:bg-orange-950/50">
       <div className="mb-4 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-orange-600 dark:bg-orange-900/60 dark:text-orange-200">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-orange-600 dark:bg-orange-900/80 dark:text-orange-200">
           <svg
             className="h-5 w-5"
             fill="none"
