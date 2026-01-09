@@ -64,9 +64,9 @@ export function UserTierSwitcher({ currentTier }: UserTierSwitcherProps) {
   ];
 
   return (
-    <div className="rounded-2xl border border-orange-200 bg-orange-50 p-6 dark:border-orange-800 dark:bg-orange-950/20">
+    <div className="rounded-2xl border border-orange-200 bg-orange-50 p-6 dark:border-orange-700 dark:bg-orange-950/30">
       <div className="mb-4 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-300">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-orange-600 dark:bg-orange-900/60 dark:text-orange-200">
           <svg
             className="h-5 w-5"
             fill="none"
@@ -88,10 +88,10 @@ export function UserTierSwitcher({ currentTier }: UserTierSwitcherProps) {
           </svg>
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-orange-900 dark:text-orange-100">
+          <h3 className="text-lg font-semibold text-orange-900 dark:text-orange-200">
             User Tier Testing (Dev Mode)
           </h3>
-          <p className="text-sm text-orange-700 dark:text-orange-300">
+          <p className="text-sm text-orange-700 dark:text-orange-200/80">
             Simulate different user tiers for testing
           </p>
         </div>
@@ -109,13 +109,13 @@ export function UserTierSwitcher({ currentTier }: UserTierSwitcherProps) {
               value={tier.value}
               checked={selectedTier === tier.value}
               onChange={() => handleTierChange(tier.value)}
-              className="text-orange-600 focus:ring-orange-500"
+              className="text-orange-600 focus:ring-orange-500 dark:text-orange-400 dark:focus:ring-orange-400"
             />
             <div>
-              <div className="font-medium text-orange-900 dark:text-orange-100">
+              <div className="font-medium text-orange-900 dark:text-orange-200">
                 {tier.label}
               </div>
-              <div className="text-sm text-orange-700 dark:text-orange-300">
+              <div className="text-sm text-orange-700 dark:text-orange-200/70">
                 {tier.description}
               </div>
             </div>
@@ -123,8 +123,11 @@ export function UserTierSwitcher({ currentTier }: UserTierSwitcherProps) {
         ))}
       </div>
 
-      <div className="mt-4 text-xs text-orange-600 dark:text-orange-400">
-        Current tier: <strong>{currentTier.toUpperCase()}</strong>
+      <div className="mt-4 text-xs text-orange-600 dark:text-orange-300">
+        Current tier:{' '}
+        <strong className="dark:text-orange-200">
+          {currentTier.toUpperCase()}
+        </strong>
       </div>
     </div>
   );
