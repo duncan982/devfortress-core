@@ -26,7 +26,7 @@ interface MainNavigationClientProps {
 
 export function MainNavigationClient({
   isAuthenticated: serverAuthenticated,
-  hasActiveSubscription = false,
+  hasActiveSubscription: serverHasActiveSubscription = false,
 }: MainNavigationClientProps) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -38,6 +38,14 @@ export function MainNavigationClient({
   const isAuthenticated = isInitialized
     ? status === 'authenticated'
     : serverAuthenticated;
+
+  // Check if user has active subscription based on role (client-side)
+  // Admin, Developer, Owner roles always get priority support
+  const privilegedRoles = ['ADMIN', 'DEVELOPER', 'OWNER'];
+  const hasActiveSubscription =
+    isInitialized && isAuthenticated
+      ? privilegedRoles.includes(session?.user?.role || '')
+      : serverHasActiveSubscription;
 
   // Close user menu when clicking outside
   useEffect(() => {
