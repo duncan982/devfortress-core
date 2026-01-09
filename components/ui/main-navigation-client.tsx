@@ -244,7 +244,7 @@ export function MainNavigationClient({
                   href={link.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center space-x-1.5 rounded-xl px-2 py-1.5 text-xs md:text-sm font-medium transition-colors text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-900 dark:hover:text-neutral-100"
+                  className="inline-flex items-center space-x-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-900 dark:hover:text-neutral-100"
                 >
                   {link.icon && <span className="h-4 w-4">{link.icon}</span>}
                   <span>{link.label}</span>
@@ -266,7 +266,7 @@ export function MainNavigationClient({
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`inline-flex items-center space-x-1.5 rounded-xl px-2 py-1.5 text-xs md:text-sm font-medium transition-colors ${
+                  className={`inline-flex items-center space-x-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
                     isActive(link.href)
                       ? 'bg-neutral-100 text-primary-600 dark:bg-neutral-800 dark:text-primary-300'
                       : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-900 dark:hover:text-neutral-100'
@@ -285,7 +285,7 @@ export function MainNavigationClient({
             ) : !isAuthenticated ? (
               <Link
                 href="/auth/signin"
-                className="ml-2 inline-flex items-center space-x-2 rounded-xl bg-primary-600 px-3 py-1.5 text-xs md:text-sm font-semibold text-white transition-colors hover:bg-primary-700"
+                className="ml-2 inline-flex items-center space-x-2 rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-700"
               >
                 <span>Sign In</span>
               </Link>
@@ -293,7 +293,7 @@ export function MainNavigationClient({
               <div ref={userMenuRef} className="relative ml-2">
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="inline-flex items-center space-x-2 rounded-xl border border-neutral-200 px-2 py-1.5 text-xs md:text-sm font-medium text-neutral-700 transition-colors hover:border-neutral-300 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:border-neutral-600 dark:hover:bg-neutral-800"
+                  className="inline-flex items-center space-x-2 rounded-xl border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:border-neutral-300 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:border-neutral-600 dark:hover:bg-neutral-800"
                   aria-expanded={userMenuOpen}
                   aria-haspopup="true"
                 >
