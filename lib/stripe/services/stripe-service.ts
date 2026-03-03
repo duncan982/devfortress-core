@@ -1,6 +1,13 @@
 /**
- * Stripe service for subscription management
- * Handles checkout sessions and webhook events for subscriptions
+ * @deprecated Stripe service — REMOVED
+ *
+ * Stripe has been removed as a payment provider.
+ * Kenya-based businesses cannot use Stripe without local registration.
+ *
+ * Replacement: Paddle (international MoR) — see lib/payments/paddle-service.ts
+ * Local payments: Paystack — see lib/payments/provider-router.ts
+ *
+ * This file is kept for reference only. All functions throw deprecation errors.
  */
 
 import { logInfo, logError } from '../../logger';

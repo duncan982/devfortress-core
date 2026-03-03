@@ -23,25 +23,33 @@ import { SubscriptionTier } from '@core/lib/payments/types';
  * MVP Feature Flags
  *
  * These flags control which features are enabled for the MVP launch.
- * Credit purchasing via Stripe/Paystack is disabled for MVP - GitHub Marketplace only.
+ * Payment providers: Paddle (international) + Paystack (local KES/African markets)
+ * Stripe has been removed — not available for Kenya-based businesses without local entity.
  */
 export const MVP_FEATURE_FLAGS = {
   /**
-   * Enable credit purchasing via Stripe/Paystack
+   * Enable credit purchasing via Paddle/Paystack
    * Default: false for MVP (GitHub Marketplace subscriptions only)
    * POST-MVP: Set to true when credit purchasing feature is ready
    */
   ENABLE_CREDIT_PURCHASING: process.env.ENABLE_CREDIT_PURCHASING === 'true',
 
   /**
-   * Enable Stripe payment provider
-   * Default: false for MVP
+   * @deprecated Stripe removed — not available for Kenya-based businesses.
+   * Use Paddle instead for international payments.
    */
-  ENABLE_STRIPE: process.env.ENABLE_STRIPE === 'true',
+  ENABLE_STRIPE: false,
 
   /**
-   * Enable Paystack payment provider (African markets)
-   * Default: false for MVP
+   * Enable Paddle payment provider (international — Merchant of Record)
+   * Paddle handles VAT/tax compliance, invoicing, and global payments.
+   * No local business registration docs required.
+   */
+  ENABLE_PADDLE: process.env.ENABLE_PADDLE === 'true',
+
+  /**
+   * Enable Paystack payment provider (African markets — KES, NGN, GHS, ZAR)
+   * Use for local currency payments, M-Pesa, mobile money.
    */
   ENABLE_PAYSTACK: process.env.ENABLE_PAYSTACK === 'true',
 } as const;
@@ -57,11 +65,14 @@ export function isCreditPurchasingEnabled(): boolean {
  * Check if a specific payment provider is enabled
  */
 export function isPaymentProviderEnabled(
-  provider: 'stripe' | 'paystack'
+  provider: 'stripe' | 'paddle' | 'paystack'
 ): boolean {
   switch (provider) {
     case 'stripe':
-      return MVP_FEATURE_FLAGS.ENABLE_STRIPE;
+      // Stripe removed — always disabled
+      return false;
+    case 'paddle':
+      return MVP_FEATURE_FLAGS.ENABLE_PADDLE;
     case 'paystack':
       return MVP_FEATURE_FLAGS.ENABLE_PAYSTACK;
     default:

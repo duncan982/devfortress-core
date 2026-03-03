@@ -1,13 +1,13 @@
 /**
  * Payment provider router
  * Routes payment requests to appropriate payment processor
- * 
- * NOTE: Disabled for MVP - GitHub Marketplace subscriptions only
- * POST-MVP: Enable for credit purchasing with Stripe/Paystack
+ *
+ * Providers: Paddle (international) + Paystack (local African markets) + GitHub Marketplace
+ * Stripe removed — not available for Kenya-based businesses without local entity.
  */
 
 import { logInfo, logError } from '../logger';
-import { PaymentProvider } from './types';
+import { PaymentProvider, SubscriptionTier } from './types';
 import {
   detectUserLocation,
   recommendPaymentProvider,
@@ -113,18 +113,24 @@ export async function createPaymentIntent(
       taxRate: taxSummary.rate,
     });
 
-    // Metadata for future providers (Stripe/Paystack) intentionally not used until those integrations are enabled
+    // Metadata for Paddle/Paystack providers
 
     let providerResult: PaymentIntentResult;
 
     // Route to appropriate provider
-    // POST-MVP: Enable Stripe and Paystack for credit purchasing
     switch (selectedProvider) {
       case PaymentProvider.STRIPE:
-        providerResult = await createStripeIntent({
+        // Stripe removed — not available for Kenya-based businesses
+        throw new Error(
+          'Stripe payments are no longer supported. Use Paddle for international payments.'
+        );
+
+      case PaymentProvider.PADDLE:
+        providerResult = await createPaddleIntent({
           amount: finalAmount,
           currency,
           customerEmail: params.customerEmail,
+          userId: params.userId,
           metadata: params.metadata || {},
         });
         break;
@@ -163,44 +169,40 @@ export async function createPaymentIntent(
 }
 
 /**
- * Create Stripe payment intent
+ * Create Paddle transaction/checkout
+ * Paddle is the Merchant of Record — handles VAT, invoicing, global compliance.
  */
-async function createStripeIntent(params: {
+async function createPaddleIntent(params: {
   amount: number;
   currency: string;
   customerEmail: string;
+  userId: string;
   metadata: Record<string, string>;
 }): Promise<PaymentIntentResult> {
-  const stripe = await import('stripe').then(m => m.default);
-  const secretKey = process.env.STRIPE_SECRET_KEY;
+  const { createPaddleCheckout } = await import('./paddle-service');
 
-  if (!secretKey) {
-    throw new Error('Stripe secret key not configured');
-  }
-
-  const stripeClient = new stripe(secretKey, {
-    apiVersion: '2025-12-15.clover',
+  const result = await createPaddleCheckout({
+    priceId: '', // Will be resolved from tier in paddle-service
+    userId: params.userId,
+    userEmail: params.customerEmail,
+    tier:
+      (params.metadata.tier as SubscriptionTier) || SubscriptionTier.STARTER,
+    successUrl:
+      params.metadata.successUrl ||
+      'https://devfortress.net/dashboard?payment=success',
+    customData: params.metadata,
   });
 
-  const paymentIntent = await stripeClient.paymentIntents.create({
-    amount: params.amount,
-    currency: params.currency.toLowerCase(),
-    metadata: params.metadata,
-    receipt_email: params.customerEmail,
-    automatic_payment_methods: {
-      enabled: true,
-    },
-  });
-
-  logInfo('Stripe payment intent created', {
-    paymentIntentId: paymentIntent.id,
+  logInfo('Paddle transaction created', {
+    transactionId: result.transactionId,
     amount: params.amount,
   });
 
   return {
-    provider: PaymentProvider.STRIPE,
-    paymentIntentId: paymentIntent.id,
-    clientSecret: paymentIntent.client_secret || undefined,
+    provider: PaymentProvider.PADDLE,
+    paymentIntentId: result.transactionId,
+    checkoutUrl: result.checkoutUrl,
+    publicKey: process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN,
   };
 }
 

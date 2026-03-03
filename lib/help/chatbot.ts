@@ -67,7 +67,7 @@ VortexSecure Key Features:
 - BUILD: AI-powered API generation from natural language prompts
 - DEFEND: Automated security scanning, honeypots, and threat monitoring
 - LEARN: Flywheel learning system that improves with usage
-- Credit-based pricing with multiple payment processors (Stripe, Paystack, Whop)
+- Credit-based pricing with multiple payment processors (Paddle, Paystack, GitHub Marketplace)
 - GitHub integration for repository management
 - Team collaboration and role-based access control`;
 

@@ -171,6 +171,26 @@ export function MainNavigationClient({
           },
         ]
       : []),
+    // Consulting link - visible to all users
+    {
+      href: '/consulting',
+      label: 'Consulting',
+      icon: (
+        <svg
+          className="h-5 w-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+          />
+        </svg>
+      ),
+    },
     // Priority Support link for paid tier users
     ...(hasActiveSubscription
       ? [
@@ -228,13 +248,19 @@ export function MainNavigationClient({
   };
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-neutral-200 bg-neutral-50 transition-colors duration-200 dark:border-neutral-800 dark:bg-neutral-950">
+    <nav
+      className="sticky top-0 z-50 border-b border-neutral-200 bg-neutral-50 transition-colors duration-200 dark:border-neutral-800 dark:bg-neutral-950"
+      aria-label="Main navigation"
+    >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600 text-white font-bold">
+              <div
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600 text-white font-bold"
+                aria-hidden="true"
+              >
                 DF
               </div>
               <span className="hidden text-xl font-semibold text-neutral-900 dark:text-neutral-100 sm:block">
@@ -312,6 +338,7 @@ export function MainNavigationClient({
                   className="inline-flex items-center space-x-2 rounded-xl border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:border-neutral-300 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:border-neutral-600 dark:hover:bg-neutral-800"
                   aria-expanded={userMenuOpen}
                   aria-haspopup="true"
+                  aria-label="User menu"
                 >
                   <span>
                     {session?.user?.name || session?.user?.email || 'User'}

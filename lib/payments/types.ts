@@ -1,13 +1,17 @@
 /**
- * Payment types and interfaces for VortexSecure
+ * Payment types and interfaces for DevFortress
  * MVP: GitHub Marketplace for subscriptions
- * POST-MVP: Stripe/Paystack for credit purchasing
+ * Direct payments: Paddle (international) + Paystack (local KES/African markets)
+ * Stripe removed — not available for Kenya-based businesses without local entity.
  */
 
 export enum PaymentProvider {
   GITHUB_MARKETPLACE = 'github_marketplace',
-  // Commented out for MVP - will be used for credit purchasing post-MVP
+  /** @deprecated Stripe removed — not available for Kenya-based businesses. Use PADDLE instead. */
   STRIPE = 'stripe',
+  /** Paddle — Merchant of Record for international payments (no local docs needed) */
+  PADDLE = 'paddle',
+  /** Paystack — local African market payments (KES, NGN, GHS, ZAR, M-Pesa) */
   PAYSTACK = 'paystack',
 }
 

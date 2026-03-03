@@ -24,13 +24,15 @@ export function RootLayoutContent({ children }: RootLayoutContentProps) {
   if (isAdminRoute) {
     // Admin pages render directly without additional wrappers
     // The admin layout handles all styling and navigation
-    return <>{children}</>;
+    return <main id="main-content">{children}</main>;
   }
 
   // Standard pages get the default layout with header, footer, and consistent styling
   return (
     <div className="flex min-h-screen flex-col bg-neutral-50 text-neutral-900 transition-colors duration-200 dark:bg-neutral-950 dark:text-neutral-100">
-      <div className="flex-1">{children}</div>
+      <main id="main-content" className="flex-1">
+        {children}
+      </main>
       <Footer />
     </div>
   );

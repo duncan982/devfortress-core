@@ -1,9 +1,9 @@
 /**
  * Geo-detection service for routing users to appropriate payment providers
  * Detects user location and recommends optimal payment processor
- * 
+ *
  * NOTE: Disabled for MVP - GitHub Marketplace subscriptions only
- * POST-MVP: Enable for credit purchasing with Stripe/Paystack
+ * POST-MVP: Enable for credit purchasing with Paddle/Paystack
  */
 
 import { logInfo, logWarn } from '../logger';
