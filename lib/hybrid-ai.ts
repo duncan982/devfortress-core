@@ -218,7 +218,7 @@ async function callNLProvider(request: AIRequest): Promise<AIResponse> {
     });
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
       messages: [
         {
           role: 'system',

@@ -163,7 +163,7 @@ Generate a comprehensive security prompt that includes:
 Keep it concise (under 300 words) and actionable for code generation.`;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
       messages: [
         {
           role: 'system',

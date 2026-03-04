@@ -20,11 +20,13 @@ const ensureSupabaseConfig = async () => {
   }
 
   // Check if we should use local auth instead of Supabase
-  const shouldUseLocal = !supabaseUrl ||
-                         !supabaseKey ||
-                         supabaseUrl.includes('placeholder') ||
-                         supabaseKey.includes('placeholder') ||
-                         process.env.NODE_ENV === 'development' && process.env.USE_LOCAL_AUTH === 'true';
+  const shouldUseLocal =
+    !supabaseUrl ||
+    !supabaseKey ||
+    supabaseUrl.includes('placeholder') ||
+    supabaseKey.includes('placeholder') ||
+    (process.env.NODE_ENV === 'development' &&
+      process.env.USE_LOCAL_AUTH === 'true');
 
   if (shouldUseLocal) {
     logInfo('Using local authentication service for development');
@@ -54,7 +56,7 @@ export async function retryAuth<T>(
   });
 
   return new Promise((resolve, reject) => {
-    operation.attempt(async (_currentAttempt) => {
+    operation.attempt(async _currentAttempt => {
       try {
         const result = await fn();
         resolve(result);
@@ -76,7 +78,10 @@ const breaker = new CircuitBreaker(async (fn: () => Promise<unknown>) => fn(), {
 export const safeSupabaseCall = breaker.fire.bind(breaker);
 
 // Query profiling utility for optimization
-export async function profileQuery(query: string, params: unknown[] = []): Promise<unknown> {
+export async function profileQuery(
+  query: string,
+  params: unknown[] = []
+): Promise<unknown> {
   // Note: This is a simplified example. In production, use a proper PostgreSQL client.
   // For Supabase, you might need to use the REST API or direct connection.
   logInfo(`EXPLAIN ANALYZE ${query}`, { params });
@@ -102,7 +107,9 @@ export function cacheSession(token: string, session: Session): void {
 }
 
 // Local auth client that mimics Supabase server client for local development
-const createLocalAuthClient = async (cookieStore: Awaited<ReturnType<typeof cookies>>) => {
+const createLocalAuthClient = async (
+  cookieStore: Awaited<ReturnType<typeof cookies>>
+) => {
   const localAuth = getLocalAuthService();
 
   // Mock Supabase client interface
@@ -149,12 +156,21 @@ const createLocalAuthClient = async (cookieStore: Awaited<ReturnType<typeof cook
         }
       },
 
-      signInWithPassword: async (credentials: { email: string; password: string }) => {
+      signInWithPassword: async (credentials: {
+        email: string;
+        password: string;
+      }) => {
         try {
-          const result = await localAuth.signInWithPassword(credentials.email, credentials.password);
+          const result = await localAuth.signInWithPassword(
+            credentials.email,
+            credentials.password
+          );
 
           if (result.error || !result.session) {
-            return { data: { user: null, session: null }, error: { message: result.error } };
+            return {
+              data: { user: null, session: null },
+              error: { message: result.error },
+            };
           }
 
           // Set cookie
@@ -177,7 +193,8 @@ const createLocalAuthClient = async (cookieStore: Awaited<ReturnType<typeof cook
             access_token: result.session.access_token,
             refresh_token: result.session.refresh_token,
             expires_at: result.session.expires_at,
-            expires_in: result.session.expires_at - Math.floor(Date.now() / 1000),
+            expires_in:
+              result.session.expires_at - Math.floor(Date.now() / 1000),
             token_type: 'bearer',
             user: {
               id: result.session.user.id,
@@ -193,23 +210,36 @@ const createLocalAuthClient = async (cookieStore: Awaited<ReturnType<typeof cook
           return {
             data: {
               user: supabaseSession.user,
-              session: supabaseSession
+              session: supabaseSession,
             },
-            error: null
+            error: null,
           };
         } catch (error) {
           logInfo('Local auth signInWithPassword error', { error });
-          return { data: { user: null, session: null }, error: { message: 'Authentication failed' } };
+          return {
+            data: { user: null, session: null },
+            error: { message: 'Authentication failed' },
+          };
         }
       },
 
-      signUp: async (credentials: { email: string; password: string; options?: { emailRedirectTo?: string } }) => {
+      signUp: async (credentials: {
+        email: string;
+        password: string;
+        options?: { emailRedirectTo?: string };
+      }) => {
         try {
           // For local auth, signUp is the same as signInWithPassword
-          const result = await localAuth.signInWithPassword(credentials.email, credentials.password);
+          const result = await localAuth.signInWithPassword(
+            credentials.email,
+            credentials.password
+          );
 
           if (result.error || !result.session) {
-            return { data: { user: null, session: null }, error: { message: result.error } };
+            return {
+              data: { user: null, session: null },
+              error: { message: result.error },
+            };
           }
 
           // Set cookie
@@ -232,7 +262,8 @@ const createLocalAuthClient = async (cookieStore: Awaited<ReturnType<typeof cook
             access_token: result.session.access_token,
             refresh_token: result.session.refresh_token,
             expires_at: result.session.expires_at,
-            expires_in: result.session.expires_at - Math.floor(Date.now() / 1000),
+            expires_in:
+              result.session.expires_at - Math.floor(Date.now() / 1000),
             token_type: 'bearer',
             user: {
               id: result.session.user.id,
@@ -248,13 +279,16 @@ const createLocalAuthClient = async (cookieStore: Awaited<ReturnType<typeof cook
           return {
             data: {
               user: supabaseSession.user,
-              session: supabaseSession
+              session: supabaseSession,
             },
-            error: null
+            error: null,
           };
         } catch (error) {
           logInfo('Local auth signUp error', { error });
-          return { data: { user: null, session: null }, error: { message: 'Signup failed' } };
+          return {
+            data: { user: null, session: null },
+            error: { message: 'Signup failed' },
+          };
         }
       },
 
@@ -301,39 +335,83 @@ const createLocalAuthClient = async (cookieStore: Awaited<ReturnType<typeof cook
         }
       },
 
-      resetPasswordForEmail: async (_email: string, _options?: { redirectTo?: string }) => {
+      resetPasswordForEmail: async (
+        _email: string,
+        _options?: { redirectTo?: string }
+      ) => {
         // For local auth, simulate success
         return { error: null };
       },
 
       updateUser: async (_updates: { password?: string }) => {
         // For local auth, simulate success
-        return { data: { user: { id: 'local-user', email: 'local@example.com' } as User }, error: null };
+        return {
+          data: {
+            user: { id: 'local-user', email: 'local@example.com' } as User,
+          },
+          error: null,
+        };
       },
     },
 
     // Mock other Supabase methods as needed
     from: () => ({
       select: (_columns?: string, options?: { count?: string }) => {
-        const baseResult = {
+        const mockChain: Record<string, unknown> = {
           eq: () => ({
             eq: () => ({
-              single: async (): Promise<{ data: null; error: { message: string } }> => ({ data: null, error: { message: 'Local auth mode - database operations not available' } }),
+              single: async (): Promise<{
+                data: null;
+                error: { message: string };
+              }> => ({
+                data: null,
+                error: {
+                  message:
+                    'Local auth mode - database operations not available',
+                },
+              }),
             }),
-            single: async (): Promise<{ data: null; error: { message: string } }> => ({ data: null, error: { message: 'Local auth mode - database operations not available' } }),
+            single: async (): Promise<{
+              data: null;
+              error: { message: string };
+            }> => ({
+              data: null,
+              error: {
+                message: 'Local auth mode - database operations not available',
+              },
+            }),
           }),
-          single: async (): Promise<{ data: null; error: { message: string } }> => ({ data: null, error: { message: 'Local auth mode - database operations not available' } }),
+          single: async (): Promise<{
+            data: null;
+            error: { message: string };
+          }> => ({
+            data: null,
+            error: {
+              message: 'Local auth mode - database operations not available',
+            },
+          }),
+          limit: () => ({
+            single: async (): Promise<{
+              data: null;
+              error: { message: string };
+            }> => ({
+              data: null,
+              error: {
+                message: 'Local auth mode - database operations not available',
+              },
+            }),
+          }),
         };
 
         // If count is requested, return a result with count property
         if (options?.count === 'exact') {
           return {
-            ...baseResult,
+            ...mockChain,
             count: 0,
           };
         }
 
-        return baseResult;
+        return mockChain;
       },
     }),
   };

@@ -3,7 +3,7 @@
  * Collects and aggregates threat data from both honeypots and live APIs,
  * analyzes patterns using AI, and stores insights in the database for
  * continuous improvement through the BUILD → DEFEND → LEARN feedback loop
- * 
+ *
  * Premium Integration: Includes LiveThreatEvent data (Premium A3) alongside
  * honeypot events for comprehensive threat intelligence
  */
@@ -103,7 +103,6 @@ export async function aggregateTestResults(
       filters.startDate ||
       new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000); // Last 30 days
 
-     
     const where: any = {
       createdAt: {
         gte: startDate,
@@ -237,7 +236,6 @@ export async function aggregateThreatData(
       filters.startDate ||
       new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000); // Last 30 days
 
-     
     const where: any = {
       detectedAt: {
         gte: startDate,
@@ -287,34 +285,38 @@ export async function aggregateThreatData(
       }),
       // Live API threat events (Premium A3 - Live Surveillance)
       // Handle gracefully if requestPath column doesn't exist yet
-      prisma.liveThreatEvent.findMany({
-        where: {
-          ...(filters.apiProjectId && { projectId: filters.apiProjectId }),
-          ...(filters.ownerId && {
-            project: { is: { createdById: filters.ownerId } },
-          }),
-          timestamp: {
-            ...(filters.startDate && { gte: filters.startDate }),
-            ...(filters.endDate && { lte: filters.endDate }),
+      prisma.liveThreatEvent
+        .findMany({
+          where: {
+            ...(filters.apiProjectId && { projectId: filters.apiProjectId }),
+            ...(filters.ownerId && {
+              project: { is: { createdById: filters.ownerId } },
+            }),
+            timestamp: {
+              ...(filters.startDate && { gte: filters.startDate }),
+              ...(filters.endDate && { lte: filters.endDate }),
+            },
           },
-        },
-        select: {
-          id: true,
-          severity: true,
-          eventType: true,
-          ip: true,
-          // requestPath: true, // May not exist yet in database
-          timestamp: true,
-          metadata: true,
-        },
-        orderBy: {
-          timestamp: 'desc',
-        },
-      }).catch(error => {
-        // Log error but continue - database schema may be migrating
-        logWarn('Failed to fetch live threat events', { error: error instanceof Error ? error.message : 'Unknown error' });
-        return [];
-      }),
+          select: {
+            id: true,
+            severity: true,
+            eventType: true,
+            ip: true,
+            // requestPath: true, // May not exist yet in database
+            timestamp: true,
+            metadata: true,
+          },
+          orderBy: {
+            timestamp: 'desc',
+          },
+        })
+        .catch(error => {
+          // Log error but continue - database schema may be migrating
+          logWarn('Failed to fetch live threat events', {
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+          return [];
+        }),
     ]);
 
     // Normalize both types of threats to a common format
@@ -325,9 +327,9 @@ export async function aggregateThreatData(
         severity: lt.severity,
         tags: [lt.eventType], // Event type as tag
         sourceIp: lt.ip,
-        payload: { 
+        payload: {
           path: '/', // Default path since requestPath may not exist
-          ...(lt.metadata as Record<string, unknown> || {})
+          ...((lt.metadata as Record<string, unknown>) || {}),
         },
         detectedAt: lt.timestamp,
       })),
@@ -507,7 +509,7 @@ Generate 5-8 recommendations with a good mix across all three phases.`;
 
     const openai = getOpenAIClient();
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
       messages: [
         {
           role: 'system',
@@ -676,7 +678,6 @@ export async function getInsights(
   limit: number = 10
 ) {
   try {
-     
     const where: any = {};
 
     if (filters.apiProjectId) {

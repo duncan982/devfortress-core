@@ -241,20 +241,6 @@ export function SignInForm({
       return;
     }
 
-    // Restrict to admin account only
-    if (
-      email !== 'ndegwaduncan193@gmail.com' ||
-      password !== 'DevFortressAdmin2025!'
-    ) {
-      logWarn('Unauthorized email sign-in attempt', { email });
-      setErrorMessage('Access denied. Only authorized admin account allowed.');
-      setLoginAttempts(prev => prev + 1);
-      setCaptchaToken('');
-      setIsLoading(false);
-      // Audit disabled - was causing sign-in hanging issues
-      return;
-    }
-
     // Brute force protection
     if (loginAttempts >= 5) {
       logWarn('Brute force protection triggered', {
@@ -319,20 +305,6 @@ export function SignInForm({
     if (!captchaToken) {
       setErrorMessage('Please complete the CAPTCHA');
       setIsLoading(false);
-      return;
-    }
-
-    // Restrict to admin account only
-    if (
-      email !== 'ndegwaduncan193@gmail.com' ||
-      password !== 'DevFortressAdmin2025!'
-    ) {
-      logWarn('Unauthorized email sign-up attempt', { email });
-      setErrorMessage('Signup not allowed. Only authorized admin account.');
-      setCaptchaToken('');
-      setIsLoading(false);
-
-      // Audit disabled - was causing sign-in hanging issues
       return;
     }
 
