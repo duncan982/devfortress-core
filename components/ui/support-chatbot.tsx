@@ -239,7 +239,7 @@ export function SupportChatbot() {
   if (!userHasAccess) {
     return (
       <div
-        className={`fixed bottom-6 right-6 z-50 flex w-96 flex-col rounded-lg border border-neutral-200 bg-white shadow-2xl transition-all duration-200 dark:border-neutral-700 dark:bg-neutral-900 ${
+        className={`fixed bottom-4 right-4 z-50 flex w-[calc(100vw-2rem)] max-w-96 flex-col rounded-lg border border-neutral-200 bg-white shadow-2xl transition-all duration-200 dark:border-neutral-700 dark:bg-neutral-900 ${
           isMinimized ? 'h-14' : 'h-auto'
         }`}
       >
@@ -317,8 +317,8 @@ export function SupportChatbot() {
 
   return (
     <div
-      className={`fixed bottom-6 right-6 z-50 flex w-96 flex-col rounded-lg border border-neutral-200 bg-white shadow-2xl transition-all duration-200 dark:border-neutral-700 dark:bg-neutral-900 ${
-        isMinimized ? 'h-14' : 'h-[600px]'
+      className={`fixed bottom-4 right-4 z-50 flex w-[calc(100vw-2rem)] max-w-96 flex-col rounded-lg border border-neutral-200 bg-white shadow-2xl transition-all duration-200 dark:border-neutral-700 dark:bg-neutral-900 ${
+        isMinimized ? 'h-14' : 'h-[min(600px,calc(100vh-6rem))]'
       }`}
     >
       {/* Header */}

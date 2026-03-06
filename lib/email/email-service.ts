@@ -18,8 +18,8 @@ function getResendClient(): Resend | null {
   return resend;
 }
 
-const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@apiforge.dev';
-const COMPANY_NAME = 'APIForge';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@devfortress.dev';
+const COMPANY_NAME = 'DevFortress';
 
 export interface EmailOptions {
   to: string | string[];

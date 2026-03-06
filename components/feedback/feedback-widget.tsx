@@ -265,7 +265,7 @@ export function FeedbackWidget({
 
     return (
       <div
-        className={`fixed ${positionClasses} z-50 w-96 rounded-xl border border-neutral-200 bg-white p-4 shadow-2xl dark:border-neutral-700 dark:bg-neutral-900`}
+        className={`fixed ${positionClasses} z-50 w-[calc(100vw-2rem)] max-w-96 rounded-xl border border-neutral-200 bg-white p-4 shadow-2xl dark:border-neutral-700 dark:bg-neutral-900`}
       >
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">

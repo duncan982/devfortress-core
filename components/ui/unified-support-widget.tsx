@@ -311,7 +311,7 @@ export function UnifiedSupportWidget() {
 
   // Open state - full widget
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-96 rounded-lg border border-neutral-200 bg-white shadow-2xl dark:border-neutral-700 dark:bg-neutral-900">
+    <div className="fixed bottom-4 right-4 z-50 w-[calc(100vw-2rem)] max-w-96 rounded-lg border border-neutral-200 bg-white shadow-2xl dark:border-neutral-700 dark:bg-neutral-900">
       {/* Header */}
       <div className="flex items-center justify-between rounded-t-lg bg-gradient-to-r from-primary-600 to-primary-700 p-4 text-white">
         <div className="flex items-center gap-2">

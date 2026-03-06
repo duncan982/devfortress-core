@@ -269,8 +269,8 @@ export function MainNavigationClient({
             </Link>
           </div>
 
-          {/* Desktop Navigation - All Links Always Visible */}
-          <div className="flex items-center gap-1">
+          {/* Desktop Navigation - Hidden on mobile, visible on md+ */}
+          <div className="hidden md:flex items-center gap-1">
             {navLinks.map(link =>
               link.external ? (
                 <a
@@ -401,13 +401,14 @@ export function MainNavigationClient({
             </div>
           </div>
 
-          {/* Mobile Menu Button - Hidden (all links shown directly) */}
-          <div className="hidden">
+          {/* Mobile Menu Button - Visible on mobile, hidden on md+ */}
+          <div className="flex items-center gap-2 md:hidden">
+            <ThemeToggleButton />
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="inline-flex items-center justify-center rounded-lg p-2 text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-900 dark:hover:text-neutral-100"
-              aria-expanded="false"
+              aria-expanded={mobileMenuOpen}
             >
               <span className="sr-only">Open main menu</span>
               {!mobileMenuOpen ? (
@@ -444,9 +445,9 @@ export function MainNavigationClient({
         </div>
       </div>
 
-      {/* Mobile Menu - Hidden (all links shown directly in header) */}
+      {/* Mobile Menu - Shown when hamburger is toggled, only relevant on mobile */}
       {mobileMenuOpen && (
-        <div className="hidden border-t border-neutral-200 dark:border-neutral-800">
+        <div className="md:hidden border-t border-neutral-200 dark:border-neutral-800">
           <div className="space-y-1 px-4 pb-3 pt-2">
             {navLinks.map(link =>
               link.external ? (

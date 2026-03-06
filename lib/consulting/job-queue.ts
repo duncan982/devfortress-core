@@ -10,6 +10,7 @@
 
 import { prisma } from '@core/lib/prisma';
 import { logInfo, logError, logWarn } from '@core/lib/logger';
+import { createNotification } from '@core/lib/notifications-server';
 import { Prisma } from '@prisma/client';
 import type {
   ConsultingJobType,
@@ -48,6 +49,19 @@ export interface ProcessableJob {
   userId: string;
   clientId: string | null;
 }
+
+export interface JobNotifyOptions {
+  userId: string;
+  jobType: ConsultingJobType;
+}
+
+const JOB_TYPE_LABELS: Record<ConsultingJobType, string> = {
+  AUDIT: 'Security Audit',
+  URL_SCAN: 'URL Scan',
+  BATCH_BUILD: 'Batch API Build',
+  BATCH_ANALYZE: 'Batch Code Analysis',
+  HONEYPOT_DEPLOY: 'Honeypot Deployment',
+};
 
 // ============================================================
 // Enqueue
@@ -134,12 +148,10 @@ export async function updateJobProgress(
   });
 }
 
-/**
- * Mark a job as successfully completed with output data.
- */
 export async function completeJob(
   jobId: string,
-  output: Record<string, unknown>
+  output: Record<string, unknown>,
+  notify?: JobNotifyOptions
 ): Promise<void> {
   await prisma.consultingJob.update({
     where: { id: jobId },
@@ -152,12 +164,32 @@ export async function completeJob(
   });
 
   logInfo('Job completed', { jobId });
+
+  if (notify) {
+    const label = JOB_TYPE_LABELS[notify.jobType] ?? notify.jobType;
+    try {
+      await createNotification(
+        notify.userId,
+        'SYSTEM',
+        `${label} Complete`,
+        `Your ${label.toLowerCase()} job has finished successfully.`,
+        { jobId, jobType: notify.jobType, status: 'COMPLETED' }
+      );
+    } catch (err) {
+      logError('Failed to send job completion notification', {
+        jobId,
+        userId: notify.userId,
+        error: err,
+      });
+    }
+  }
 }
 
-/**
- * Mark a job as failed with an error message.
- */
-export async function failJob(jobId: string, error: string): Promise<void> {
+export async function failJob(
+  jobId: string,
+  error: string,
+  notify?: JobNotifyOptions
+): Promise<void> {
   await prisma.consultingJob.update({
     where: { id: jobId },
     data: {
@@ -168,6 +200,25 @@ export async function failJob(jobId: string, error: string): Promise<void> {
   });
 
   logError('Job failed', { jobId, error });
+
+  if (notify) {
+    const label = JOB_TYPE_LABELS[notify.jobType] ?? notify.jobType;
+    try {
+      await createNotification(
+        notify.userId,
+        'SYSTEM',
+        `${label} Failed`,
+        `Your ${label.toLowerCase()} job encountered an error: ${error}`,
+        { jobId, jobType: notify.jobType, status: 'FAILED', error }
+      );
+    } catch (err) {
+      logError('Failed to send job failure notification', {
+        jobId,
+        userId: notify.userId,
+        error: err,
+      });
+    }
+  }
 }
 
 /**

@@ -302,17 +302,15 @@ export const shouldUseLocalAuth = async (): Promise<boolean> => {
   }
 
   // Check runtime connectivity to Supabase
+  // Note: /auth/v1/health is used instead of /rest/v1/ because Supabase is
+  // deprecating anon key access to the REST root endpoint (April 2026).
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
 
-    await fetch(`${supabaseUrl}/rest/v1/`, {
-      method: 'HEAD',
+    await fetch(`${supabaseUrl}/auth/v1/health`, {
+      method: 'GET',
       signal: controller.signal,
-      headers: {
-        apikey: supabaseKey,
-        Authorization: `Bearer ${supabaseKey}`,
-      },
     });
 
     clearTimeout(timeoutId);

@@ -1,14 +1,30 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Bell, AlertTriangle, Info, CheckCircle, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
+import {
+  X,
+  Bell,
+  AlertTriangle,
+  Info,
+  CheckCircle,
+  AlertCircle,
+  ExternalLink,
+} from 'lucide-react';
 import { logError } from '@core/lib/logger/client';
 
 interface Notification {
   id: string;
-  type: 'FEEDBACK' | 'CHAT_ESCALATION' | 'SYSTEM' | 'SECURITY' | 'BILLING' | 'UPDATE';
+  type:
+    | 'FEEDBACK'
+    | 'CHAT_ESCALATION'
+    | 'SYSTEM'
+    | 'SECURITY'
+    | 'BILLING'
+    | 'UPDATE';
   title: string;
   message: string;
+  metadata?: Record<string, unknown>;
   status: 'UNREAD' | 'READ' | 'DISMISSED';
   createdAt: string;
 }
@@ -31,8 +47,8 @@ export function NotificationBanner({
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
 
   // Find the first unread notification that hasn't been dismissed
-  const currentNotification = notifications.find(n =>
-    n.status === 'UNREAD' && !dismissedIds.has(n.id)
+  const currentNotification = notifications.find(
+    n => n.status === 'UNREAD' && !dismissedIds.has(n.id)
   );
 
   if (!currentNotification) {
@@ -88,18 +104,25 @@ export function NotificationBanner({
   };
 
   return (
-    <div className={`fixed top-4 right-4 z-50 max-w-sm ${getVariantStyles(currentNotification.type)} border rounded-lg shadow-lg p-4 transition-all duration-300`}>
+    <div
+      className={`fixed top-4 right-4 z-50 max-w-sm ${getVariantStyles(currentNotification.type)} border rounded-lg shadow-lg p-4 transition-all duration-300`}
+    >
       <div className="flex items-start gap-3">
-        <div className="flex-shrink-0">
-          {getIcon(currentNotification.type)}
-        </div>
+        <div className="flex-shrink-0">{getIcon(currentNotification.type)}</div>
         <div className="flex-1 min-w-0">
           <h4 className="text-sm font-semibold mb-1">
             {currentNotification.title}
           </h4>
-          <p className="text-sm opacity-90">
-            {currentNotification.message}
-          </p>
+          <p className="text-sm opacity-90">{currentNotification.message}</p>
+          {typeof currentNotification.metadata?.jobId === 'string' && (
+            <Link
+              href={`/build/jobs?highlight=${currentNotification.metadata.jobId}`}
+              className="mt-2 inline-flex items-center gap-1 text-xs font-semibold underline underline-offset-2 opacity-90 hover:opacity-100 transition-opacity"
+            >
+              View Results
+              <ExternalLink className="w-3 h-3" />
+            </Link>
+          )}
         </div>
         <div className="flex items-center gap-1">
           <button

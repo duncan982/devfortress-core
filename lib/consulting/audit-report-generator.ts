@@ -187,11 +187,15 @@ export async function generateAuditReport(
 
     // Mark job as complete
     if (jobId) {
-      await completeJob(jobId, {
-        reportId: auditReport.id,
-        overallScore,
-        severityCounts,
-      });
+      await completeJob(
+        jobId,
+        {
+          reportId: auditReport.id,
+          overallScore,
+          severityCounts,
+        },
+        { userId, jobType: 'AUDIT' }
+      );
     }
 
     logInfo('Audit report generated', {
@@ -212,7 +216,7 @@ export async function generateAuditReport(
 
     // Mark job as failed
     if (jobId) {
-      await failJob(jobId, errorMsg);
+      await failJob(jobId, errorMsg, { userId, jobType: 'AUDIT' });
     }
 
     throw error;

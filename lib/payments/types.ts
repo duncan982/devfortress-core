@@ -162,7 +162,7 @@ export const SUBSCRIPTION_PRICING: Record<
       'Basic security scans (OWASP)',
       // 'Community support', // Commented out - paying customers get dedicated support
       '1 GitHub repository connection',
-      '5 premium requests per month (limited access) - Coming Soon',
+      '5 premium requests per month (limited access)',
     ],
   },
   [SubscriptionTier.PRO]: {
