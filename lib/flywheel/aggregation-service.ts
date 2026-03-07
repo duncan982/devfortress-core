@@ -425,9 +425,15 @@ export async function aggregateThreatData(
  */
 export async function generateInsights(
   aggregatedData: Awaited<ReturnType<typeof aggregateThreatData>>,
-  apiProjectId: string
+  apiProjectId?: string,
+  ownerId?: string
 ): Promise<InsightGenerationResult> {
   try {
+    if (!apiProjectId && !ownerId) {
+      throw new Error(
+        'Either apiProjectId or ownerId is required to generate insights'
+      );
+    }
     // Build enhanced analysis prompt for AI with phase categorization
     const prompt = `You are a security expert analyzing threat intelligence from honeypot deployments for an API security platform.
 
@@ -613,7 +619,10 @@ Generate 5-8 recommendations with a good mix across all three phases.`;
     // Store insight in database
     const insight = await prisma.flywheelInsight.create({
       data: {
-        apiProjectId,
+        ...(apiProjectId
+          ? { apiProject: { connect: { id: apiProjectId } } }
+          : {}),
+        ...(ownerId ? { owner: { connect: { id: ownerId } } } : {}),
         type: InsightType.VULNERABILITY_TREND,
         summary: aiInsights.summary,
         details: JSON.parse(
@@ -639,7 +648,8 @@ Generate 5-8 recommendations with a good mix across all three phases.`;
 
     logInfo('Generated and stored flywheel insight with phase categorization', {
       insightId: insight.id,
-      apiProjectId,
+      apiProjectId: apiProjectId || 'user-level',
+      ownerId: ownerId || 'project-level',
       totalThreats: aggregatedData.totalThreats,
       recommendationsByPhase: {
         BUILD: phaseBreakdown.BUILD.length,
@@ -665,7 +675,7 @@ Generate 5-8 recommendations with a good mix across all three phases.`;
       modelVersion: completion.model,
     };
   } catch (error) {
-    logError('Failed to generate insights', { error, apiProjectId });
+    logError('Failed to generate insights', { error, apiProjectId, ownerId });
     throw error;
   }
 }
@@ -685,9 +695,18 @@ export async function getInsights(
     }
 
     if (filters.ownerId) {
-      where.apiProject = {
-        createdById: filters.ownerId,
-      };
+      // Get insights for user's API projects OR direct user-level insights
+      where.OR = [
+        {
+          apiProject: {
+            createdById: filters.ownerId,
+          },
+        },
+        {
+          ownerId: filters.ownerId,
+          apiProjectId: null,
+        },
+      ];
     }
 
     const insights = await prisma.flywheelInsight.findMany({
@@ -710,12 +729,14 @@ export async function getInsights(
     return insights;
   } catch (error) {
     logError('Failed to get insights', { error, filters });
-    throw error;
+    // Return empty array instead of throwing to prevent page errors
+    return [];
   }
 }
 
 /**
  * Trigger insight generation for all API projects with honeypots
+ * AND for standalone honeypots not linked to any API project
  */
 export async function generateInsightsForAllProjects(): Promise<{
   success: number;
@@ -740,8 +761,23 @@ export async function generateInsightsForAllProjects(): Promise<{
       },
     });
 
-    logInfo('Generating insights for all projects', {
+    // Also get users who have standalone honeypots (not linked to any API project)
+    const standaloneHoneypotOwners = await prisma.honeypot.findMany({
+      where: {
+        apiProjectId: null,
+        threatEvents: {
+          some: {},
+        },
+      },
+      select: {
+        ownerId: true,
+      },
+      distinct: ['ownerId'],
+    });
+
+    logInfo('Generating insights for all projects and standalone honeypots', {
       projectCount: projects.length,
+      standaloneOwnerCount: standaloneHoneypotOwners.length,
     });
 
     const results: Array<{
@@ -789,6 +825,44 @@ export async function generateInsightsForAllProjects(): Promise<{
       failed,
     });
 
+    // Phase 2: Generate insights for standalone honeypot owners
+    for (const { ownerId } of standaloneHoneypotOwners) {
+      try {
+        const aggregatedData = await aggregateThreatData({
+          ownerId,
+        });
+
+        if (aggregatedData.totalThreats > 0) {
+          await generateInsights(aggregatedData, undefined, ownerId);
+          results.push({ projectId: `user:${ownerId}`, status: 'success' });
+          success++;
+        } else {
+          results.push({
+            projectId: `user:${ownerId}`,
+            status: 'failed',
+            error: 'No threat data available for standalone honeypots',
+          });
+          failed++;
+        }
+      } catch (error) {
+        logError('Failed to generate insights for standalone honeypot owner', {
+          ownerId,
+          error,
+        });
+        results.push({
+          projectId: `user:${ownerId}`,
+          status: 'failed',
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+        failed++;
+      }
+    }
+
+    logInfo('Completed all insight generation (projects + standalone)', {
+      success,
+      failed,
+    });
+
     return { success, failed, results };
   } catch (error) {
     logError('Failed to generate insights for all projects', { error });
@@ -818,12 +892,20 @@ export async function getBuildPhaseInsights(
   startDate.setDate(startDate.getDate() - maxAgeInDays);
 
   try {
-    // Fetch recent insights for user's projects
+    // Fetch recent insights for user's projects and standalone honeypots
     const insights = await prisma.flywheelInsight.findMany({
       where: {
-        apiProject: {
-          createdById: userId,
-        },
+        OR: [
+          {
+            apiProject: {
+              createdById: userId,
+            },
+          },
+          {
+            ownerId: userId,
+            apiProjectId: null,
+          },
+        ],
         generatedAt: {
           gte: startDate,
         },

@@ -56,7 +56,7 @@ export function UnifiedSupportWidget() {
   const [isLoadingChat, setIsLoadingChat] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
 
-  // Check if user has access (authenticated + subscribed)
+  // Check if user has access (authenticated users)
   const hasAccess = () => {
     // During initialization, don't hide the widget - wait for auth state to be determined
     if (!isInitialized) {
@@ -67,15 +67,8 @@ export function UnifiedSupportWidget() {
       return false;
     }
 
-    // TEMPORARY: For testing, allow all authenticated users to see the widget
+    // All authenticated users can access the support widget
     return true;
-
-    // Original logic:
-    // if (subscriptionLoading) {
-    //   return false; // Still loading
-    // }
-
-    // return subscriptionStatus?.hasSubscription === true;
   };
 
   const userHasAccess = hasAccess();
@@ -280,20 +273,7 @@ export function UnifiedSupportWidget() {
 
   // Don't show if user doesn't have access
   if (!userHasAccess) {
-    return null; // No widget shown for non-subscribed users
-  }
-
-  // Closed state - floating button
-  if (!isOpen) {
-    return (
-      <button
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-4 right-4 z-50 rounded-full bg-primary-600 p-4 text-white shadow-lg transition-all duration-200 hover:scale-110 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
-        aria-label="Open Chat & Feedback Support"
-      >
-        <MessageCircle className="h-6 w-6" />
-      </button>
-    );
+    return null; // No widget shown for unauthenticated users
   }
 
   // Closed state - floating button

@@ -149,14 +149,25 @@ function getContinent(countryCode: string): string {
  * Recommend payment provider based on user location
  */
 export function recommendPaymentProvider(
-  _location: GeoLocation
+  location: GeoLocation
 ): ProviderRecommendation {
-  // MVP: Only GitHub Marketplace for subscriptions
-  // Credit purchasing disabled
+  const country = location.country || 'US';
+
+  // African countries → Paystack (local payment methods, mobile money)
+  if (PAYSTACK_COUNTRIES.includes(country)) {
+    return {
+      primary: PaymentProvider.PAYSTACK,
+      alternatives: [PaymentProvider.PADDLE],
+      reason: `Paystack recommended for ${country} — supports local payment methods and mobile money`,
+    };
+  }
+
+  // All other countries → Paddle (global MoR, handles tax/compliance)
   return {
-    primary: PaymentProvider.GITHUB_MARKETPLACE,
+    primary: PaymentProvider.PADDLE,
     alternatives: [],
-    reason: 'GitHub Marketplace provides seamless subscription management',
+    reason:
+      'Paddle recommended — handles international payments, tax, and compliance as Merchant of Record',
   };
 }
 
@@ -164,10 +175,17 @@ export function recommendPaymentProvider(
  * Get available payment providers for a location
  */
 export function getAvailableProviders(
-  _location: GeoLocation // Reserved for future geo-based filtering
+  location: GeoLocation
 ): PaymentProvider[] {
-  // MVP: Only GitHub Marketplace for subscriptions
-  return [PaymentProvider.GITHUB_MARKETPLACE];
+  const country = location.country || 'US';
+  const providers: PaymentProvider[] = [PaymentProvider.PADDLE];
+
+  // Add Paystack for African markets
+  if (PAYSTACK_COUNTRIES.includes(country)) {
+    providers.push(PaymentProvider.PAYSTACK);
+  }
+
+  return providers;
 }
 
 /**

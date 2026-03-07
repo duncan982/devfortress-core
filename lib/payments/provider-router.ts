@@ -126,8 +126,10 @@ export async function createPaymentIntent(
         );
 
       case PaymentProvider.PADDLE:
+        // Paddle is Merchant of Record — handles tax/VAT itself
+        // Pass base amount, NOT tax-inclusive amount, to avoid double-taxation
         providerResult = await createPaddleIntent({
-          amount: finalAmount,
+          amount,
           currency,
           customerEmail: params.customerEmail,
           userId: params.userId,

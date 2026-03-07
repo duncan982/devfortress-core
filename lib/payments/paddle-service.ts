@@ -86,15 +86,19 @@ export interface PaddleSubscriptionEvent {
 function getPaddlePriceId(tier: SubscriptionTier): string {
   const prices: Record<SubscriptionTier, string> = {
     [SubscriptionTier.FREE]: '',
-    [SubscriptionTier.STARTER]:
-      process.env.PADDLE_PRICE_STARTER || 'pri_starter_placeholder',
-    [SubscriptionTier.PRO]:
-      process.env.PADDLE_PRICE_PRO || 'pri_pro_placeholder',
-    [SubscriptionTier.ENTERPRISE]:
-      process.env.PADDLE_PRICE_ENTERPRISE || 'pri_enterprise_placeholder',
+    [SubscriptionTier.STARTER]: process.env.PADDLE_PRICE_STARTER || '',
+    [SubscriptionTier.PRO]: process.env.PADDLE_PRICE_PRO || '',
+    [SubscriptionTier.ENTERPRISE]: process.env.PADDLE_PRICE_ENTERPRISE || '',
   };
 
-  return prices[tier];
+  const priceId = prices[tier];
+  if (!priceId) {
+    throw new Error(
+      `Paddle price ID not configured for tier: ${tier}. ` +
+        `Set PADDLE_PRICE_${tier} in your environment variables.`
+    );
+  }
+  return priceId;
 }
 
 // ============================================================

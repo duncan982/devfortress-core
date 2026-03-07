@@ -1,24 +1,17 @@
 /**
  * Email Service
- * Handles sending transactional emails using Resend
+ * Handles sending transactional emails using Brevo (formerly Sendinblue) SMTP API
  */
-import { Resend } from 'resend';
 import { logInfo, logError } from '@core/lib/logger';
 
-// Lazy initialization of Resend client to avoid errors during testing
-let resend: Resend | null = null;
+const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 
-function getResendClient(): Resend | null {
-  if (!process.env.RESEND_API_KEY) {
-    return null;
-  }
-  if (!resend) {
-    resend = new Resend(process.env.RESEND_API_KEY);
-  }
-  return resend;
+function getBrevoApiKey(): string | null {
+  return process.env.BREVO_API_KEY || null;
 }
 
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@devfortress.dev';
+const FROM_NAME = process.env.FROM_NAME || 'DevFortress';
 const COMPANY_NAME = 'DevFortress';
 
 export interface EmailOptions {
@@ -30,30 +23,47 @@ export interface EmailOptions {
 }
 
 /**
- * Send an email using Resend
+ * Send an email using Brevo SMTP API
  */
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
   try {
-    const client = getResendClient();
-    if (!client) {
-      logError('RESEND_API_KEY not configured');
+    const apiKey = getBrevoApiKey();
+    if (!apiKey) {
+      logError('BREVO_API_KEY not configured');
       return false;
     }
 
-    const { error } = await client.emails.send({
-      to: Array.isArray(options.to) ? options.to : [options.to],
-      from: options.from || FROM_EMAIL,
-      subject: options.subject,
-      html: options.html,
-      text: options.text,
+    const recipients = Array.isArray(options.to) ? options.to : [options.to];
+
+    const response = await fetch(BREVO_API_URL, {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'api-key': apiKey,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        sender: {
+          name: FROM_NAME,
+          email: options.from || FROM_EMAIL,
+        },
+        to: recipients.map(email => ({ email })),
+        subject: options.subject,
+        htmlContent: options.html,
+        textContent: options.text,
+      }),
     });
 
-    if (error) {
-      logError('Email sending failed', error);
+    if (!response.ok) {
+      const errorBody = await response.text();
+      logError('Brevo email sending failed', {
+        status: response.status,
+        body: errorBody,
+      });
       return false;
     }
 
-    logInfo('Email sent successfully', { to: options.to });
+    logInfo('Email sent successfully via Brevo', { to: options.to });
     return true;
   } catch (error) {
     logError('Email sending exception', error);
