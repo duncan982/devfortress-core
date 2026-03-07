@@ -5,7 +5,10 @@
 
 import type { DevFortressSession } from '@core/lib/auth/session';
 import { SubscriptionTier } from '@core/lib/payments/types';
-import { hasPrivilegedRole, getUserSubscriptionWithPlan } from './subscription-middleware';
+import {
+  hasPrivilegedRole,
+  getUserSubscriptionWithPlan,
+} from './subscription-middleware';
 
 /**
  * Premium feature definitions mapped to subscription tiers
@@ -13,6 +16,8 @@ import { hasPrivilegedRole, getUserSubscriptionWithPlan } from './subscription-m
 export const FEATURE_TIERS: Record<string, SubscriptionTier[]> = {
   // BUILD Phase Premium Features
   'build.patch': [SubscriptionTier.PRO, SubscriptionTier.ENTERPRISE],
+  'build.batch': [SubscriptionTier.PRO, SubscriptionTier.ENTERPRISE],
+  'build.urlScraper': [SubscriptionTier.ENTERPRISE],
   'build.customModels': [SubscriptionTier.ENTERPRISE],
   'build.advancedSecurity': [SubscriptionTier.PRO, SubscriptionTier.ENTERPRISE],
   'build.aiCodeReview': [SubscriptionTier.PRO, SubscriptionTier.ENTERPRISE],
@@ -27,7 +32,10 @@ export const FEATURE_TIERS: Record<string, SubscriptionTier[]> = {
 
   // LEARN Phase Premium Features
   'learn.mlModels': [SubscriptionTier.PRO, SubscriptionTier.ENTERPRISE],
-  'learn.predictiveAnalytics': [SubscriptionTier.PRO, SubscriptionTier.ENTERPRISE],
+  'learn.predictiveAnalytics': [
+    SubscriptionTier.PRO,
+    SubscriptionTier.ENTERPRISE,
+  ],
   'learn.automatedFixes': [SubscriptionTier.ENTERPRISE],
   'learn.customTraining': [SubscriptionTier.ENTERPRISE],
 
@@ -56,7 +64,9 @@ export async function hasFeatureAccess(
     return true;
   }
 
-  const { hasSubscription, plan } = await getUserSubscriptionWithPlan(session.user.id);
+  const { hasSubscription, plan } = await getUserSubscriptionWithPlan(
+    session.user.id
+  );
 
   if (!hasSubscription || !plan) {
     return false;
@@ -81,14 +91,16 @@ export async function getAccessibleFeatures(
     return Object.keys(FEATURE_TIERS) as FeatureKey[];
   }
 
-  const { hasSubscription, plan } = await getUserSubscriptionWithPlan(session.user.id);
+  const { hasSubscription, plan } = await getUserSubscriptionWithPlan(
+    session.user.id
+  );
 
   if (!hasSubscription || !plan) {
     return [];
   }
 
   const accessibleFeatures: FeatureKey[] = [];
-  
+
   for (const [feature, allowedTiers] of Object.entries(FEATURE_TIERS)) {
     if (allowedTiers.includes(plan)) {
       accessibleFeatures.push(feature as FeatureKey);
@@ -112,7 +124,9 @@ export async function getUserTier(
     return SubscriptionTier.ENTERPRISE;
   }
 
-  const { hasSubscription, plan } = await getUserSubscriptionWithPlan(session.user.id);
+  const { hasSubscription, plan } = await getUserSubscriptionWithPlan(
+    session.user.id
+  );
 
   if (!hasSubscription || !plan) {
     return 'FREE';
@@ -126,6 +140,8 @@ export async function getUserTier(
  */
 export const FEATURE_DISPLAY_NAMES: Record<FeatureKey, string> = {
   'build.patch': 'PATCH Mode',
+  'build.batch': 'Batch API Generation',
+  'build.urlScraper': 'URL Scraper',
   'build.customModels': 'Custom AI Models',
   'build.advancedSecurity': 'Advanced Security Analysis',
   'build.aiCodeReview': 'AI Code Review',
@@ -151,7 +167,8 @@ export const FEATURE_DISPLAY_NAMES: Record<FeatureKey, string> = {
 export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
   'build.patch': 'Generate PATCH endpoints alongside POST/GET/PUT/DELETE',
   'build.customModels': 'Train and deploy custom AI models for your use case',
-  'build.advancedSecurity': 'Enhanced security scanning and vulnerability detection',
+  'build.advancedSecurity':
+    'Enhanced security scanning and vulnerability detection',
   'build.aiCodeReview': 'AI-powered code review and suggestions',
   'defend.liveMonitoring': 'Real-time monitoring of deployed API endpoints',
   'defend.realTimeAlerts': 'Instant notifications for security events',
@@ -172,4 +189,8 @@ export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
 /**
  * Re-export client-safe utilities for backward compatibility
  */
-export { getTierBadgeColor, getLowestTier, formatTierName } from './premium-utils';
+export {
+  getTierBadgeColor,
+  getLowestTier,
+  formatTierName,
+} from './premium-utils';
