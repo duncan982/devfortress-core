@@ -251,7 +251,8 @@ export default function HoneypotActions({ honeypot }: Props) {
                 {loadingThreats ? 'Loading...' : 'View Threats'}
               </button>
 
-              {honeypot.status === HoneypotStatus.ACTIVE && (
+              {(honeypot.status === HoneypotStatus.ACTIVE ||
+                honeypot.status === HoneypotStatus.DEPLOYED) && (
                 <button
                   onClick={testHoneypot}
                   disabled={loadingTest}

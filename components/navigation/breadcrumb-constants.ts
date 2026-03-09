@@ -21,7 +21,7 @@ export const BREADCRUMB_PATHS = {
 
   // DEFEND Phase sub-pages - unified navigation
   defendAlerts: { label: 'DEFEND Phase', href: '/defend' },
-  defendSurveillance: { label: 'COLLECT Phase', href: '/collect' },
+  defendSurveillance: { label: 'DEFEND Phase', href: '/defend' },
   defendEvents: { label: 'DEFEND Phase', href: '/defend' },
   honeypots: { label: 'DEFEND Phase', href: '/defend' },
   threats: { label: 'COLLECT Phase', href: '/collect' },

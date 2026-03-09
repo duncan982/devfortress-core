@@ -9,6 +9,8 @@ import Link from 'next/link';
 import { Honeypot, HoneypotStatus } from '@prisma/client';
 import HoneypotActions from '@core/components/honeypots/honeypot-actions';
 import HoneypotLogs from '@core/components/honeypots/honeypot-logs';
+import { BreadcrumbNav } from '@core/components/navigation/BreadcrumbNav';
+import { BREADCRUMB_PATHS } from '@core/components/navigation/breadcrumb-constants';
 
 interface HoneypotWithProject extends Honeypot {
   apiProject?: {
@@ -53,6 +55,12 @@ export default function HoneypotDetailClient({
     <main className="bg-neutral-50 px-6 py-12 font-sans text-neutral-900 transition-colors duration-200 dark:bg-neutral-950 dark:text-neutral-100">
       <section className="mx-auto w-full max-w-5xl rounded-3xl border border-neutral-200 bg-white px-10 py-14 shadow-xl dark:border-neutral-800 dark:bg-neutral-950">
         <div className="flex flex-col gap-6">
+          {/* Breadcrumb */}
+          <BreadcrumbNav
+            items={[BREADCRUMB_PATHS.dashboard, BREADCRUMB_PATHS.honeypots]}
+            currentPage={honeypot.name}
+          />
+
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
