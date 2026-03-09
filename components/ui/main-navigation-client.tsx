@@ -269,8 +269,8 @@ export function MainNavigationClient({
             </Link>
           </div>
 
-          {/* Desktop Navigation - Hidden on mobile, visible on md+ */}
-          <div className="hidden md:flex items-center gap-1">
+          {/* Desktop Navigation - Always visible with responsive sizing */}
+          <div className="hidden sm:flex items-center gap-0.5 sm:gap-1">
             {navLinks.map(link =>
               link.external ? (
                 <a
@@ -278,10 +278,10 @@ export function MainNavigationClient({
                   href={link.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center space-x-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-900 dark:hover:text-neutral-100"
+                  className="inline-flex items-center space-x-1 sm:space-x-1.5 rounded-xl px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-900 dark:hover:text-neutral-100"
                 >
                   {link.icon && (
-                    <span className="flex h-5 w-5 items-center justify-center">
+                    <span className="hidden md:flex h-5 w-5 items-center justify-center">
                       {link.icon}
                     </span>
                   )}
@@ -304,14 +304,14 @@ export function MainNavigationClient({
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`inline-flex items-center space-x-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
+                  className={`inline-flex items-center space-x-1 sm:space-x-1.5 rounded-xl px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors ${
                     isActive(link.href)
                       ? 'bg-neutral-100 text-primary-600 dark:bg-neutral-800 dark:text-primary-300'
                       : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-900 dark:hover:text-neutral-100'
                   }`}
                 >
                   {link.icon && (
-                    <span className="flex h-5 w-5 items-center justify-center">
+                    <span className="hidden md:flex h-5 w-5 items-center justify-center">
                       {link.icon}
                     </span>
                   )}
@@ -448,8 +448,8 @@ export function MainNavigationClient({
             </div>
           </div>
 
-          {/* Mobile Menu Button - Visible on mobile, hidden on md+ */}
-          <div className="flex items-center gap-2 md:hidden">
+          {/* Mobile Menu Button - Only visible on xs screens */}
+          <div className="flex items-center gap-2 sm:hidden">
             <ThemeToggleButton />
             <button
               type="button"
@@ -492,9 +492,9 @@ export function MainNavigationClient({
         </div>
       </div>
 
-      {/* Mobile Menu - Shown when hamburger is toggled, only relevant on mobile */}
+      {/* Mobile Menu - Shown when hamburger is toggled, only relevant on xs */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-neutral-200 dark:border-neutral-800">
+        <div className="sm:hidden border-t border-neutral-200 dark:border-neutral-800">
           <div className="space-y-1 px-4 pb-3 pt-2">
             {navLinks.map(link =>
               link.external ? (
