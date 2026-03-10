@@ -157,7 +157,18 @@ export async function aggregateTestResults(
     const uniqueAttacks = new Set<string>();
 
     testResults.forEach(testResult => {
-      const results = testResult.results as Array<{
+      const rawResults = testResult.results;
+
+      // Guard: results is a Json field that may not be an array
+      if (!Array.isArray(rawResults)) {
+        logWarn('Skipping test result with non-array results field', {
+          testResultId: testResult.id,
+          resultsType: typeof rawResults,
+        });
+        return;
+      }
+
+      const results = rawResults as Array<{
         attackName: string;
         path: string;
         statusCode: number | null;
@@ -617,34 +628,78 @@ Generate 5-8 recommendations with a good mix across all three phases.`;
     };
 
     // Store insight in database
-    const insight = await prisma.flywheelInsight.create({
-      data: {
-        ...(apiProjectId
-          ? { apiProject: { connect: { id: apiProjectId } } }
-          : {}),
-        ...(ownerId ? { owner: { connect: { id: ownerId } } } : {}),
-        type: InsightType.VULNERABILITY_TREND,
-        summary: aiInsights.summary,
-        details: JSON.parse(
-          JSON.stringify({
-            totalThreats: aggregatedData.totalThreats,
-            criticalThreats: aggregatedData.criticalThreats,
-            topPatterns: aggregatedData.patterns.slice(0, 10),
-            topIPs: aggregatedData.topIPs,
-            testResults: aggregatedData.testResults,
-            recommendations: aiInsights.recommendations,
-            trends: aiInsights.trends,
-            phaseBreakdown,
-            timeRange: {
-              start: aggregatedData.timeRange.start.toISOString(),
-              end: aggregatedData.timeRange.end.toISOString(),
-            },
-          })
-        ),
-        modelVersion: completion.model,
-        confidence: 0.85,
-      },
-    });
+    // Build the base data object for creation
+    const insightData: Parameters<
+      typeof prisma.flywheelInsight.create
+    >[0]['data'] = {
+      ...(apiProjectId
+        ? { apiProject: { connect: { id: apiProjectId } } }
+        : {}),
+      ...(ownerId ? { owner: { connect: { id: ownerId } } } : {}),
+      type: InsightType.VULNERABILITY_TREND,
+      summary: aiInsights.summary,
+      details: JSON.parse(
+        JSON.stringify({
+          totalThreats: aggregatedData.totalThreats,
+          criticalThreats: aggregatedData.criticalThreats,
+          topPatterns: aggregatedData.patterns.slice(0, 10),
+          topIPs: aggregatedData.topIPs,
+          testResults: aggregatedData.testResults,
+          recommendations: aiInsights.recommendations,
+          trends: aiInsights.trends,
+          phaseBreakdown,
+          timeRange: {
+            start: aggregatedData.timeRange.start.toISOString(),
+            end: aggregatedData.timeRange.end.toISOString(),
+          },
+          // Store ownerId in details as backup when column is unavailable
+          ...(ownerId && !apiProjectId ? { generatedForUserId: ownerId } : {}),
+        })
+      ),
+      modelVersion: completion.model,
+      confidence: 0.85,
+    };
+
+    let insight;
+    try {
+      insight = await prisma.flywheelInsight.create({ data: insightData });
+    } catch (createError) {
+      // Fallback: if ownerId column doesn't exist yet (migration pending),
+      // retry without the owner relation
+      const errorMsg =
+        createError instanceof Error
+          ? createError.message
+          : String(createError);
+      if (errorMsg.includes('ownerId') || errorMsg.includes('owner')) {
+        logWarn(
+          'ownerId column not available on FlywheelInsight, retrying without owner relation',
+          {
+            ownerId,
+            apiProjectId,
+          }
+        );
+        // Remove owner relation and require apiProjectId
+        const fallbackData = { ...insightData };
+        delete (fallbackData as Record<string, unknown>).owner;
+        if (!apiProjectId) {
+          // Cannot store without either apiProjectId or ownerId - create with a dummy project link is not viable
+          // Store the insight summary in details and skip DB storage
+          logError(
+            'Cannot store insight: neither apiProjectId provided nor ownerId column available',
+            {
+              ownerId,
+            }
+          );
+          throw new Error(
+            'FlywheelInsight ownerId column is missing in the database. ' +
+              'Run the migration: add-flywheel-insight-ownerid.sql'
+          );
+        }
+        insight = await prisma.flywheelInsight.create({ data: fallbackData });
+      } else {
+        throw createError;
+      }
+    }
 
     logInfo('Generated and stored flywheel insight with phase categorization', {
       insightId: insight.id,
