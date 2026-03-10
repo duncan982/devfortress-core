@@ -392,10 +392,11 @@ export function SignInForm({
 
         {derivedMessage ? (
           <div
-            className="mb-6 rounded-lg border border-warning-300 bg-warning-50 p-4 text-sm text-warning-900 dark:border-warning-600 dark:bg-warning-950 dark:text-warning-100"
+            className="mb-6 rounded-lg border-2 border-amber-400 bg-amber-50 p-4 text-sm font-medium text-amber-900 dark:border-amber-500 dark:bg-amber-950/80 dark:text-amber-100"
             role="alert"
             aria-live="polite"
           >
+            <span className="mr-2">⚠️</span>
             {derivedMessage}
           </div>
         ) : null}

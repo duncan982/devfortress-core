@@ -270,8 +270,8 @@ export function MainNavigationClient({
             </Link>
           </div>
 
-          {/* Desktop Navigation - Hidden on mobile */}
-          <div className="hidden md:flex items-center gap-0.5 sm:gap-1">
+          {/* Desktop Navigation - Right-aligned, hidden on mobile */}
+          <div className="hidden md:flex items-center gap-1 lg:gap-2 ml-auto">
             {navLinks.map(link =>
               link.external ? (
                 <a
@@ -279,7 +279,7 @@ export function MainNavigationClient({
                   href={link.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center space-x-1 sm:space-x-1.5 rounded-xl px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-900 dark:hover:text-neutral-100"
+                  className="inline-flex items-center space-x-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-900 dark:hover:text-neutral-100"
                 >
                   {link.icon && (
                     <span className="hidden md:flex h-5 w-5 items-center justify-center">
@@ -305,7 +305,7 @@ export function MainNavigationClient({
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`inline-flex items-center space-x-1 sm:space-x-1.5 rounded-xl px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium transition-colors ${
+                  className={`inline-flex items-center space-x-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
                     isActive(link.href)
                       ? 'bg-neutral-100 text-primary-600 dark:bg-neutral-800 dark:text-primary-300'
                       : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-900 dark:hover:text-neutral-100'
