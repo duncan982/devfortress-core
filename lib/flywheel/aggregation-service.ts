@@ -68,6 +68,10 @@ export interface ActionableRecommendation {
   priority: 'HIGH' | 'MEDIUM' | 'LOW';
   affectedEndpoints?: string[];
   relatedPatterns?: string[];
+  /** The API project name this recommendation is associated with */
+  sourceProjectName?: string;
+  /** Honeypot names associated with this recommendation */
+  sourceHoneypots?: string[];
 }
 
 export interface InsightGenerationResult {

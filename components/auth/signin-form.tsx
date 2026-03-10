@@ -392,7 +392,7 @@ export function SignInForm({
 
         {derivedMessage ? (
           <div
-            className="mb-6 rounded-lg border border-warning-300 bg-warning-50 p-4 text-sm text-warning-900 dark:border-warning-700 dark:bg-amber-950 dark:text-warning-200"
+            className="mb-6 rounded-lg border border-warning-300 bg-warning-50 p-4 text-sm text-warning-900 dark:border-warning-600 dark:bg-warning-950 dark:text-warning-100"
             role="alert"
             aria-live="polite"
           >
