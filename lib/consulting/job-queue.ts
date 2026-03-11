@@ -64,6 +64,45 @@ const JOB_TYPE_LABELS: Record<ConsultingJobType, string> = {
 };
 
 // ============================================================
+// On-demand job processing trigger
+// ============================================================
+
+/**
+ * Fire-and-forget trigger of the process-jobs endpoint.
+ * On Vercel Hobby plan, cron jobs run only once daily, so we trigger
+ * the job processor immediately after enqueuing to ensure prompt execution.
+ * Falls back silently if the trigger fails (daily cron acts as safety net).
+ */
+async function triggerJobProcessing(): Promise<void> {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL;
+    if (!baseUrl) {
+      logWarn('No base URL configured — skipping on-demand job trigger');
+      return;
+    }
+
+    const url = baseUrl.startsWith('http')
+      ? `${baseUrl}/api/cron/process-jobs`
+      : `https://${baseUrl}/api/cron/process-jobs`;
+
+    const cronSecret = process.env.CRON_SECRET?.trim();
+
+    // Fire-and-forget — don't await the full response
+    fetch(url, {
+      method: 'GET',
+      headers: {
+        ...(cronSecret ? { Authorization: `Bearer ${cronSecret}` } : {}),
+      },
+      signal: AbortSignal.timeout(500), // Just trigger, don't wait
+    }).catch(() => {
+      // Silently ignore — the daily cron is the safety net
+    });
+  } catch {
+    // Non-critical — daily cron will pick up any missed jobs
+  }
+}
+
+// ============================================================
 // Enqueue
 // ============================================================
 
@@ -91,6 +130,10 @@ export async function enqueueJob(
     type: params.type,
     userId: params.userId,
   });
+
+  // Trigger immediate processing (fire-and-forget)
+  // On Hobby plan, cron runs daily; this ensures near-instant job execution
+  triggerJobProcessing();
 
   return job;
 }
