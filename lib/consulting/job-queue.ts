@@ -87,13 +87,14 @@ async function triggerJobProcessing(): Promise<void> {
 
     const cronSecret = process.env.CRON_SECRET?.trim();
 
-    // Fire-and-forget — don't await the full response
+    // Fire-and-forget — trigger the function but don't wait for full response
+    // 5s is enough time for Vercel to accept the request and start the function
     fetch(url, {
       method: 'GET',
       headers: {
         ...(cronSecret ? { Authorization: `Bearer ${cronSecret}` } : {}),
       },
-      signal: AbortSignal.timeout(500), // Just trigger, don't wait
+      signal: AbortSignal.timeout(5000),
     }).catch(() => {
       // Silently ignore — the daily cron is the safety net
     });
@@ -265,17 +266,20 @@ export async function failJob(
 }
 
 /**
- * Cancel a pending job. Only PENDING jobs can be cancelled.
+ * Cancel a pending or processing job.
+ * PENDING jobs are cancelled immediately.
+ * PROCESSING jobs are marked as CANCELLED (the handler should check for this).
  */
 export async function cancelJob(jobId: string): Promise<boolean> {
   const result = await prisma.consultingJob.updateMany({
     where: {
       id: jobId,
-      status: 'PENDING',
+      status: { in: ['PENDING', 'PROCESSING'] },
     },
     data: {
       status: 'CANCELLED',
       completedAt: new Date(),
+      error: 'Cancelled by user',
     },
   });
 
@@ -284,7 +288,7 @@ export async function cancelJob(jobId: string): Promise<boolean> {
     return true;
   }
 
-  logWarn('Cannot cancel job — not in PENDING state', { jobId });
+  logWarn('Cannot cancel job — not in PENDING or PROCESSING state', { jobId });
   return false;
 }
 

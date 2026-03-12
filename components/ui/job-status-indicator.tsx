@@ -82,7 +82,7 @@ export function JobStatusIndicator() {
 
   return (
     <Link
-      href="/consulting"
+      href="/build/jobs"
       className="relative inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-300 dark:hover:bg-amber-900/50"
       title={`${summary.pending} pending, ${summary.processing} processing`}
     >
