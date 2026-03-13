@@ -75,7 +75,9 @@ const JOB_TYPE_LABELS: Record<ConsultingJobType, string> = {
  */
 async function triggerJobProcessing(): Promise<void> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL;
+    // Prefer deployment-scoped VERCEL_URL first to avoid preview jobs being
+    // triggered against production APP_URL.
+    const baseUrl = process.env.VERCEL_URL || process.env.NEXT_PUBLIC_APP_URL;
     if (!baseUrl) {
       logWarn('No base URL configured — skipping on-demand job trigger');
       return;
@@ -87,16 +89,29 @@ async function triggerJobProcessing(): Promise<void> {
 
     const cronSecret = process.env.CRON_SECRET?.trim();
 
-    // Fire-and-forget — trigger the function but don't wait for full response
-    // 5s is enough time for Vercel to accept the request and start the function
-    fetch(url, {
-      method: 'GET',
-      headers: {
-        ...(cronSecret ? { Authorization: `Bearer ${cronSecret}` } : {}),
-      },
-      signal: AbortSignal.timeout(5000),
-    }).catch(() => {
-      // Silently ignore — the daily cron is the safety net
+    // Use a longer timeout (30s) to handle cold starts on Vercel
+    const doTrigger = () =>
+      fetch(url, {
+        method: 'GET',
+        headers: {
+          ...(cronSecret ? { Authorization: `Bearer ${cronSecret}` } : {}),
+        },
+        signal: AbortSignal.timeout(30000),
+      });
+
+    // First attempt
+    doTrigger().catch(() => {
+      // Retry once after 2s if the first trigger fails (e.g., cold start)
+      setTimeout(() => {
+        doTrigger().catch(err => {
+          logWarn(
+            'On-demand job trigger failed after retry — daily cron will pick up',
+            {
+              error: err instanceof Error ? err.message : String(err),
+            }
+          );
+        });
+      }, 2000);
     });
   } catch {
     // Non-critical — daily cron will pick up any missed jobs

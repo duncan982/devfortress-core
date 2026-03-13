@@ -1,6 +1,8 @@
 /**
  * Main Navigation Client Component
  * Client-side navigation logic with authentication awareness
+ * Desktop: all links visible in header bar with labels
+ * Mobile: compact inline icon-only navigation (no hamburger menu)
  */
 
 'use client';
@@ -10,6 +12,7 @@ import { usePathname } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import { ThemeToggleButton } from './theme-toggle';
 import { JobStatusIndicator } from './job-status-indicator';
+import { NotificationBellIndicator } from './notification-bell-indicator';
 import { useAuthSession } from '@core/components/providers/session-provider';
 
 interface NavLink {
@@ -30,7 +33,6 @@ export function MainNavigationClient({
   hasActiveSubscription: serverHasActiveSubscription = false,
 }: MainNavigationClientProps) {
   const pathname = usePathname();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const { session, status, isInitialized, signOut } = useAuthSession();
@@ -250,11 +252,11 @@ export function MainNavigationClient({
 
   return (
     <nav
-      className="sticky top-0 z-50 border-b border-neutral-200 bg-neutral-50 transition-colors duration-200 dark:border-neutral-800 dark:bg-neutral-950"
+      className="sticky top-0 z-50 overflow-x-clip border-b border-neutral-200 bg-neutral-50 transition-colors duration-200 dark:border-neutral-800 dark:bg-neutral-950"
       aria-label="Main navigation"
     >
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
+      <div className="mx-auto max-w-7xl min-w-0 px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 min-w-0 items-center justify-between">
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-2">
@@ -271,7 +273,7 @@ export function MainNavigationClient({
           </div>
 
           {/* Desktop Navigation - Right-aligned, hidden on mobile */}
-          <div className="hidden md:flex items-center gap-1 lg:gap-2 ml-auto">
+          <div className="hidden md:flex min-w-0 items-center gap-1 lg:gap-1.5 ml-auto">
             {navLinks.map(link =>
               link.external ? (
                 <a
@@ -279,10 +281,10 @@ export function MainNavigationClient({
                   href={link.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center space-x-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-900 dark:hover:text-neutral-100"
+                  className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-[13px] font-medium transition-colors text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-900 dark:hover:text-neutral-100"
                 >
                   {link.icon && (
-                    <span className="hidden md:flex h-5 w-5 items-center justify-center">
+                    <span className="flex h-4 w-4 items-center justify-center text-neutral-500 dark:text-neutral-400">
                       {link.icon}
                     </span>
                   )}
@@ -305,14 +307,14 @@ export function MainNavigationClient({
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`inline-flex items-center space-x-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
+                  className={`inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-[13px] font-medium transition-colors ${
                     isActive(link.href)
                       ? 'bg-neutral-100 text-primary-600 dark:bg-neutral-800 dark:text-primary-300'
                       : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-900 dark:hover:text-neutral-100'
                   }`}
                 >
                   {link.icon && (
-                    <span className="hidden md:flex h-5 w-5 items-center justify-center">
+                    <span className="flex h-4 w-4 items-center justify-center text-neutral-500 dark:text-neutral-400">
                       {link.icon}
                     </span>
                   )}
@@ -321,34 +323,39 @@ export function MainNavigationClient({
               )
             )}
 
+            {/* Separator */}
+            <div className="mx-1 h-5 w-px bg-neutral-200 dark:bg-neutral-700" />
+
             {/* Job Status Indicator - shows when there are active jobs */}
             {isAuthenticated && <JobStatusIndicator />}
 
+            {/* Notification Bell */}
+            {isAuthenticated && <NotificationBellIndicator />}
+
             {/* Auth Section */}
             {!isInitialized ? (
-              // Loading state during initialization
-              <div className="ml-2 h-10 w-20 animate-pulse rounded-xl bg-neutral-200 dark:bg-neutral-700" />
+              <div className="h-8 w-16 animate-pulse rounded-lg bg-neutral-200 dark:bg-neutral-700" />
             ) : !isAuthenticated ? (
               <Link
                 href="/auth/signin"
-                className="ml-2 inline-flex items-center space-x-2 rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-700"
+                className="inline-flex items-center rounded-lg bg-primary-600 px-3 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-primary-700"
               >
-                <span>Sign In</span>
+                Sign In
               </Link>
             ) : (
-              <div ref={userMenuRef} className="relative ml-2">
+              <div ref={userMenuRef} className="relative">
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="inline-flex items-center space-x-2 rounded-xl border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:border-neutral-300 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:border-neutral-600 dark:hover:bg-neutral-800"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 px-2.5 py-1.5 text-[13px] font-medium text-neutral-700 transition-colors hover:border-neutral-300 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:border-neutral-600 dark:hover:bg-neutral-800"
                   aria-expanded={userMenuOpen}
                   aria-haspopup="true"
                   aria-label="User menu"
                 >
-                  <span>
+                  <span className="max-w-[100px] truncate">
                     {session?.user?.name || session?.user?.email || 'User'}
                   </span>
                   <svg
-                    className={`h-4 w-4 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`}
+                    className={`h-3.5 w-3.5 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -447,207 +454,141 @@ export function MainNavigationClient({
             )}
 
             {/* Theme Toggle */}
-            <div className="ml-2 border-l border-neutral-200 pl-2 dark:border-neutral-800">
+            <div className="ml-1 border-l border-neutral-200 pl-1 dark:border-neutral-800">
               <ThemeToggleButton />
             </div>
           </div>
 
-          {/* Mobile: Theme Toggle + Hamburger Menu */}
-          <div className="flex items-center gap-2 md:hidden">
-            <ThemeToggleButton />
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="inline-flex items-center justify-center rounded-lg p-2 text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-900 dark:hover:text-neutral-100"
-              aria-expanded={mobileMenuOpen}
-              aria-label="Toggle mobile menu"
-            >
-              <span className="sr-only">Open main menu</span>
-              {!mobileMenuOpen ? (
-                <svg
-                  className="h-6 w-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+          {/* Mobile: Compact inline icons for all nav + auth (no hamburger) */}
+          <div className="flex items-center gap-0.5 md:hidden overflow-x-auto scrollbar-hide">
+            {/* Nav links as icon-only buttons on mobile */}
+            {navLinks.map(link =>
+              link.external ? (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={link.label}
+                  className="relative inline-flex items-center justify-center rounded-lg p-1.5 text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                </svg>
+                  {link.icon && (
+                    <span className="flex h-5 w-5 items-center justify-center">
+                      {link.icon}
+                    </span>
+                  )}
+                </a>
               ) : (
-                <svg
-                  className="h-6 w-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile Menu - Compact nav links + auth */}
-      {mobileMenuOpen && (
-        <div className="md:hidden border-t border-neutral-200 dark:border-neutral-800 max-h-[40vh] overflow-y-auto">
-          <div className="px-3 pb-2 pt-1.5">
-            {/* Navigation Links - Compact grid for icons */}
-            <div className="grid grid-cols-4 gap-1">
-              {navLinks.map(link =>
-                link.external ? (
-                  <a
-                    key={link.href}
-                    href={link.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-                  >
-                    {link.icon && (
-                      <span className="flex h-5 w-5 items-center justify-center">
-                        {link.icon}
-                      </span>
-                    )}
-                    <span className="text-[10px] font-medium leading-tight text-center truncate w-full">
-                      {link.label}
-                    </span>
-                  </a>
-                ) : (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`flex flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 transition-colors ${
-                      isActive(link.href)
-                        ? 'bg-neutral-100 text-primary-600 dark:bg-neutral-800 dark:text-primary-300'
-                        : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-neutral-100'
-                    }`}
-                  >
-                    {link.icon && (
-                      <span className="flex h-5 w-5 items-center justify-center">
-                        {link.icon}
-                      </span>
-                    )}
-                    <span className="text-[10px] font-medium leading-tight text-center truncate w-full">
-                      {link.label}
-                    </span>
-                  </Link>
-                )
-              )}
-            </div>
-
-            {/* Auth Section - Mobile Compact */}
-            <div className="border-t border-neutral-200 pt-1.5 mt-1 dark:border-neutral-800">
-              {!isInitialized ? (
-                <div className="h-8 w-full animate-pulse rounded-lg bg-neutral-200 dark:bg-neutral-700" />
-              ) : !isAuthenticated ? (
                 <Link
-                  href="/auth/signin"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex w-full items-center justify-center rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-primary-700"
+                  key={link.href}
+                  href={link.href}
+                  title={link.label}
+                  className={`relative inline-flex items-center justify-center rounded-lg p-1.5 transition-colors ${
+                    isActive(link.href)
+                      ? 'bg-neutral-100 text-primary-600 dark:bg-neutral-800 dark:text-primary-300'
+                      : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100'
+                  }`}
                 >
-                  <span>Sign In</span>
+                  {link.icon && (
+                    <span className="flex h-5 w-5 items-center justify-center">
+                      {link.icon}
+                    </span>
+                  )}
                 </Link>
-              ) : (
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-bold text-primary-700 dark:bg-primary-900 dark:text-primary-300">
-                      {(session?.user?.name || session?.user?.email || 'U')
-                        .charAt(0)
-                        .toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium text-neutral-900 dark:text-neutral-100 truncate">
+              )
+            )}
+
+            {/* Separator */}
+            <div className="mx-0.5 h-5 w-px shrink-0 bg-neutral-200 dark:bg-neutral-700" />
+
+            {/* Job Status */}
+            {isAuthenticated && <JobStatusIndicator />}
+
+            {/* Notification Bell */}
+            {isAuthenticated && <NotificationBellIndicator />}
+
+            {/* Auth Section - Mobile */}
+            {!isInitialized ? (
+              <div className="h-7 w-7 animate-pulse rounded-full bg-neutral-200 dark:bg-neutral-700" />
+            ) : !isAuthenticated ? (
+              <Link
+                href="/auth/signin"
+                title="Sign In"
+                className="inline-flex items-center justify-center rounded-lg p-1.5 text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+              >
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
+                  />
+                </svg>
+              </Link>
+            ) : (
+              <div ref={userMenuRef} className="relative">
+                <button
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="inline-flex items-center justify-center rounded-full h-7 w-7 bg-primary-100 text-xs font-bold text-primary-700 dark:bg-primary-900 dark:text-primary-300 transition-colors hover:bg-primary-200 dark:hover:bg-primary-800"
+                  aria-expanded={userMenuOpen}
+                  aria-haspopup="true"
+                  aria-label="User menu"
+                  title={session?.user?.name || session?.user?.email || 'User'}
+                >
+                  {(session?.user?.name || session?.user?.email || 'U')
+                    .charAt(0)
+                    .toUpperCase()}
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 z-50 mt-2 w-48 rounded-lg border border-neutral-200 bg-white py-1 shadow-lg dark:border-neutral-700 dark:bg-neutral-800">
+                    <div className="px-3 py-2 border-b border-neutral-200 dark:border-neutral-700">
+                      <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">
                         {session?.user?.name || 'User'}
                       </p>
+                      <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                        {session?.user?.email}
+                      </p>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
                     <Link
                       href="/dashboard"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="rounded-md p-1.5 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-700"
-                      title="Dashboard"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex w-full items-center px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-700"
                     >
-                      <svg
-                        className="h-4 w-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-                        />
-                      </svg>
+                      Dashboard
                     </Link>
                     <Link
                       href="/dashboard/settings"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="rounded-md p-1.5 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-700"
-                      title="Settings"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex w-full items-center px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-700"
                     >
-                      <svg
-                        className="h-4 w-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                        />
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                      </svg>
+                      Settings
                     </Link>
+                    <div className="border-t border-neutral-200 dark:border-neutral-700 my-1" />
                     <button
                       onClick={() => {
-                        setMobileMenuOpen(false);
+                        setUserMenuOpen(false);
                         signOut();
                       }}
-                      className="rounded-md p-1.5 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-700"
-                      title="Sign Out"
+                      className="flex w-full items-center px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-700"
                     >
-                      <svg
-                        className="h-4 w-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                        />
-                      </svg>
+                      Sign Out
                     </button>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
+
+            {/* Theme Toggle */}
+            <ThemeToggleButton />
           </div>
         </div>
-      )}
+      </div>
     </nav>
   );
 }

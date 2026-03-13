@@ -23,6 +23,7 @@ import {
   type DisconnectRepoState,
 } from '@/app/dashboard/actions/manage-repositories';
 import { createSupabaseClientComponentClient } from '@core/lib/supabase/client';
+import { createBrowserClient } from '@supabase/ssr';
 
 const initialState: FetchReposState = {};
 
@@ -68,8 +69,28 @@ export function RepositoryConnectPanel() {
     setIsRedirecting(true);
 
     try {
-      const supabase = await createSupabaseClientComponentClient();
-      const { error } = await supabase.auth.signInWithOAuth({
+      // Use a direct Supabase browser client for OAuth to bypass local auth override.
+      // Local auth's signInWithOAuth simulates success without actually redirecting.
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+      if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder')) {
+        setOauthError(
+          'Supabase is not configured. GitHub OAuth requires a valid Supabase project.'
+        );
+        setIsRedirecting(false);
+        return;
+      }
+
+      const supabase = createBrowserClient(supabaseUrl, supabaseKey, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+        },
+      });
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'github',
         options: {
           scopes: 'repo',
@@ -78,12 +99,19 @@ export function RepositoryConnectPanel() {
       });
 
       if (error) {
-        setOauthError('Unable to open GitHub authorization. Please try again.');
+        setOauthError(`Unable to open GitHub authorization: ${error.message}`);
         setIsRedirecting(false);
         return;
       }
-    } catch {
-      setOauthError('Unexpected error starting the GitHub connection.');
+
+      // signInWithOAuth returns a URL — ensure we redirect
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      setOauthError(
+        `Unexpected error starting the GitHub connection: ${err instanceof Error ? err.message : 'Unknown error'}`
+      );
       setIsRedirecting(false);
     }
   }, []);
