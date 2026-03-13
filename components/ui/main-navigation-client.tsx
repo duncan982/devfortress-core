@@ -1,15 +1,15 @@
 /**
  * Main Navigation Client Component
  * Client-side navigation logic with authentication awareness
- * Desktop: all links visible in header bar with labels
- * Mobile: compact inline icon-only navigation (no hamburger menu)
+ * Desktop: all links visible in header bar with icons and labels
+ * Mobile: hamburger menu that opens vertical navigation overlay
  */
 
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { ThemeToggleButton } from './theme-toggle';
 import { JobStatusIndicator } from './job-status-indicator';
 import { NotificationBellIndicator } from './notification-bell-indicator';
@@ -34,7 +34,9 @@ export function MainNavigationClient({
 }: MainNavigationClientProps) {
   const pathname = usePathname();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
   const { session, status, isInitialized, signOut } = useAuthSession();
 
   // Use client-side session status, fallback to server-side during initialization
@@ -67,6 +69,20 @@ export function MainNavigationClient({
         document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [userMenuOpen]);
+
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+  }, [mobileMenuOpen]);
+
+  const closeMobileMenu = useCallback(() => {
+    setMobileMenuOpen(false);
+  }, []);
 
   const parseBooleanFlag = (value?: string) => {
     if (!value) {
@@ -252,7 +268,7 @@ export function MainNavigationClient({
 
   return (
     <nav
-      className="sticky top-0 z-50 overflow-x-clip border-b border-neutral-200 bg-neutral-50 transition-colors duration-200 dark:border-neutral-800 dark:bg-neutral-950"
+      className="sticky top-0 z-50 border-b border-neutral-200 bg-neutral-50 transition-colors duration-200 dark:border-neutral-800 dark:bg-neutral-950"
       aria-label="Main navigation"
     >
       <div className="mx-auto max-w-7xl min-w-0 px-4 sm:px-6 lg:px-8">
@@ -459,65 +475,27 @@ export function MainNavigationClient({
             </div>
           </div>
 
-          {/* Mobile: Compact inline icons for all nav + auth (no hamburger) */}
-          <div className="flex items-center gap-0.5 md:hidden overflow-x-auto scrollbar-hide">
-            {/* Nav links as icon-only buttons on mobile */}
-            {navLinks.map(link =>
-              link.external ? (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title={link.label}
-                  className="relative inline-flex items-center justify-center rounded-lg p-1.5 text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
-                >
-                  {link.icon && (
-                    <span className="flex h-5 w-5 items-center justify-center">
-                      {link.icon}
-                    </span>
-                  )}
-                </a>
-              ) : (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  title={link.label}
-                  className={`relative inline-flex items-center justify-center rounded-lg p-1.5 transition-colors ${
-                    isActive(link.href)
-                      ? 'bg-neutral-100 text-primary-600 dark:bg-neutral-800 dark:text-primary-300'
-                      : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100'
-                  }`}
-                >
-                  {link.icon && (
-                    <span className="flex h-5 w-5 items-center justify-center">
-                      {link.icon}
-                    </span>
-                  )}
-                </Link>
-              )
-            )}
-
-            {/* Separator */}
-            <div className="mx-0.5 h-5 w-px shrink-0 bg-neutral-200 dark:bg-neutral-700" />
-
+          {/* Mobile: Hamburger button + essential icons */}
+          <div className="flex items-center gap-1 md:hidden">
             {/* Job Status */}
             {isAuthenticated && <JobStatusIndicator />}
 
             {/* Notification Bell */}
             {isAuthenticated && <NotificationBellIndicator />}
 
-            {/* Auth Section - Mobile */}
-            {!isInitialized ? (
-              <div className="h-7 w-7 animate-pulse rounded-full bg-neutral-200 dark:bg-neutral-700" />
-            ) : !isAuthenticated ? (
-              <Link
-                href="/auth/signin"
-                title="Sign In"
-                className="inline-flex items-center justify-center rounded-lg p-1.5 text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
-              >
+            {/* Theme Toggle */}
+            <ThemeToggleButton />
+
+            {/* Hamburger Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="inline-flex items-center justify-center rounded-lg p-2 text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+              aria-expanded={mobileMenuOpen}
+              aria-label="Toggle navigation menu"
+            >
+              {mobileMenuOpen ? (
                 <svg
-                  className="h-5 w-5"
+                  className="h-6 w-6"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -526,69 +504,195 @@ export function MainNavigationClient({
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
+                    d="M6 18L18 6M6 6l12 12"
                   />
                 </svg>
-              </Link>
-            ) : (
-              <div ref={userMenuRef} className="relative">
-                <button
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="inline-flex items-center justify-center rounded-full h-7 w-7 bg-primary-100 text-xs font-bold text-primary-700 dark:bg-primary-900 dark:text-primary-300 transition-colors hover:bg-primary-200 dark:hover:bg-primary-800"
-                  aria-expanded={userMenuOpen}
-                  aria-haspopup="true"
-                  aria-label="User menu"
-                  title={session?.user?.name || session?.user?.email || 'User'}
+              ) : (
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  {(session?.user?.name || session?.user?.email || 'U')
-                    .charAt(0)
-                    .toUpperCase()}
-                </button>
-
-                {userMenuOpen && (
-                  <div className="absolute right-0 z-50 mt-2 w-48 rounded-lg border border-neutral-200 bg-white py-1 shadow-lg dark:border-neutral-700 dark:bg-neutral-800">
-                    <div className="px-3 py-2 border-b border-neutral-200 dark:border-neutral-700">
-                      <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">
-                        {session?.user?.name || 'User'}
-                      </p>
-                      <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
-                        {session?.user?.email}
-                      </p>
-                    </div>
-                    <Link
-                      href="/dashboard"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="flex w-full items-center px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-700"
-                    >
-                      Dashboard
-                    </Link>
-                    <Link
-                      href="/dashboard/settings"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="flex w-full items-center px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-700"
-                    >
-                      Settings
-                    </Link>
-                    <div className="border-t border-neutral-200 dark:border-neutral-700 my-1" />
-                    <button
-                      onClick={() => {
-                        setUserMenuOpen(false);
-                        signOut();
-                      }}
-                      className="flex w-full items-center px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-700"
-                    >
-                      Sign Out
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Theme Toggle */}
-            <ThemeToggleButton />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                </svg>
+              )}
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 top-16 z-40 md:hidden"
+          aria-label="Mobile navigation menu"
+        >
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/20 dark:bg-black/40"
+            onClick={closeMobileMenu}
+          />
+
+          {/* Menu Panel */}
+          <div
+            ref={mobileMenuRef}
+            className="absolute inset-x-0 top-0 max-h-[calc(100vh-4rem)] overflow-y-auto border-b border-neutral-200 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-900"
+          >
+            <div className="space-y-1 px-4 py-3">
+              {navLinks.map(link =>
+                link.external ? (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={closeMobileMenu}
+                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                  >
+                    {link.icon && (
+                      <span className="flex h-5 w-5 items-center justify-center text-neutral-500 dark:text-neutral-400">
+                        {link.icon}
+                      </span>
+                    )}
+                    <span>{link.label}</span>
+                    <svg
+                      className="ml-auto h-3 w-3 opacity-50"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                      />
+                    </svg>
+                  </a>
+                ) : (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={closeMobileMenu}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                      isActive(link.href)
+                        ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
+                        : 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800'
+                    }`}
+                  >
+                    {link.icon && (
+                      <span className="flex h-5 w-5 items-center justify-center text-neutral-500 dark:text-neutral-400">
+                        {link.icon}
+                      </span>
+                    )}
+                    <span>{link.label}</span>
+                  </Link>
+                )
+              )}
+            </div>
+
+            {/* Auth Section - Mobile Menu */}
+            <div className="border-t border-neutral-200 px-4 py-3 dark:border-neutral-700">
+              {!isInitialized ? (
+                <div className="h-10 animate-pulse rounded-lg bg-neutral-200 dark:bg-neutral-700" />
+              ) : !isAuthenticated ? (
+                <Link
+                  href="/auth/signin"
+                  onClick={closeMobileMenu}
+                  className="flex w-full items-center justify-center rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-700"
+                >
+                  Sign In
+                </Link>
+              ) : (
+                <div className="space-y-1">
+                  <div className="px-3 py-2">
+                    <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                      {session?.user?.name || 'User'}
+                    </p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                      {session?.user?.email}
+                    </p>
+                  </div>
+                  <Link
+                    href="/dashboard"
+                    onClick={closeMobileMenu}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                  >
+                    <svg
+                      className="h-5 w-5 text-neutral-500 dark:text-neutral-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                      />
+                    </svg>
+                    Dashboard
+                  </Link>
+                  <Link
+                    href="/dashboard/settings"
+                    onClick={closeMobileMenu}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                  >
+                    <svg
+                      className="h-5 w-5 text-neutral-500 dark:text-neutral-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                    Settings
+                  </Link>
+                  <button
+                    onClick={() => {
+                      closeMobileMenu();
+                      signOut();
+                    }}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                  >
+                    <svg
+                      className="h-5 w-5 text-neutral-500 dark:text-neutral-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                      />
+                    </svg>
+                    Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </nav>
   );
 }
