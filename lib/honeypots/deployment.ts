@@ -174,7 +174,11 @@ interface VercelDeploymentRequest {
 }
 
 function normalizeWebhookBaseUrl(rawUrl: string): string {
-  const trimmed = rawUrl.trim();
+  // Strip whitespace, newlines, carriage returns, and literal \n sequences
+  const trimmed = rawUrl
+    .trim()
+    .replace(/\\n/g, '')
+    .replace(/[\r\n]/g, '');
 
   if (trimmed.length === 0) {
     throw new Error('Webhook base URL cannot be empty');
@@ -433,6 +437,21 @@ export function generateHoneypotCode(params: {
   files['api/handler.js'] = `const crypto = require('crypto');
 
 /**
+ * Lightweight logging helpers for serverless environment.
+ * These mirror the DevFortress logger interface but just use console.*
+ * since the deployed honeypot has no access to the parent project's logger.
+ */
+function logInfo(message, data) {
+  console.log(JSON.stringify({ level: 'info', message, ...data, ts: new Date().toISOString() }));
+}
+function logWarn(message, data) {
+  console.warn(JSON.stringify({ level: 'warn', message, ...data, ts: new Date().toISOString() }));
+}
+function logError(message, data) {
+  console.error(JSON.stringify({ level: 'error', message, ...data, ts: new Date().toISOString() }));
+}
+
+/**
  * Parse error to a safe format
  */
 function parseUnknownError(error) {
@@ -532,7 +551,8 @@ class EventBuffer {
    * Send a single event to the legacy single-event endpoint
    */
   async sendSingleEvent(event) {
-    const webhookUrl = process.env.APIFORGE_WEBHOOK_URL;
+    const rawWebhookUrl = process.env.APIFORGE_WEBHOOK_URL;
+    const webhookUrl = rawWebhookUrl ? rawWebhookUrl.trim().replace(/\\\\n/g, '').replace(/[\\r\\n]/g, '') : '';
     const webhookSecret = process.env.HONEYPOT_WEBHOOK_SECRET;
     const webhookAuthToken = process.env.HONEYPOT_WEBHOOK_AUTH_TOKEN || process.env.VERCEL_PROTECTION_BYPASS_TOKEN || null;
 
@@ -603,7 +623,9 @@ class EventBuffer {
    * Falls back to individual sends if batch endpoint returns 404
    */
   async sendBatch(events, retryCount = 0) {
-    const webhookUrl = process.env.APIFORGE_WEBHOOK_URL;
+    // Sanitize webhook URL — strip stray newlines/whitespace from env vars
+    const rawWebhookUrl = process.env.APIFORGE_WEBHOOK_URL;
+    const webhookUrl = rawWebhookUrl ? rawWebhookUrl.trim().replace(/\\\\n/g, '').replace(/[\\r\\n]/g, '') : '';
     const webhookSecret = process.env.HONEYPOT_WEBHOOK_SECRET;
     const webhookAuthToken = process.env.HONEYPOT_WEBHOOK_AUTH_TOKEN || process.env.VERCEL_PROTECTION_BYPASS_TOKEN || null;
 
@@ -896,6 +918,15 @@ module.exports = async function handler(req, res) {
     severity,
     reason: path === '/' ? 'Root access' : 'Endpoint accessed: ' + path,
   });
+
+  // CRITICAL: Flush the event buffer BEFORE responding.
+  // Serverless functions are frozen immediately after res.end(),
+  // so the 3-second buffer timer will never fire.
+  try {
+    await eventBuffer.flush();
+  } catch (flushErr) {
+    console.error('[HONEYPOT] Failed to flush events', { error: parseUnknownError(flushErr).message });
+  }
 
   // Return a fake successful response to keep attackers engaged
   res.setHeader('Content-Type', 'application/json');
@@ -1559,7 +1590,14 @@ export async function deployHoneypotWorkflow(
       process.env.APIFORGE_BASE_URL,
       process.env.NEXT_PUBLIC_APP_URL,
       process.env.VERCEL_URL,
-    ].find(value => value && value.trim() !== '' && value !== '--value');
+    ]
+      .map(v =>
+        v
+          ?.trim()
+          .replace(/\\n/g, '')
+          .replace(/[\r\n]/g, '')
+      )
+      .find(value => value && value.trim() !== '' && value !== '--value');
 
     if (!webhookBaseUrl) {
       throw new Error(

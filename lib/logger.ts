@@ -1,4 +1,5 @@
 import type { LogFunction, LoggerLike } from './logger/types';
+import { sanitizeLogData, sanitizeErrorMessage } from './logger/pii-sanitizer';
 
 const isBrowser = typeof window !== 'undefined';
 
@@ -66,8 +67,9 @@ const createServerLogger = async (): Promise<LoggerLike> => {
 
     // Only add file transports in non-serverless environments
     if (!isServerless) {
-      const { default: DailyRotateFile } =
-        await import('winston-daily-rotate-file');
+      const { default: DailyRotateFile } = await import(
+        'winston-daily-rotate-file'
+      );
 
       const logsDir = path.join(process.cwd(), 'logs');
 
@@ -164,14 +166,20 @@ export const logError = async (
   context?: { ip?: string; sessionToken?: string; userId?: string }
 ) => {
   const loggerInstance = await getLogger();
-  loggerInstance.error(message, {
+  const rawData = {
     timestamp: new Date().toISOString(),
-    error: error instanceof Error ? error.message : error,
-    stack: error instanceof Error ? error.stack : undefined,
+    error: error instanceof Error ? sanitizeErrorMessage(error.message) : error,
+    stack:
+      process.env.NODE_ENV === 'production'
+        ? undefined
+        : error instanceof Error
+          ? error.stack
+          : undefined,
     sourceIp: context?.ip,
     sessionToken: context?.sessionToken,
     userId: context?.userId,
-  });
+  };
+  loggerInstance.error(message, sanitizeLogData(rawData));
 };
 
 /**
@@ -187,13 +195,14 @@ export const logWarn = async (
   context?: { ip?: string; sessionToken?: string; userId?: string }
 ) => {
   const loggerInstance = await getLogger();
-  loggerInstance.warn(message, {
+  const rawData = {
     timestamp: new Date().toISOString(),
     data,
     sourceIp: context?.ip,
     sessionToken: context?.sessionToken,
     userId: context?.userId,
-  });
+  };
+  loggerInstance.warn(message, sanitizeLogData(rawData));
 };
 
 /**
@@ -209,13 +218,14 @@ export const logInfo = async (
   context?: { ip?: string; sessionToken?: string; userId?: string }
 ) => {
   const loggerInstance = await getLogger();
-  loggerInstance.info(message, {
+  const rawData = {
     timestamp: new Date().toISOString(),
     data,
     sourceIp: context?.ip,
     sessionToken: context?.sessionToken,
     userId: context?.userId,
-  });
+  };
+  loggerInstance.info(message, sanitizeLogData(rawData));
 };
 
 /**
@@ -231,13 +241,14 @@ export const logDebug = async (
   context?: { ip?: string; sessionToken?: string; userId?: string }
 ) => {
   const loggerInstance = await getLogger();
-  loggerInstance.debug(message, {
+  const rawData = {
     timestamp: new Date().toISOString(),
     data,
     sourceIp: context?.ip,
     sessionToken: context?.sessionToken,
     userId: context?.userId,
-  });
+  };
+  loggerInstance.debug(message, sanitizeLogData(rawData));
 };
 
 /**
@@ -247,5 +258,12 @@ export const logDebug = async (
  */
 export const logHttp = async (message: string, data?: unknown) => {
   const loggerInstance = await getLogger();
-  loggerInstance.http(message, data);
+  loggerInstance.http(message, sanitizeLogData(data));
 };
+
+// Re-export PII sanitizer utilities for use in API routes and components
+export {
+  sanitizeLogData,
+  sanitizeErrorMessage,
+  sanitizeApiResponse,
+} from './logger/pii-sanitizer';

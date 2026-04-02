@@ -173,6 +173,7 @@ export async function createPaymentIntent(
 /**
  * Create Paddle transaction/checkout
  * Paddle is the Merchant of Record — handles VAT, invoicing, global compliance.
+ * Supports both subscription checkouts and one-time credit purchases.
  */
 async function createPaddleIntent(params: {
   amount: number;
@@ -181,8 +182,42 @@ async function createPaddleIntent(params: {
   userId: string;
   metadata: Record<string, string>;
 }): Promise<PaymentIntentResult> {
-  const { createPaddleCheckout } = await import('./paddle-service');
+  const { createPaddleCheckout, createPaddleCreditPurchase } = await import(
+    './paddle-service'
+  );
 
+  // If this is a credit purchase with a named pack, use the one-time transaction flow
+  if (
+    params.metadata.type === 'credit_purchase' &&
+    params.metadata.creditPack
+  ) {
+    const { CreditPack } = await import('./types');
+    const pack = params.metadata
+      .creditPack as (typeof CreditPack)[keyof typeof CreditPack];
+    const result = await createPaddleCreditPurchase({
+      userId: params.userId,
+      userEmail: params.customerEmail,
+      creditPack: pack,
+      successUrl:
+        params.metadata.successUrl ||
+        'https://devfortress.net/dashboard?payment=success',
+    });
+
+    logInfo('Paddle credit purchase transaction created', {
+      transactionId: result.transactionId,
+      creditPack: pack,
+      amount: params.amount,
+    });
+
+    return {
+      provider: PaymentProvider.PADDLE,
+      paymentIntentId: result.transactionId,
+      checkoutUrl: result.checkoutUrl,
+      publicKey: process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN,
+    };
+  }
+
+  // Default: subscription checkout
   const result = await createPaddleCheckout({
     priceId: '', // Will be resolved from tier in paddle-service
     userId: params.userId,

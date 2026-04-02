@@ -128,12 +128,31 @@ const OPENAPI_PATHS = [
 // Core Crawler
 // ============================================================
 
+export interface CrawlOptions {
+  /**
+   * Maximum wall-clock time (ms) the crawl may use.
+   * When exceeded the crawler returns whatever it has found so far.
+   * Default: 25 000 ms (25 s) — leaves headroom inside a 60 s function.
+   */
+  timeBudgetMs?: number;
+  /** AbortSignal propagated from the caller (e.g. Vercel function timeout). */
+  signal?: AbortSignal;
+}
+
 /**
  * Crawl a URL to discover its API surface and resources.
  * Runs all discovery strategies in parallel.
+ *
+ * Accepts an optional `CrawlOptions` to cap wall-clock time so that the
+ * caller (a serverless function with a hard timeout) can retain enough
+ * time for the subsequent batch-scan phase.
  */
-export async function crawlUrl(targetUrl: string): Promise<CrawlResult> {
+export async function crawlUrl(
+  targetUrl: string,
+  options?: CrawlOptions
+): Promise<CrawlResult> {
   const startTime = Date.now();
+  const timeBudgetMs = options?.timeBudgetMs ?? 25_000;
   const errors: string[] = [];
 
   // Normalize URL
@@ -145,17 +164,34 @@ export async function crawlUrl(targetUrl: string): Promise<CrawlResult> {
     throw new Error(`Invalid URL: ${targetUrl}`);
   }
 
-  logInfo('Starting URL crawl', { baseUrl });
+  logInfo('Starting URL crawl', { baseUrl, timeBudgetMs });
+
+  // Derive a per-strategy AbortSignal that fires when the budget expires
+  const budgetController = new AbortController();
+  const budgetTimer = setTimeout(() => budgetController.abort(), timeBudgetMs);
+  // If the caller already supplied an external signal, wire it up too
+  if (options?.signal) {
+    if (options.signal.aborted) {
+      budgetController.abort();
+    } else {
+      options.signal.addEventListener('abort', () => budgetController.abort(), {
+        once: true,
+      });
+    }
+  }
+  const signal = budgetController.signal;
 
   // Run all discovery strategies in parallel
   const [sitemapResult, robotsResult, probeResult, openapiResult, htmlResult] =
     await Promise.allSettled([
-      discoverFromSitemap(baseUrl),
-      discoverFromRobots(baseUrl),
-      probeCommonPaths(baseUrl),
-      discoverOpenApi(baseUrl),
-      discoverFromHtml(baseUrl),
+      discoverFromSitemap(baseUrl, signal),
+      discoverFromRobots(baseUrl, signal),
+      probeCommonPaths(baseUrl, signal),
+      discoverOpenApi(baseUrl, signal),
+      discoverFromHtml(baseUrl, signal),
     ]);
+
+  clearTimeout(budgetTimer);
 
   const endpoints: DiscoveredEndpoint[] = [];
   const sitemapUrls: string[] = [];
@@ -236,19 +272,20 @@ export async function crawlUrl(targetUrl: string): Promise<CrawlResult> {
  * Fetch and parse sitemap.xml for URLs.
  */
 async function discoverFromSitemap(
-  baseUrl: string
+  baseUrl: string,
+  signal?: AbortSignal
 ): Promise<{ urls: string[]; endpoints: DiscoveredEndpoint[] }> {
   const urls: string[] = [];
   const endpoints: DiscoveredEndpoint[] = [];
   const visitedSitemaps = new Set<string>();
 
   async function parseSitemap(sitemapUrl: string): Promise<void> {
-    if (visitedSitemaps.has(sitemapUrl)) {
+    if (visitedSitemaps.has(sitemapUrl) || signal?.aborted) {
       return;
     }
     visitedSitemaps.add(sitemapUrl);
 
-    const response = await fetchWithTimeout(sitemapUrl, 7000);
+    const response = await fetchWithTimeout(sitemapUrl, 5000, signal);
     if (!response.ok) return;
 
     const text = await response.text();
@@ -292,13 +329,18 @@ async function discoverFromSitemap(
  * Fetch and parse robots.txt for disallowed paths and API hints.
  */
 async function discoverFromRobots(
-  baseUrl: string
+  baseUrl: string,
+  signal?: AbortSignal
 ): Promise<{ disallowed: string[]; endpoints: DiscoveredEndpoint[] }> {
   const disallowed: string[] = [];
   const endpoints: DiscoveredEndpoint[] = [];
 
   try {
-    const response = await fetchWithTimeout(`${baseUrl}/robots.txt`, 5000);
+    const response = await fetchWithTimeout(
+      `${baseUrl}/robots.txt`,
+      4000,
+      signal
+    );
     if (!response.ok) return { disallowed, endpoints };
 
     const text = await response.text();
@@ -338,16 +380,21 @@ async function discoverFromRobots(
 
 /**
  * Probe common API paths to see which ones respond.
+ * Limited to first 30 paths to stay within time budget.
  */
 async function probeCommonPaths(
-  baseUrl: string
+  baseUrl: string,
+  signal?: AbortSignal
 ): Promise<DiscoveredEndpoint[]> {
   const endpoints: DiscoveredEndpoint[] = [];
 
-  const probes = COMMON_API_PATHS.map(async path => {
+  // Limit probes to stay within time budget
+  const pathsToProbe = COMMON_API_PATHS.slice(0, 30);
+  const probes = pathsToProbe.map(async path => {
+    if (signal?.aborted) return;
     try {
       const url = `${baseUrl}${path}`;
-      const response = await fetchWithTimeout(url, 5000);
+      const response = await fetchWithTimeout(url, 3000, signal);
 
       // Any non-404 response means the path exists
       if (response.status !== 404) {
@@ -372,14 +419,18 @@ async function probeCommonPaths(
 /**
  * Look for OpenAPI/Swagger specs.
  */
-async function discoverOpenApi(baseUrl: string): Promise<{
+async function discoverOpenApi(
+  baseUrl: string,
+  signal?: AbortSignal
+): Promise<{
   spec: Record<string, unknown>;
   endpoints: DiscoveredEndpoint[];
 } | null> {
   for (const path of OPENAPI_PATHS) {
+    if (signal?.aborted) return null;
     try {
       const url = `${baseUrl}${path}`;
-      const response = await fetchWithTimeout(url, 5000);
+      const response = await fetchWithTimeout(url, 3000, signal);
 
       if (response.ok) {
         const contentType = response.headers.get('content-type') || '';
@@ -443,24 +494,30 @@ async function discoverOpenApi(baseUrl: string): Promise<{
  * Crawl the homepage and internal pages to discover links via HTML parsing.
  * Extracts href/action attributes from anchors, forms, and script/data attributes.
  * Follows internal links one level deep for broader discovery.
+ *
+ * IMPORTANT: Page limit kept low (8) and JS bundle fetches capped (3) to stay
+ * within Vercel Hobby plan function timeout constraints.
  */
 async function discoverFromHtml(
-  baseUrl: string
+  baseUrl: string,
+  signal?: AbortSignal
 ): Promise<DiscoveredEndpoint[]> {
   const endpoints: DiscoveredEndpoint[] = [];
   const visited = new Set<string>();
   const pagesToCrawl = [baseUrl, `${baseUrl}/`];
 
-  // Crawl up to 60 internal pages for broader endpoint discovery
-  const maxPages = 60;
+  // Keep low — each page fetch is sequential and can take up to 5 s
+  const maxPages = 8;
 
   for (let i = 0; i < pagesToCrawl.length && visited.size < maxPages; i++) {
+    if (signal?.aborted) break;
+
     const pageUrl = pagesToCrawl[i];
     if (visited.has(pageUrl)) continue;
     visited.add(pageUrl);
 
     try {
-      const response = await fetchWithTimeout(pageUrl, 8000);
+      const response = await fetchWithTimeout(pageUrl, 5000, signal);
       if (!response.ok) continue;
 
       const contentType = response.headers.get('content-type') || '';
@@ -480,10 +537,12 @@ async function discoverFromHtml(
         }
       }
 
-      const scriptCandidates = scriptUrls.slice(0, 15);
+      // Cap JS bundle fetches — each is sequential and expensive
+      const scriptCandidates = scriptUrls.slice(0, 3);
       for (const scriptUrl of scriptCandidates) {
+        if (signal?.aborted) break;
         try {
-          const scriptRes = await fetchWithTimeout(scriptUrl, 7000);
+          const scriptRes = await fetchWithTimeout(scriptUrl, 4000, signal);
           if (!scriptRes.ok) continue;
           const scriptBody = await scriptRes.text();
 
@@ -645,13 +704,27 @@ function resolveUrl(baseUrl: string, href: string): string | null {
 
 /**
  * Fetch with a timeout to avoid hanging on slow responses.
+ * Optionally accepts an external AbortSignal (e.g. from a time-budget
+ * controller) — the first signal to fire wins.
  */
 async function fetchWithTimeout(
   url: string,
-  timeoutMs: number
+  timeoutMs: number,
+  externalSignal?: AbortSignal
 ): Promise<Response> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  // Wire up external signal so it can also abort this fetch
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      controller.abort();
+    } else {
+      externalSignal.addEventListener('abort', () => controller.abort(), {
+        once: true,
+      });
+    }
+  }
 
   try {
     const response = await fetch(url, {

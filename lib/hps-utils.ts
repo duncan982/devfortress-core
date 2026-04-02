@@ -32,8 +32,11 @@ export async function checkQuota(userId: string): Promise<boolean> {
 
   const tierLimits: Record<string, number> = {
     STARTER: 1,
-    PROFESSIONAL: 5,
-    ENTERPRISE: 20,
+    PRO: 3,
+    TEAM: 10,
+    ENTERPRISE: 10, // Legacy alias for TEAM
+    BUSINESS: 25,
+    ENTERPRISE_PLUS: 100,
   };
   const limit = tierLimits[userData.tier as string] || 0;
 

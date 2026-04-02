@@ -13,12 +13,19 @@ export enum TeamRole {
   VIEWER = 'VIEWER',
 }
 
-// Subscription tier enum (should match Prisma schema)
+// Subscription tier enum (aligned with payments/types.ts SubscriptionTier)
 export enum SubscriptionTier {
   // FREE = 'FREE', // Commented out - free tier removed, targeting paying customers only
   STARTER = 'STARTER',
-  PROFESSIONAL = 'PROFESSIONAL',
+  PRO = 'PRO',
+  /** @deprecated Renamed to TEAM in pricing v3. Kept for backward compatibility. */
   ENTERPRISE = 'ENTERPRISE',
+  /** Team plan ($499/mo) — renamed from Enterprise in pricing v3 */
+  TEAM = 'TEAM',
+  /** Business plan ($2,000/mo) — Coming Soon */
+  BUSINESS = 'BUSINESS',
+  /** Enterprise Plus (custom pricing) — Coming Soon */
+  ENTERPRISE_PLUS = 'ENTERPRISE_PLUS',
 }
 
 export interface PortalSection {
@@ -159,8 +166,11 @@ export class PortalAccessControl {
     const tierHierarchy = {
       // [SubscriptionTier.FREE]: 0, // Commented out - FREE tier removed
       [SubscriptionTier.STARTER]: 1,
-      [SubscriptionTier.PROFESSIONAL]: 2,
-      [SubscriptionTier.ENTERPRISE]: 3,
+      [SubscriptionTier.PRO]: 2,
+      [SubscriptionTier.ENTERPRISE]: 3, // Legacy alias for TEAM
+      [SubscriptionTier.TEAM]: 3,
+      [SubscriptionTier.BUSINESS]: 4,
+      [SubscriptionTier.ENTERPRISE_PLUS]: 5,
     };
 
     return tierHierarchy[userTier] >= tierHierarchy[minTier];
@@ -224,8 +234,8 @@ export class PortalAccessControl {
       case SubscriptionTier.STARTER:
         return {
           maxAPIs: 10,
-          maxHoneypots: 1, // Updated to match SUBSCRIPTION_PRICING
-          maxTeamMembers: 1, // Updated to match seats
+          maxHoneypots: 1,
+          maxTeamMembers: 1,
           maxMonitors: 20,
           apiCallsPerMonth: 10000,
           hasAdvancedSecurity: false,
@@ -233,11 +243,11 @@ export class PortalAccessControl {
           hasCustomDomain: false,
           hasPrioritySupport: false,
         };
-      case SubscriptionTier.PROFESSIONAL:
+      case SubscriptionTier.PRO:
         return {
           maxAPIs: 50,
-          maxHoneypots: 3, // Updated to match PRO tier in SUBSCRIPTION_PRICING
-          maxTeamMembers: 5, // Updated to match seats
+          maxHoneypots: 3,
+          maxTeamMembers: 5,
           maxMonitors: 100,
           apiCallsPerMonth: 100000,
           hasAdvancedSecurity: true,
@@ -245,7 +255,21 @@ export class PortalAccessControl {
           hasCustomDomain: true,
           hasPrioritySupport: false,
         };
+      case SubscriptionTier.TEAM:
       case SubscriptionTier.ENTERPRISE:
+        return {
+          maxAPIs: 250,
+          maxHoneypots: 10,
+          maxTeamMembers: 10,
+          maxMonitors: 500,
+          apiCallsPerMonth: 500000,
+          hasAdvancedSecurity: true,
+          hasAnalytics: true,
+          hasCustomDomain: true,
+          hasPrioritySupport: true,
+        };
+      case SubscriptionTier.BUSINESS:
+      case SubscriptionTier.ENTERPRISE_PLUS:
         return {
           maxAPIs: -1, // Unlimited
           maxHoneypots: -1, // Unlimited

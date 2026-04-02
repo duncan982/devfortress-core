@@ -1,6 +1,13 @@
 /**
  * Breadcrumb Navigation Constants
  * Shared breadcrumb paths for consistent navigation
+ *
+ * Active Defense Feedback Loop (5-Phase Architecture):
+ * 1. BUILD - Generate secure APIs and honeypots
+ * 2. DEFEND - Deploy surveillance and monitor threats
+ * 3. COLLECT - Aggregate threat data from production APIs
+ * 4. LEARN - AI analysis and pattern recognition
+ * 5. PATCH - Apply learned insights to improve protection
  */
 
 export interface BreadcrumbItem {
@@ -17,6 +24,7 @@ export const BREADCRUMB_PATHS = {
   defend: { label: 'DEFEND Phase', href: '/defend' },
   learn: { label: 'LEARN Phase', href: '/learn' },
   collect: { label: 'COLLECT Phase', href: '/collect' },
+  patch: { label: 'PATCH Phase', href: '/patch' },
   accountManagement: { label: 'Account & Management', href: '/dashboard' },
 
   // DEFEND Phase sub-pages - unified navigation

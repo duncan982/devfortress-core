@@ -413,20 +413,26 @@ View all honeypot activity in real-time:
         slug: 'billing-subscriptions',
         content: `# Billing & Subscriptions
 
-All billing is handled through GitHub Marketplace.
+All billing for developer plans is handled through Paddle. Enterprise plans use annual invoice/PO.
 
-## Plans
+## Developer & Team Plans (Self-serve via Paddle)
 
-- **Starter**: $69/month - 25 API generations, 1 honeypot
-- **Pro**: $129/month - 60 API generations, 3 honeypots
-- **Enterprise**: $299/user/month - 250 API generations, 10+ honeypots
+- **Starter**: $99/month - 25 API generations, 1 honeypot, 50K events, alerts only
+- **Pro**: $199/month - 60 API generations, 3 honeypots, 500K events, 500 automated actions
+- **Team**: $499/month - 250 API generations, 10 honeypots, 5M events, 5K actions, SSO/SAML
+
+## Enterprise Plans (Coming Soon — Annual billing)
+
+- **Business**: From $2,000/month - 100 API endpoints, 25 honeypots, mTLS, SIEM, unlimited actions
+- **Enterprise**: From $5,000/month - 500 API endpoints, dedicated CSM, PCI-DSS/HIPAA compliance
+- **Enterprise Plus**: Custom pricing - On-premise, multi-region, dedicated security engineer
 
 ## Upgrading/Downgrading
 
-Manage your subscription through GitHub Marketplace:
-1. Go to github.com/marketplace
-2. Find VortexSecure
-3. Click "Edit your plan"
+Manage your subscription through Paddle or contact us:
+1. Go to your DevFortress dashboard
+2. Navigate to Settings → Subscription
+3. Click "Manage Plan"
 4. Choose new plan
 
 ## Subscription Required

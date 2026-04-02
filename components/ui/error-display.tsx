@@ -412,20 +412,20 @@ export function ErrorDisplay({
   // Full variant
   return (
     <div
-      className={`rounded-xl border border-red-200 bg-white p-6 shadow-sm dark:border-red-800 dark:bg-gray-900 ${className}`}
+      className={`rounded-xl border border-red-200 bg-white p-6 shadow-sm dark:border-red-800/50 dark:bg-neutral-900 ${className}`}
     >
       <div className="text-center">
         <span className="text-5xl">⚠️</span>
-        <h2 className="mt-4 text-2xl font-bold text-gray-900 dark:text-white">
+        <h2 className="mt-4 text-2xl font-bold text-neutral-900 dark:text-white">
           {errorInfo.message}
         </h2>
         {errorInfo.code && (
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
             Error code: {errorInfo.code}
           </p>
         )}
         {showDetails && errorInfo.details && (
-          <p className="mx-auto mt-4 max-w-md text-gray-600 dark:text-gray-300">
+          <p className="mx-auto mt-4 max-w-md text-neutral-600 dark:text-neutral-300">
             {errorInfo.details}
           </p>
         )}
@@ -434,19 +434,19 @@ export function ErrorDisplay({
       {/* Recovery Options */}
       {showRecovery && errorInfo.recoveryOptions && (
         <div className="mt-8">
-          <h3 className="mb-4 text-center text-sm font-medium text-gray-500 dark:text-gray-400">
+          <h3 className="mb-4 text-center text-sm font-medium text-neutral-500 dark:text-neutral-400">
             What you can do:
           </h3>
           <div className="grid gap-4 md:grid-cols-2">
             {errorInfo.recoveryOptions.map((option, index) => (
               <div
                 key={index}
-                className="rounded-lg border border-gray-200 p-4 dark:border-gray-700"
+                className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-700"
               >
-                <h4 className="font-semibold text-gray-900 dark:text-white">
+                <h4 className="font-semibold text-neutral-900 dark:text-white">
                   {option.title}
                 </h4>
-                <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
                   {option.description}
                 </p>
                 {option.action && (
@@ -486,7 +486,7 @@ export function ErrorDisplay({
         )}
         <Link
           href="/dashboard"
-          className="rounded-lg border border-gray-300 px-6 py-2.5 font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+          className="rounded-lg border border-neutral-300 px-6 py-2.5 font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-600 dark:text-neutral-300 dark:hover:bg-neutral-800"
         >
           Go to Dashboard
         </Link>
@@ -496,13 +496,13 @@ export function ErrorDisplay({
       <div className="mt-6 text-center">
         <button
           onClick={() => setExpanded(!expanded)}
-          className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          className="text-sm text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
         >
           {expanded ? 'Hide' : 'Show'} technical details
         </button>
         {expanded && (
-          <div className="mt-4 rounded-lg bg-gray-100 p-4 text-left dark:bg-gray-800">
-            <pre className="overflow-auto text-xs text-gray-600 dark:text-gray-400">
+          <div className="mt-4 rounded-lg bg-neutral-100 p-4 text-left dark:bg-neutral-800">
+            <pre className="overflow-auto text-xs text-neutral-600 dark:text-neutral-400">
               {JSON.stringify(errorInfo, null, 2)}
             </pre>
           </div>

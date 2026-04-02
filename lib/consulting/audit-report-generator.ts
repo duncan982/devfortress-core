@@ -11,7 +11,9 @@
 import { prisma } from '@core/lib/prisma';
 import { logInfo, logError } from '@core/lib/logger';
 import { crawlUrl } from './url-crawler';
+import type { CrawlOptions } from './url-crawler';
 import { batchScanEndpoints, type BatchScanResult } from './batch-scanner';
+import type { ScanOptions } from './batch-scanner';
 import { updateJobProgress, completeJob, failJob } from './job-queue';
 import type { SubscriptionPlan } from '@prisma/client';
 
@@ -26,6 +28,13 @@ export interface AuditReportInput {
   clientId?: string;
   jobId?: string;
   plan: SubscriptionPlan;
+  /**
+   * Total wall-clock time (ms) available for the entire audit.
+   * When running inside a serverless function with a hard timeout,
+   * pass the remaining budget here so the crawler + scanner stay
+   * within limits.  Default: 45 000 ms.
+   */
+  timeBudgetMs?: number;
 }
 
 export interface AuditReportData {
@@ -64,8 +73,11 @@ export interface AuditReportData {
 
 const SCAN_CONCURRENCY: Record<SubscriptionPlan, number> = {
   STARTER: 1,
-  PRO: 5,
-  ENTERPRISE: 25,
+  PRO: 3,
+  ENTERPRISE: 10, // Legacy alias for TEAM
+  TEAM: 10,
+  BUSINESS: 25,
+  ENTERPRISE_PLUS: 50,
 };
 
 // ============================================================
@@ -86,6 +98,11 @@ export async function generateAuditReport(
   input: AuditReportInput
 ): Promise<AuditReportData> {
   const { targetUrl, userId, clientId, jobId, plan } = input;
+  const totalBudget = input.timeBudgetMs ?? 45_000;
+  const auditStart = Date.now();
+
+  /** ms remaining in the overall budget */
+  const remaining = () => Math.max(0, totalBudget - (Date.now() - auditStart));
 
   try {
     // Step 1: Crawl URL if provided
@@ -93,9 +110,17 @@ export async function generateAuditReport(
 
     if (targetUrl) {
       if (jobId) await updateJobProgress(jobId, 5);
-      logInfo('Audit: crawling target URL', { targetUrl });
+      logInfo('Audit: crawling target URL', {
+        targetUrl,
+        budgetRemaining: remaining(),
+      });
 
-      const crawlResult = await crawlUrl(targetUrl);
+      // Allocate ~40% of remaining budget to crawl, leave rest for scan + report
+      const crawlBudget = Math.min(18_000, Math.floor(remaining() * 0.4));
+      const crawlOptions: CrawlOptions = {
+        timeBudgetMs: Math.max(5000, crawlBudget),
+      };
+      const crawlResult = await crawlUrl(targetUrl, crawlOptions);
       if (jobId) await updateJobProgress(jobId, 20);
 
       // Step 2: Batch scan endpoints
@@ -103,7 +128,17 @@ export async function generateAuditReport(
       logInfo('Audit: scanning endpoints', {
         count: crawlResult.endpoints.length,
         concurrency,
+        budgetRemaining: remaining(),
       });
+
+      // Allocate ~70% of remaining budget to scan, keep 8 s for report generation + DB
+      const scanBudget = Math.min(22_000, remaining() - 8_000);
+      const scanOptions: ScanOptions = {
+        timeBudgetMs: Math.max(5000, scanBudget),
+        maxEndpoints: 15,
+        // AI analysis is expensive (OpenAI call per endpoint) — skip for header-only pass
+        skipAIAnalysis: plan === 'STARTER',
+      };
 
       scanResult = await batchScanEndpoints(
         crawlResult,
@@ -115,7 +150,8 @@ export async function generateAuditReport(
               const pct = 20 + Math.round((scanned / total) * 50);
               updateJobProgress(jobId, pct).catch(() => {});
             }
-          : undefined
+          : undefined,
+        scanOptions
       );
 
       if (jobId) await updateJobProgress(jobId, 70);

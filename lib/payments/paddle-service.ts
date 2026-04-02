@@ -15,7 +15,7 @@
  */
 
 import { logInfo, logError, logWarn } from '../logger';
-import { SubscriptionTier } from './types';
+import { SubscriptionTier, CreditPack, ProAddon } from './types';
 
 // ============================================================
 // Types
@@ -72,6 +72,35 @@ export interface PaddleSubscriptionEvent {
     action: string;
     effectiveAt: string;
   } | null;
+  /** One-time purchase metadata (credit packs) */
+  purchaseType?: 'subscription' | 'credit_purchase' | 'addon';
+  creditPack?: CreditPack;
+  creditsAmount?: number;
+  addonId?: ProAddon;
+  addonQuantity?: number;
+}
+
+// ============================================================
+// One-time purchase types (credit packs, add-ons)
+// ============================================================
+
+export interface PaddleCreditPurchaseParams {
+  userId: string;
+  userEmail: string;
+  creditPack: CreditPack;
+  successUrl: string;
+  cancelUrl?: string;
+  customData?: Record<string, string>;
+}
+
+export interface PaddleAddonCheckoutParams {
+  userId: string;
+  userEmail: string;
+  addonId: ProAddon;
+  quantity: number;
+  subscriptionId: string; // Paddle subscription ID to add items to
+  successUrl: string;
+  customData?: Record<string, string>;
 }
 
 // ============================================================
@@ -88,7 +117,14 @@ function getPaddlePriceId(tier: SubscriptionTier): string {
     [SubscriptionTier.FREE]: '',
     [SubscriptionTier.STARTER]: process.env.PADDLE_PRICE_STARTER || '',
     [SubscriptionTier.PRO]: process.env.PADDLE_PRICE_PRO || '',
-    [SubscriptionTier.ENTERPRISE]: process.env.PADDLE_PRICE_ENTERPRISE || '',
+    [SubscriptionTier.ENTERPRISE]: process.env.PADDLE_PRICE_ENTERPRISE || '', // Legacy alias for TEAM
+    [SubscriptionTier.TEAM]:
+      process.env.PADDLE_PRICE_TEAM ||
+      process.env.PADDLE_PRICE_ENTERPRISE ||
+      '',
+    [SubscriptionTier.BUSINESS]: process.env.PADDLE_PRICE_BUSINESS || '',
+    [SubscriptionTier.ENTERPRISE_PLUS]:
+      process.env.PADDLE_PRICE_ENTERPRISE_PLUS || '',
   };
 
   const priceId = prices[tier];
@@ -96,6 +132,57 @@ function getPaddlePriceId(tier: SubscriptionTier): string {
     throw new Error(
       `Paddle price ID not configured for tier: ${tier}. ` +
         `Set PADDLE_PRICE_${tier} in your environment variables.`
+    );
+  }
+  return priceId;
+}
+
+/**
+ * Map credit packs to Paddle price IDs (one-time products).
+ * Set these in environment variables:
+ *   PADDLE_PRICE_CREDITS_SMALL, PADDLE_PRICE_CREDITS_MEDIUM,
+ *   PADDLE_PRICE_CREDITS_LARGE, PADDLE_PRICE_CREDITS_MEGA
+ */
+function getPaddleCreditPriceId(pack: CreditPack): string {
+  const prices: Record<CreditPack, string> = {
+    [CreditPack.SMALL]: process.env.PADDLE_PRICE_CREDITS_SMALL || '',
+    [CreditPack.MEDIUM]: process.env.PADDLE_PRICE_CREDITS_MEDIUM || '',
+    [CreditPack.LARGE]: process.env.PADDLE_PRICE_CREDITS_LARGE || '',
+    [CreditPack.MEGA]: process.env.PADDLE_PRICE_CREDITS_MEGA || '',
+  };
+
+  const priceId = prices[pack];
+  if (!priceId) {
+    throw new Error(
+      `Paddle price ID not configured for credit pack: ${pack}. ` +
+        `Set PADDLE_PRICE_CREDITS_${pack} in your environment variables.`
+    );
+  }
+  return priceId;
+}
+
+/**
+ * Map pro add-ons to Paddle price IDs (recurring items added to subscriptions).
+ * Set these in environment variables:
+ *   PADDLE_PRICE_ADDON_SEAT, PADDLE_PRICE_ADDON_APP,
+ *   PADDLE_PRICE_ADDON_HONEYPOT, PADDLE_PRICE_ADDON_SSO,
+ *   PADDLE_PRICE_ADDON_COMPLIANCE, PADDLE_PRICE_ADDON_EVENTS
+ */
+function getPaddleAddonPriceId(addon: ProAddon): string {
+  const prices: Record<ProAddon, string> = {
+    [ProAddon.EXTRA_SEAT]: process.env.PADDLE_PRICE_ADDON_SEAT || '',
+    [ProAddon.EXTRA_APP]: process.env.PADDLE_PRICE_ADDON_APP || '',
+    [ProAddon.EXTRA_HONEYPOT]: process.env.PADDLE_PRICE_ADDON_HONEYPOT || '',
+    [ProAddon.SSO_SAML]: process.env.PADDLE_PRICE_ADDON_SSO || '',
+    [ProAddon.COMPLIANCE_PACK]: process.env.PADDLE_PRICE_ADDON_COMPLIANCE || '',
+    [ProAddon.EXTRA_EVENTS]: process.env.PADDLE_PRICE_ADDON_EVENTS || '',
+  };
+
+  const priceId = prices[addon];
+  if (!priceId) {
+    throw new Error(
+      `Paddle price ID not configured for add-on: ${addon}. ` +
+        `Set the corresponding PADDLE_PRICE_ADDON_* environment variable.`
     );
   }
   return priceId;
@@ -209,6 +296,181 @@ export async function createPaddleCheckout(
     logError('Failed to create Paddle checkout', {
       error,
       userId: params.userId,
+    });
+    throw error;
+  }
+}
+
+/**
+ * Create a one-time Paddle transaction for AI credit/token pack purchase.
+ * Uses Paddle's one-time pricing (not subscriptions).
+ */
+export async function createPaddleCreditPurchase(
+  params: PaddleCreditPurchaseParams
+): Promise<PaddleCheckoutResult> {
+  const config = getPaddleConfig();
+  const baseUrl = getPaddleBaseUrl(config.environment);
+
+  const priceId = getPaddleCreditPriceId(params.creditPack);
+
+  const { CREDIT_PACKS } = await import('./types');
+  const packInfo = CREDIT_PACKS[params.creditPack];
+
+  const body: Record<string, unknown> = {
+    items: [{ price_id: priceId, quantity: 1 }],
+    customer: {
+      email: params.userEmail,
+    },
+    custom_data: {
+      userId: params.userId,
+      purchaseType: 'credit_purchase',
+      creditPack: params.creditPack,
+      creditsAmount: String(packInfo.credits),
+      ...params.customData,
+    },
+    checkout: {
+      url: params.successUrl,
+    },
+  };
+
+  try {
+    const response = await fetch(`${baseUrl}/transactions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logError('Paddle credit purchase creation failed', {
+        status: response.status,
+        error: errorText,
+      });
+      throw new Error(`Paddle API error: ${response.status} — ${errorText}`);
+    }
+
+    const data = await response.json();
+    const transaction = data.data;
+
+    logInfo('Paddle credit purchase created', {
+      transactionId: transaction.id,
+      userId: params.userId,
+      creditPack: params.creditPack,
+      credits: packInfo.credits,
+      price: packInfo.price,
+    });
+
+    return {
+      transactionId: transaction.id,
+      checkoutUrl: transaction.checkout?.url || undefined,
+      status: transaction.status,
+    };
+  } catch (error) {
+    logError('Failed to create Paddle credit purchase', {
+      error,
+      userId: params.userId,
+      creditPack: params.creditPack,
+    });
+    throw error;
+  }
+}
+
+/**
+ * Add a recurring add-on item to an existing Paddle subscription.
+ * Uses Paddle's subscription update API to add line items.
+ */
+export async function createPaddleAddonCheckout(
+  params: PaddleAddonCheckoutParams
+): Promise<void> {
+  const config = getPaddleConfig();
+  const baseUrl = getPaddleBaseUrl(config.environment);
+
+  const addonPriceId = getPaddleAddonPriceId(params.addonId);
+
+  try {
+    // First, get the current subscription to preserve existing items
+    const subResponse = await fetch(
+      `${baseUrl}/subscriptions/${params.subscriptionId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${config.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!subResponse.ok) {
+      const errorText = await subResponse.text();
+      throw new Error(
+        `Failed to fetch subscription: ${subResponse.status} — ${errorText}`
+      );
+    }
+
+    const subData = await subResponse.json();
+    const currentItems: Array<{ price_id: string; quantity: number }> = (
+      subData.data.items || []
+    ).map((item: { price: { id: string }; quantity: number }) => ({
+      price_id: item.price.id,
+      quantity: item.quantity,
+    }));
+
+    // Check if this addon price already exists — update quantity instead
+    const existingIdx = currentItems.findIndex(
+      item => item.price_id === addonPriceId
+    );
+    if (existingIdx >= 0) {
+      currentItems[existingIdx].quantity = params.quantity;
+    } else if (params.quantity > 0) {
+      currentItems.push({ price_id: addonPriceId, quantity: params.quantity });
+    }
+
+    // Remove items with 0 quantity
+    const updatedItems = currentItems.filter(item => item.quantity > 0);
+
+    const response = await fetch(
+      `${baseUrl}/subscriptions/${params.subscriptionId}`,
+      {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${config.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: updatedItems,
+          proration_billing_mode: 'prorated_immediately',
+          custom_data: {
+            userId: params.userId,
+            lastAddonChange: params.addonId,
+            addonQuantity: String(params.quantity),
+            ...params.customData,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logError('Paddle add-on update failed', {
+        status: response.status,
+        error: errorText,
+      });
+      throw new Error(`Paddle API error: ${response.status} — ${errorText}`);
+    }
+
+    logInfo('Paddle subscription add-on updated', {
+      subscriptionId: params.subscriptionId,
+      userId: params.userId,
+      addonId: params.addonId,
+      quantity: params.quantity,
+    });
+  } catch (error) {
+    logError('Failed to update Paddle subscription add-on', {
+      error,
+      userId: params.userId,
+      addonId: params.addonId,
     });
     throw error;
   }
@@ -395,6 +657,20 @@ export function parsePaddleWebhookEvent(
         | { action: string; effectiveAt: string }
         | null
         | undefined,
+      // One-time purchase metadata
+      purchaseType:
+        (customData.purchaseType as
+          | 'subscription'
+          | 'credit_purchase'
+          | 'addon') || undefined,
+      creditPack: customData.creditPack as CreditPack | undefined,
+      creditsAmount: customData.creditsAmount
+        ? parseInt(customData.creditsAmount, 10)
+        : undefined,
+      addonId: customData.lastAddonChange as ProAddon | undefined,
+      addonQuantity: customData.addonQuantity
+        ? parseInt(customData.addonQuantity, 10)
+        : undefined,
     };
   } catch (error) {
     logError('Failed to parse Paddle webhook event', { error });

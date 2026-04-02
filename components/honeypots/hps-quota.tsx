@@ -34,11 +34,15 @@ export default function HPSQuota() {
       const res = await fetch('/api/hps/buy-credits', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: 10 }), // Example: buy 10 credits
+        body: JSON.stringify({ amount: 10 }),
       });
       if (res.ok) {
         const { url } = await res.json();
-        window.location.href = url; // Redirect to Stripe
+        if (url) window.location.href = url;
+      } else {
+        const data = await res.json();
+        logError('Buy credits unavailable', data);
+        alert(data.message || 'Credit purchases are temporarily unavailable.');
       }
     } catch (error) {
       logError('Failed to buy credits', error);

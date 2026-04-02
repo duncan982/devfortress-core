@@ -2,10 +2,12 @@
  * Quota Enforcement Service
  * Enforces tier-based limits for API generations and honeypots
  *
- * Pricing Tiers (aligned with SUBSCRIPTION_PRICING):
- * - STARTER ($99/mo): 25 API generations, 1 honeypot
- * - PRO ($199/mo): 60 API generations, 3 honeypots
- * - ENTERPRISE ($499/mo): 250 API generations, 10+ honeypots
+ * Pricing Tiers (aligned with devfortress-pricing-3.html, 6-tier model):
+ * - STARTER ($99/mo): 25 API generations, 1 honeypot, alerts only (no automated actions)
+ * - PRO ($199/mo): 60 API generations, 3 honeypots, 500 automated actions/mo
+ * - TEAM ($499/mo): 250 API generations, 10 honeypots, 5K actions/mo
+ * - BUSINESS ($2K/mo): 500 API generations, 25 honeypots, unlimited actions (Coming Soon)
+ * - ENTERPRISE_PLUS (custom): Unlimited everything (Coming Soon)
  */
 
 import { SubscriptionPlan, SubscriptionStatus } from '@prisma/client';
@@ -16,11 +18,16 @@ import { getUserTeams, getTeamMembers } from '@core/lib/teams/team-service';
 
 /**
  * Tier limits for API generations (per billing cycle/month)
+ * Note: Uses Prisma SubscriptionPlan enum (STARTER/PRO/ENTERPRISE/TEAM/BUSINESS/ENTERPRISE_PLUS)
+ * ENTERPRISE in Prisma maps to "Team" plan in pricing v3
  */
 export const GENERATION_LIMITS: Record<SubscriptionPlan, number> = {
   STARTER: 25,
   PRO: 60,
-  ENTERPRISE: 250,
+  ENTERPRISE: 250, // "Team" plan in pricing v3
+  TEAM: 250,
+  BUSINESS: 500,
+  ENTERPRISE_PLUS: -1, // Unlimited
 };
 
 /**
@@ -29,7 +36,10 @@ export const GENERATION_LIMITS: Record<SubscriptionPlan, number> = {
 export const HONEYPOT_LIMITS: Record<SubscriptionPlan, number> = {
   STARTER: 1,
   PRO: 3,
-  ENTERPRISE: 10,
+  ENTERPRISE: 10, // "Team" plan in pricing v3
+  TEAM: 10,
+  BUSINESS: 25,
+  ENTERPRISE_PLUS: -1, // Unlimited
 };
 
 /**
@@ -38,8 +48,25 @@ export const HONEYPOT_LIMITS: Record<SubscriptionPlan, number> = {
  */
 export const INSIGHT_LIMITS: Record<SubscriptionPlan, number> = {
   STARTER: 10, // 10 insight generations per month
-  PRO: 50, // 50 insight generations per month
-  ENTERPRISE: 200, // 200 insight generations per month
+  PRO: 100, // Updated: 100 per month (was 50, aligned with pricing HTML "AI insights 100/mo")
+  ENTERPRISE: 200, // 200 insight generations per month ("Team" plan)
+  TEAM: 200,
+  BUSINESS: 500,
+  ENTERPRISE_PLUS: -1, // Unlimited
+};
+
+/**
+ * Tier limits for automated response actions (per billing cycle/month)
+ * Starter = 0 (alerts only, no automated actions)
+ * -1 = unlimited
+ */
+export const AUTOMATED_ACTION_LIMITS: Record<SubscriptionPlan, number> = {
+  STARTER: 0, // Alert only — no automated response
+  PRO: 500, // 500 automated actions per month
+  ENTERPRISE: 5_000, // "Team" plan: 5,000 actions per month
+  TEAM: 5_000,
+  BUSINESS: -1, // Unlimited
+  ENTERPRISE_PLUS: -1, // Unlimited
 };
 
 export interface QuotaCheckResult {

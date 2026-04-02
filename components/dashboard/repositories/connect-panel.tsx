@@ -50,11 +50,47 @@ export function RepositoryConnectPanel() {
   const [oauthError, setOauthError] = useState<string | null>(null);
   const [selectedRepos, setSelectedRepos] = useState<Set<number>>(new Set());
   const [activeTab, setActiveTab] = useState<'connect' | 'manage'>('connect');
+  const [githubConnected, setGithubConnected] = useState<boolean | null>(null);
 
   const hasRepos = Array.isArray(state.repos) && state.repos.length > 0;
   const hasConnectedRepos =
     Array.isArray(connectedState.repositories) &&
     connectedState.repositories.length > 0;
+
+  // Detect GitHub connection status
+  useEffect(() => {
+    async function checkGitHubStatus() {
+      try {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        if (
+          !supabaseUrl ||
+          !supabaseKey ||
+          supabaseUrl.includes('placeholder')
+        ) {
+          setGithubConnected(false);
+          return;
+        }
+        const supabase = createBrowserClient(supabaseUrl, supabaseKey, {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true,
+          },
+        });
+        const { data } = await supabase.auth.getSession();
+        const identities = data?.session?.user?.identities || [];
+        const hasGithub = identities.some(
+          (id: { provider?: string }) => id.provider === 'github'
+        );
+        setGithubConnected(hasGithub);
+      } catch {
+        // Can't determine — will let fetch attempt reveal status
+        setGithubConnected(false);
+      }
+    }
+    checkGitHubStatus();
+  }, []);
 
   useEffect(() => {
     // Load connected repositories on mount
@@ -63,6 +99,27 @@ export function RepositoryConnectPanel() {
       connectedAction(formData);
     });
   }, [connectedAction]);
+
+  // Auto-refresh connected repos after successful connect
+  useEffect(() => {
+    if (connectState.success || bulkConnectState.success) {
+      startTransition(() => {
+        const formData = new FormData();
+        connectedAction(formData);
+      });
+    }
+  }, [connectState.success, bulkConnectState.success, connectedAction]);
+
+  // Auto-fetch repos on mount only if GitHub account is connected
+  useEffect(() => {
+    if (githubConnected === true && !hasRepos) {
+      startTransition(() => {
+        const formData = new FormData();
+        formAction(formData);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [githubConnected]);
 
   const handleGitHubConnect = useCallback(async () => {
     setOauthError(null);
@@ -94,7 +151,7 @@ export function RepositoryConnectPanel() {
         provider: 'github',
         options: {
           scopes: 'repo',
-          redirectTo: `${location.origin}/auth/callback`,
+          redirectTo: `${location.origin}/auth/callback?next=/dashboard/repositories`,
         },
       });
 
@@ -117,22 +174,26 @@ export function RepositoryConnectPanel() {
   }, []);
 
   const handleConnectRepo = useCallback(
-    async (repoId: number) => {
-      const formData = new FormData();
-      formData.append('repoId', repoId.toString());
-      connectAction(formData);
+    (repoId: number) => {
+      startTransition(() => {
+        const formData = new FormData();
+        formData.append('repoId', repoId.toString());
+        connectAction(formData);
+      });
     },
     [connectAction]
   );
 
-  const handleConnectAll = useCallback(async () => {
+  const handleConnectAll = useCallback(() => {
     if (selectedRepos.size === 0) return;
 
-    const formData = new FormData();
-    selectedRepos.forEach(repoId => {
-      formData.append('repoIds', repoId.toString());
+    startTransition(() => {
+      const formData = new FormData();
+      selectedRepos.forEach(repoId => {
+        formData.append('repoIds', repoId.toString());
+      });
+      bulkConnectAction(formData);
     });
-    bulkConnectAction(formData);
   }, [selectedRepos, bulkConnectAction]);
 
   const handleSelectRepo = useCallback((repoId: number, checked: boolean) => {
@@ -206,29 +267,100 @@ export function RepositoryConnectPanel() {
 
       {activeTab === 'connect' && (
         <>
-          <div className="space-y-4">
-            <button
-              type="button"
-              onClick={handleGitHubConnect}
-              disabled={isRedirecting}
-              className="w-full rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-70"
+          {/* Step indicator */}
+          <div className="mb-6 flex items-center gap-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+            <div
+              className={`flex items-center gap-1.5 ${githubConnected ? 'text-green-600 dark:text-green-400' : 'text-primary-600 dark:text-primary-400'}`}
             >
-              {isRedirecting
-                ? 'Redirecting to GitHub…'
-                : 'Connect GitHub via Supabase'}
-            </button>
-
-            <form action={formAction} className="space-y-4">
-              <button
-                type="submit"
-                disabled={isPending}
-                className="w-full rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+              <span
+                className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white ${githubConnected ? 'bg-green-500' : 'bg-primary-600'}`}
               >
-                {isPending
-                  ? 'Fetching repositories…'
-                  : 'Fetch GitHub repositories'}
-              </button>
-            </form>
+                {githubConnected ? '✓' : '1'}
+              </span>
+              Connect Account
+            </div>
+            <span className="text-neutral-300 dark:text-neutral-600">→</span>
+            <div
+              className={`flex items-center gap-1.5 ${hasRepos ? 'text-green-600 dark:text-green-400' : githubConnected ? 'text-primary-600 dark:text-primary-400' : ''}`}
+            >
+              <span
+                className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white ${hasRepos ? 'bg-green-500' : githubConnected ? 'bg-primary-600' : 'bg-neutral-300 dark:bg-neutral-600'}`}
+              >
+                {hasRepos ? '✓' : '2'}
+              </span>
+              Select Repos
+            </div>
+            <span className="text-neutral-300 dark:text-neutral-600">→</span>
+            <div
+              className={`flex items-center gap-1.5 ${hasConnectedRepos ? 'text-green-600 dark:text-green-400' : ''}`}
+            >
+              <span
+                className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white ${hasConnectedRepos ? 'bg-green-500' : 'bg-neutral-300 dark:bg-neutral-600'}`}
+              >
+                {hasConnectedRepos ? '✓' : '3'}
+              </span>
+              Manage
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {/* Show GitHub connection status and appropriate button */}
+            {githubConnected === true ? (
+              <div className="flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 dark:border-green-800 dark:bg-green-950/30">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-xs text-white">
+                  ✓
+                </span>
+                <div className="flex-1">
+                  <span className="text-sm font-medium text-green-800 dark:text-green-300">
+                    GitHub account connected
+                  </span>
+                  <p className="text-xs text-green-600 dark:text-green-400">
+                    Your GitHub identity is linked. Repositories are
+                    auto-fetched below.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleGitHubConnect}
+                  disabled={isRedirecting}
+                  className="rounded-lg border border-green-300 px-3 py-1 text-xs font-medium text-green-700 hover:bg-green-100 dark:border-green-700 dark:text-green-300 dark:hover:bg-green-900/30"
+                >
+                  Reconnect
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={handleGitHubConnect}
+                  disabled={isRedirecting}
+                  className="w-full rounded-xl bg-primary-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {isRedirecting
+                    ? 'Redirecting to GitHub…'
+                    : '🔗 Step 1: Connect GitHub Account'}
+                </button>
+                <p className="text-center text-xs text-neutral-500 dark:text-neutral-400">
+                  This will redirect you to GitHub to authorize access to your
+                  repositories.
+                </p>
+              </div>
+            )}
+
+            {/* Only show Refresh Repos button if GitHub is connected */}
+            {githubConnected === true && (
+              <form action={formAction} className="space-y-4">
+                <button
+                  type="submit"
+                  disabled={isPending}
+                  className="w-full rounded-xl bg-neutral-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+                >
+                  {isPending
+                    ? 'Fetching repositories…'
+                    : '🔄 Refresh Repository List'}
+                </button>
+              </form>
+            )}
           </div>
 
           {state.error ? (

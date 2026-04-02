@@ -4,7 +4,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { SubscriptionPlan } from '@prisma/client';
 
@@ -29,6 +29,7 @@ export default function HoneypotCreateForm({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -176,7 +177,9 @@ export default function HoneypotCreateForm({
             id="apiProjectId"
             value={formData.apiProjectId}
             onChange={e =>
-              setFormData({ ...formData, apiProjectId: e.target.value })
+              startTransition(() => {
+                setFormData({ ...formData, apiProjectId: e.target.value });
+              })
             }
             className="w-full px-4 py-2 border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-neutral-900 dark:text-neutral-100"
             disabled={loading}

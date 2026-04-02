@@ -72,6 +72,21 @@ const PLAN_RATE_LIMITS: Record<SubscriptionTier, RoleRateLimitConfig> = {
     maxRequests: 500,
     abuseThreshold: 250,
   },
+  [SubscriptionTier.TEAM]: {
+    windowMs: 60 * 1000,
+    maxRequests: 500,
+    abuseThreshold: 250,
+  },
+  [SubscriptionTier.BUSINESS]: {
+    windowMs: 60 * 1000,
+    maxRequests: 2000,
+    abuseThreshold: 1000,
+  },
+  [SubscriptionTier.ENTERPRISE_PLUS]: {
+    windowMs: 60 * 1000,
+    maxRequests: 5000,
+    abuseThreshold: 2500,
+  },
 };
 
 const HONEYPOT_DAILY_LIMIT = 5; // Admin honeypot creation limit per day

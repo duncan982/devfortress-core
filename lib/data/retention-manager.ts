@@ -5,7 +5,7 @@
  * Retention Policies:
  * - FREE/STARTER: 7 days
  * - PRO: 30 days
- * - ENTERPRISE: 90 days
+ * - ENTERPRISE: 365 days (1 year)
  *
  * GDPR Compliance:
  * - Data export
@@ -24,7 +24,10 @@ const RETENTION_DAYS: Record<SubscriptionTier, number> = {
   [SubscriptionTier.FREE]: 7,
   [SubscriptionTier.STARTER]: 7,
   [SubscriptionTier.PRO]: 30,
-  [SubscriptionTier.ENTERPRISE]: 90,
+  [SubscriptionTier.ENTERPRISE]: 365, // 1 year — matches pricing page
+  [SubscriptionTier.TEAM]: 365,
+  [SubscriptionTier.BUSINESS]: 180,
+  [SubscriptionTier.ENTERPRISE_PLUS]: 365,
 };
 
 /**

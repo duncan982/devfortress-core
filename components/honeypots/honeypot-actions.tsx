@@ -52,6 +52,7 @@ export default function HoneypotActions({ honeypot }: Props) {
   const [loadingStats, setLoadingStats] = useState(false);
   const [loadingThreats, setLoadingThreats] = useState(false);
   const [loadingTest, setLoadingTest] = useState(false);
+  const [loadingDirectInject, setLoadingDirectInject] = useState(false);
   const [loadingWebhookUpdate, setLoadingWebhookUpdate] = useState(false);
   const [loadingRedeploy, setLoadingRedeploy] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
@@ -135,6 +136,36 @@ export default function HoneypotActions({ honeypot }: Props) {
       setError(err instanceof Error ? err.message : 'Test failed');
     } finally {
       setLoadingTest(false);
+    }
+  };
+
+  const directInjectEvents = async () => {
+    setLoadingDirectInject(true);
+    setError(null);
+    setTestResult(null);
+
+    try {
+      const response = await fetch(
+        `/api/honeypots/${honeypot.id}/direct-inject`,
+        {
+          method: 'POST',
+        }
+      );
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to inject events');
+      }
+      const data = await response.json();
+      setTestResult(
+        `✅ Direct injection completed!\n\n` +
+          `📊 Injected: ${data.injected} of ${data.injected + data.failed} events\n` +
+          `🕒 Time: ${new Date().toLocaleString()}\n\n` +
+          `Events are now visible in the "Threat Logs" tab. This bypasses the webhook relay.`
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Direct inject failed');
+    } finally {
+      setLoadingDirectInject(false);
     }
   };
 
@@ -256,11 +287,21 @@ export default function HoneypotActions({ honeypot }: Props) {
                 <button
                   onClick={testHoneypot}
                   disabled={loadingTest}
-                  className="rounded-lg border border-neutral-200 px-4 py-2 text-sm font-semibold text-neutral-900 hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-900"
+                  className="rounded-lg border border-blue-300 bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed dark:border-blue-500 dark:bg-blue-700 dark:text-white dark:hover:bg-blue-600"
+                  title="Send real HTTP requests to the deployed honeypot to verify it detects and logs attacks correctly. Results are tagged as TEST data."
                 >
-                  {loadingTest ? 'Testing...' : 'Test Honeypot'}
+                  {loadingTest ? 'Testing...' : '🌐 Live Attack Simulation'}
                 </button>
               )}
+
+              <button
+                onClick={directInjectEvents}
+                disabled={loadingDirectInject}
+                className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-100 disabled:opacity-50 disabled:cursor-not-allowed dark:border-amber-600 dark:bg-amber-950 dark:text-amber-100 dark:hover:bg-amber-900"
+                title="Write sample threat events directly to the database without sending HTTP requests (bypasses webhook relay). Results are tagged as TEST data."
+              >
+                {loadingDirectInject ? 'Injecting...' : '💾 Inject Test Data'}
+              </button>
 
               {(honeypot.status === HoneypotStatus.ACTIVE ||
                 honeypot.status === HoneypotStatus.DEPLOYED) && (

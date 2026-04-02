@@ -1,6 +1,12 @@
 'use client';
 
-import { useActionState, useCallback, useState, useEffect, startTransition } from 'react';
+import {
+  useActionState,
+  useCallback,
+  useState,
+  useEffect,
+  startTransition,
+} from 'react';
 import {
   checkRepositoryStatus,
   createBranch,
@@ -214,37 +220,42 @@ export function GitHubOperationsPanel() {
 
         {/* Future Operations Placeholder */}
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
-            Planned Operations
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+              Planned Operations
+            </h2>
+            <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+              Coming Soon
+            </span>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-700">
+            <div className="rounded-lg border border-dashed border-neutral-300 p-4 opacity-60 dark:border-neutral-600">
               <h3 className="font-medium text-neutral-900 dark:text-neutral-100 mb-2">
-                Pull Request Management
+                🔀 Pull Request Management
               </h3>
               <p className="text-sm text-neutral-600 dark:text-neutral-400">
                 Create PRs for pushed API code, manage reviews and merges.
               </p>
             </div>
-            <div className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-700">
+            <div className="rounded-lg border border-dashed border-neutral-300 p-4 opacity-60 dark:border-neutral-600">
               <h3 className="font-medium text-neutral-900 dark:text-neutral-100 mb-2">
-                Webhook Integration
+                🔗 Webhook Integration
               </h3>
               <p className="text-sm text-neutral-600 dark:text-neutral-400">
                 Set up webhooks for repository events and CI/CD integration.
               </p>
             </div>
-            <div className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-700">
+            <div className="rounded-lg border border-dashed border-neutral-300 p-4 opacity-60 dark:border-neutral-600">
               <h3 className="font-medium text-neutral-900 dark:text-neutral-100 mb-2">
-                Issue Tracking
+                🐛 Issue Tracking
               </h3>
               <p className="text-sm text-neutral-600 dark:text-neutral-400">
                 Create issues for deployment failures and security alerts.
               </p>
             </div>
-            <div className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-700">
+            <div className="rounded-lg border border-dashed border-neutral-300 p-4 opacity-60 dark:border-neutral-600">
               <h3 className="font-medium text-neutral-900 dark:text-neutral-100 mb-2">
-                Release Management
+                📦 Release Management
               </h3>
               <p className="text-sm text-neutral-600 dark:text-neutral-400">
                 Create GitHub releases for deployed API versions.

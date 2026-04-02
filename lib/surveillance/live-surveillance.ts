@@ -5,12 +5,11 @@
  * Available for PRO and ENTERPRISE tiers
  */
 
-import { PrismaClient, ThreatSeverity, LiveThreatEvent } from '@prisma/client';
+import { ThreatSeverity, LiveThreatEvent, Prisma } from '@prisma/client';
 import { logInfo, logError } from '../logger';
 import { broadcastAlert, type RealTimeAlert } from '../alerts/real-time-alerts';
+import { prisma } from '../prisma';
 import crypto from 'crypto';
-
-const prisma = new PrismaClient();
 
 /**
  * Event types that can be captured by surveillance
@@ -44,6 +43,16 @@ export interface IncomingLiveEvent {
   body?: unknown;
   severity?: ThreatSeverity;
   metadata?: Record<string, unknown>;
+  // v3.1 observability fields
+  userId?: string | null;
+  sessionId?: string | null;
+  clMode?: string;
+  authPhase?: string;
+  actionTaken?: string;
+  responseLatencyMs?: number;
+  sessionActiveAfterAction?: boolean;
+  appId?: string;
+  environment?: string;
 }
 
 /**
@@ -58,12 +67,15 @@ export interface SurveillanceConfig {
 }
 
 /**
- * Data retention periods by tier (in days)
+ * Data retention periods by tier (in days) — Aligned with pricing v3
  */
 export const DATA_RETENTION_DAYS: Record<string, number> = {
   STARTER: 7,
   PRO: 30,
-  ENTERPRISE: 90,
+  TEAM: 365,
+  ENTERPRISE: 365, // 1 year — matches pricing page
+  BUSINESS: 365,
+  ENTERPRISE_PLUS: 730, // 2 years (custom)
 };
 
 /**
@@ -72,7 +84,10 @@ export const DATA_RETENTION_DAYS: Record<string, number> = {
 export const EVENT_RATE_LIMITS: Record<string, number> = {
   STARTER: 100,
   PRO: 500,
-  ENTERPRISE: 2000,
+  TEAM: 2000,
+  ENTERPRISE: 2000, // Legacy alias for TEAM
+  BUSINESS: 10000,
+  ENTERPRISE_PLUS: 50000,
 };
 
 /**
@@ -86,6 +101,13 @@ const eventRateTracking = new Map<string, number[]>();
  */
 export function generateSurveillanceApiKey(): string {
   return `vx_live_${crypto.randomBytes(24).toString('hex')}`;
+}
+
+/**
+ * Generate a webhook secret for HMAC verification
+ */
+export function generateWebhookSecret(): string {
+  return `whsec_${crypto.randomBytes(32).toString('hex')}`;
 }
 
 /**
@@ -238,21 +260,33 @@ export async function ingestLiveEvent(
     const timestamp = event.timestamp ? new Date(event.timestamp) : new Date();
 
     // Store event
+    const createData: Prisma.LiveThreatEventUncheckedCreateInput = {
+      projectId,
+      eventType: event.eventType,
+      timestamp,
+      ip: event.ip,
+      userAgent: event.userAgent,
+      requestPath: event.requestPath,
+      statusCode: event.statusCode,
+      method: event.method,
+      headers: event.headers as object | undefined,
+      body: event.body as object | undefined,
+      severity,
+      metadata: event.metadata as object | undefined,
+      // v3.1 observability columns
+      userId: event.userId ?? null,
+      sessionId: event.sessionId ?? null,
+      clMode: event.clMode ?? null,
+      authPhase: event.authPhase ?? null,
+      actionTaken: event.actionTaken ?? null,
+      responseLatencyMs: event.responseLatencyMs ?? null,
+      sessionActiveAfterAction: event.sessionActiveAfterAction ?? null,
+      appId: event.appId ?? null,
+      environment: event.environment ?? null,
+    };
+
     const storedEvent = await prisma.liveThreatEvent.create({
-      data: {
-        projectId,
-        eventType: event.eventType,
-        timestamp,
-        ip: event.ip,
-        userAgent: event.userAgent,
-        requestPath: event.requestPath,
-        statusCode: event.statusCode,
-        method: event.method,
-        headers: event.headers as object | undefined,
-        body: event.body as object | undefined,
-        severity,
-        metadata: event.metadata as object | undefined,
-      },
+      data: createData,
     });
 
     logInfo('Live event ingested', {
@@ -341,7 +375,6 @@ export async function getLiveEvents(
     offset = 0,
   } = options;
 
-   
   const where: any = { projectId };
 
   if (eventType) where.eventType = eventType;
@@ -384,7 +417,6 @@ export async function getLiveEventStats(
 }> {
   const { startDate, endDate } = options;
 
-   
   const where: any = { projectId };
 
   if (startDate || endDate) {
@@ -453,12 +485,18 @@ export async function getLiveEventStats(
 }
 
 /**
- * Generate or regenerate surveillance API key for a project
+ * Generate or regenerate surveillance API key and webhook secret for a project
  */
 export async function generateProjectApiKey(
   projectId: string,
   userId: string
-): Promise<{ success: boolean; apiKey?: string; error?: string }> {
+): Promise<{
+  success: boolean;
+  apiKey?: string;
+  webhookSecret?: string;
+  projectId?: string;
+  error?: string;
+}> {
   try {
     // Verify ownership
     const project = await prisma.apiProject.findFirst({
@@ -473,15 +511,27 @@ export async function generateProjectApiKey(
     }
 
     const apiKey = generateSurveillanceApiKey();
+    const webhookSecretValue = generateWebhookSecret();
 
     await prisma.apiProject.update({
       where: { id: projectId },
-      data: { surveillanceApiKey: apiKey },
+      data: {
+        surveillanceApiKey: apiKey,
+        webhookSecret: webhookSecretValue,
+      },
     });
 
-    logInfo('Surveillance API key generated', { projectId, userId });
+    logInfo('Surveillance API key and webhook secret generated', {
+      projectId,
+      userId,
+    });
 
-    return { success: true, apiKey };
+    return {
+      success: true,
+      apiKey,
+      webhookSecret: webhookSecretValue,
+      projectId,
+    };
   } catch (error) {
     logError('Failed to generate surveillance API key', {
       error,

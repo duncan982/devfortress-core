@@ -6,11 +6,7 @@
 'use client';
 
 import { useState } from 'react';
-// POST-MVP: Enable Stripe for credit purchasing
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements } from '@stripe/react-stripe-js';
 import { PaymentProviderSelector } from './PaymentProviderSelector';
-import { StripePaymentForm } from './StripePaymentForm';
 import { PaymentProvider } from '@core/lib/payments/types';
 import { logInfo, logError } from '@core/lib/logger/client';
 
@@ -29,7 +25,6 @@ export function CreditPurchaseForm({
   const [selectedProvider, setSelectedProvider] = useState<
     PaymentProvider | undefined
   >();
-  const [clientSecret, setClientSecret] = useState<string | null>(null); // POST-MVP: Enable for Stripe payments
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
@@ -72,17 +67,8 @@ export function CreditPurchaseForm({
 
       logInfo('Payment intent created', { provider: data.provider });
 
-      // POST-MVP: Enable Stripe and Paystack for credit purchasing
-      if (data.provider === PaymentProvider.STRIPE && data.clientSecret) {
-        setClientSecret(data.clientSecret);
-      } else if (data.checkoutUrl) {
-        // For Paystack, redirect to checkout
-        setCheckoutUrl(data.checkoutUrl);
-        window.location.href = data.checkoutUrl;
-      }
-      
-      // GitHub Marketplace redirect (fallback)
-      if (data.checkoutUrl && data.provider === PaymentProvider.GITHUB_MARKETPLACE) {
+      // Redirect to external checkout (Paystack, GitHub Marketplace, etc.)
+      if (data.checkoutUrl) {
         setCheckoutUrl(data.checkoutUrl);
         window.location.href = data.checkoutUrl;
       }
@@ -95,27 +81,6 @@ export function CreditPurchaseForm({
       setLoading(false);
     }
   };
-
-  // POST-MVP: Enable Stripe inline payment form
-  if (clientSecret) {
-    const stripePromise = loadStripe(
-      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''
-    );
-
-    return (
-      <Elements stripe={stripePromise} options={{ clientSecret }}>
-        <StripePaymentForm
-          credits={credits}
-          totalCost={totalCost}
-          onSuccess={_onSuccess || (() => {})}
-          onCancel={() => {
-            setClientSecret(null);
-            if (onCancel) onCancel();
-          }}
-        />
-      </Elements>
-    );
-  }
 
   // If redirecting to external checkout, show loading
   if (checkoutUrl) {
@@ -209,101 +174,3 @@ export function CreditPurchaseForm({
     </div>
   );
 }
-
-/**
- * Stripe payment form (shown after payment intent is created)
- * Commented out for MVP - will be used for credit purchasing post-MVP
- */
-/*
-function StripePaymentForm({
-  credits,
-  totalCost,
-  onSuccess,
-  onCancel,
-}: {
-  credits: number;
-  totalCost: number;
-  onSuccess?: (credits: number) => void;
-  onCancel?: () => void;
-}) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!stripe || !elements) {
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const { error: submitError } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: `${window.location.origin}/dashboard?payment=success`,
-        },
-        redirect: 'if_required',
-      });
-
-      if (submitError) {
-        setError(submitError.message || 'Payment failed');
-        logError('Stripe payment failed', { error: submitError });
-      } else {
-        logInfo('Payment successful', { credits });
-        if (onSuccess) onSuccess(credits);
-      }
-    } catch (err) {
-      logError('Payment submission error', { error: err });
-      setError('An unexpected error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-          Complete Payment
-        </h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          {credits} credits for ${totalCost.toFixed(2)}
-        </p>
-      </div>
-
-      {error && (
-        <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
-          <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
-        </div>
-      )}
-
-      <PaymentElement />
-
-      <div className="flex space-x-3">
-        {onCancel && (
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={loading}
-            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50"
-          >
-            Cancel
-          </button>
-        )}
-        <button
-          type="submit"
-          disabled={!stripe || loading}
-          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {loading ? 'Processing...' : `Pay $${totalCost.toFixed(2)}`}
-        </button>
-      </div>
-    </form>
-  );
-}
-*/

@@ -38,6 +38,7 @@ export function SignInForm({
   const [captchaToken, setCaptchaToken] = useState<string>('');
   const [useLocalAuth, setUseLocalAuth] = useState(false);
   const [showDevLogin, setShowDevLogin] = useState(false);
+  const [isLocalhost, setIsLocalhost] = useState(false);
   const captchaRef = useRef<TurnstileInstance>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -47,16 +48,17 @@ export function SignInForm({
 
   useEffect(() => {
     shouldUseLocalAuth().then(setUseLocalAuth);
-    // Show dev login panel on localhost when NEXT_PUBLIC_DEV_LOGIN_ENABLED is set
+    // Detect localhost at runtime — dev login MUST only show on localhost
+    const localhostDetected =
+      typeof window !== 'undefined' &&
+      (window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1');
+    setIsLocalhost(localhostDetected);
+    // Show dev login panel ONLY on localhost when NEXT_PUBLIC_DEV_LOGIN_ENABLED is set
     // NEXT_PUBLIC_* vars are inlined at build time by Next.js
     const devLoginEnabled =
       process.env.NEXT_PUBLIC_DEV_LOGIN_ENABLED === 'true';
-    if (
-      typeof window !== 'undefined' &&
-      devLoginEnabled &&
-      (window.location.hostname === 'localhost' ||
-        window.location.hostname === '127.0.0.1')
-    ) {
+    if (devLoginEnabled && localhostDetected) {
       setShowDevLogin(true);
     }
   }, []);
@@ -536,7 +538,7 @@ export function SignInForm({
                 ? 'Continue with GitHub'
                 : 'GitHub sign-in unavailable'}
           </button>
-          {(useLocalAuth || showDevLogin) && (
+          {((useLocalAuth && isLocalhost) || showDevLogin) && (
             <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-950">
               <div className="mb-3 flex items-center gap-2">
                 <svg

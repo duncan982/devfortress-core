@@ -770,10 +770,12 @@ Format as JSON with an array of insight strings.`;
   private static getPlanMonthlyRevenue(plan: string): number {
     const planPricing: Record<string, number> = {
       FREE: 0,
-      STARTER: 9,
-      PROFESSIONAL: 29,
-      BUSINESS: 99,
-      ENTERPRISE: 299,
+      STARTER: 99,
+      PRO: 199,
+      TEAM: 499,
+      ENTERPRISE: 499, // Legacy alias for TEAM
+      BUSINESS: 2000,
+      ENTERPRISE_PLUS: 5000,
     };
 
     return planPricing[plan] || 0;

@@ -4,7 +4,7 @@
  * Client component for honeypot detail page with tabs
  */
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { Honeypot, HoneypotStatus } from '@prisma/client';
 import HoneypotActions from '@core/components/honeypots/honeypot-actions';
@@ -31,6 +31,13 @@ export default function HoneypotDetailClient({
   honeypot,
 }: HoneypotDetailClientProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'logs'>('overview');
+  const [, startTransition] = useTransition();
+
+  const handleTabChange = (tab: 'overview' | 'logs') => {
+    startTransition(() => {
+      setActiveTab(tab);
+    });
+  };
 
   const statusColors: Record<HoneypotStatus, string> = {
     [HoneypotStatus.ACTIVE]:
@@ -63,21 +70,13 @@ export default function HoneypotDetailClient({
 
           {/* Header */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link
-                href="/dashboard/honeypots"
-                className="rounded-lg border border-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-900 hover:bg-neutral-50 dark:border-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-900"
-              >
-                ← Back to Honeypots
-              </Link>
-              <div>
-                <p className="text-sm uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-                  Honeypot Details
-                </p>
-                <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-                  {honeypot.name}
-                </h1>
-              </div>
+            <div>
+              <p className="text-sm uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+                Honeypot Details
+              </p>
+              <h1 className="mt-2 text-3xl font-semibold tracking-tight">
+                {honeypot.name}
+              </h1>
             </div>
             <div
               className={`rounded-full px-3 py-1 text-xs font-medium ${statusColors[honeypot.status]}`}
@@ -90,7 +89,7 @@ export default function HoneypotDetailClient({
           <div className="border-b border-neutral-200 dark:border-neutral-700">
             <nav className="-mb-px flex space-x-8">
               <button
-                onClick={() => setActiveTab('overview')}
+                onClick={() => handleTabChange('overview')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'overview'
                     ? 'border-primary-500 text-primary-600 dark:text-primary-400'
@@ -100,7 +99,7 @@ export default function HoneypotDetailClient({
                 Overview
               </button>
               <button
-                onClick={() => setActiveTab('logs')}
+                onClick={() => handleTabChange('logs')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'logs'
                     ? 'border-primary-500 text-primary-600 dark:text-primary-400'

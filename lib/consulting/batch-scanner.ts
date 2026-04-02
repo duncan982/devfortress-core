@@ -8,7 +8,7 @@
  * Used by both consulting (you run for clients) and DIY (subscribers run themselves).
  */
 
-import { logInfo, logError } from '@core/lib/logger';
+import { logInfo, logError, logWarn } from '@core/lib/logger';
 import { performSecurityScan } from '@core/lib/build/secureforge';
 import { IaCScannerService } from '@core/lib/security/iac-scanner';
 import type { SecurityReport } from '@core/lib/build/secureforge';
@@ -91,6 +91,27 @@ const SECURITY_HEADERS = [
 // Main Batch Scanner
 // ============================================================
 
+export interface ScanOptions {
+  /**
+   * Maximum wall-clock time (ms) the scan may use.
+   * When exceeded the scanner returns results collected so far.
+   * Default: 25 000 ms (25 s).
+   */
+  timeBudgetMs?: number;
+  /**
+   * Maximum number of endpoints to scan.
+   * Extra endpoints are silently dropped to keep within time budget.
+   * Default: 15.
+   */
+  maxEndpoints?: number;
+  /**
+   * Skip the expensive OpenAI-based body analysis during batch scanning.
+   * Set to true for URL_SCAN jobs where the audit phase will do full analysis.
+   * Default: false.
+   */
+  skipAIAnalysis?: boolean;
+}
+
 /**
  * Run security scans against all discovered endpoints from a crawl.
  * Uses Promise.allSettled() for parallel scanning with fault tolerance.
@@ -99,31 +120,61 @@ const SECURITY_HEADERS = [
  * @param plan - Subscriber tier (affects AI analysis depth)
  * @param concurrency - Max parallel scans (tier-gated)
  * @param onProgress - Optional callback for progress updates
+ * @param scanOptions - Time budget and endpoint cap options
  */
 export async function batchScanEndpoints(
   crawlResult: CrawlResult,
   plan: SubscriptionPlan,
   concurrency: number = 5,
-  onProgress?: (scanned: number, total: number) => void
+  onProgress?: (scanned: number, total: number) => void,
+  scanOptions?: ScanOptions
 ): Promise<BatchScanResult> {
   const startTime = Date.now();
-  const endpoints = crawlResult.endpoints;
+  const timeBudgetMs = scanOptions?.timeBudgetMs ?? 25_000;
+  const maxEndpoints = scanOptions?.maxEndpoints ?? 15;
+  const skipAI = scanOptions?.skipAIAnalysis ?? false;
+
+  // Cap endpoints to prevent unbounded work
+  const allEndpoints = crawlResult.endpoints;
+  const endpoints = allEndpoints.slice(0, maxEndpoints);
+  if (allEndpoints.length > maxEndpoints) {
+    logInfo('Capping scanned endpoints for time budget', {
+      total: allEndpoints.length,
+      scanning: endpoints.length,
+    });
+  }
 
   logInfo('Starting batch scan', {
     baseUrl: crawlResult.baseUrl,
     endpointCount: endpoints.length,
     concurrency,
+    timeBudgetMs,
+    skipAI,
   });
 
   const endpointResults: EndpointScanResult[] = [];
   let scannedCount = 0;
+  let budgetExceeded = false;
 
   // Process in batches of `concurrency` size
   for (let i = 0; i < endpoints.length; i += concurrency) {
+    // Check time budget before starting next batch
+    const elapsed = Date.now() - startTime;
+    if (elapsed > timeBudgetMs) {
+      logWarn('Batch scan time budget exceeded, returning partial results', {
+        elapsed,
+        timeBudgetMs,
+        scanned: scannedCount,
+        total: endpoints.length,
+      });
+      budgetExceeded = true;
+      break;
+    }
+
     const batch = endpoints.slice(i, i + concurrency);
 
     const results = await Promise.allSettled(
-      batch.map(endpoint => scanSingleEndpoint(endpoint, plan))
+      batch.map(endpoint => scanSingleEndpoint(endpoint, plan, skipAI))
     );
 
     for (let j = 0; j < results.length; j++) {
@@ -150,6 +201,8 @@ export async function batchScanEndpoints(
 
   // Calculate summary
   const summary = calculateSummary(endpointResults);
+  // Reflect total discovered endpoints (not just the ones we scanned)
+  summary.totalEndpoints = allEndpoints.length;
   const overallScore = calculateOverallScore(endpointResults);
   const duration = Date.now() - startTime;
 
@@ -158,6 +211,7 @@ export async function batchScanEndpoints(
     ...summary,
     overallScore,
     duration,
+    budgetExceeded,
   });
 
   return {
@@ -176,10 +230,12 @@ export async function batchScanEndpoints(
 
 /**
  * Scan a single endpoint for security issues.
+ * When skipAI is true, only checks headers (no body fetch / OpenAI call).
  */
 async function scanSingleEndpoint(
   endpoint: DiscoveredEndpoint,
-  plan: SubscriptionPlan
+  plan: SubscriptionPlan,
+  skipAI: boolean = false
 ): Promise<EndpointScanResult> {
   const result: EndpointScanResult = {
     endpoint,
@@ -187,9 +243,9 @@ async function scanSingleEndpoint(
   };
 
   try {
-    // Fetch the endpoint to check headers and get response body
+    // Fetch the endpoint to check headers — reduced timeout for serverless
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    const timeout = setTimeout(() => controller.abort(), 5000);
 
     const response = await fetch(endpoint.url, {
       method: 'HEAD', // Use HEAD to avoid downloading large bodies
@@ -207,15 +263,17 @@ async function scanSingleEndpoint(
     result.responseHeaders = Object.fromEntries(response.headers.entries());
 
     // If endpoint returns JSON/HTML, fetch body for deeper analysis
+    // Skip this expensive path when the caller only needs header checks
     const contentType = response.headers.get('content-type') || '';
     if (
-      contentType.includes('json') ||
-      contentType.includes('html') ||
-      contentType.includes('javascript')
+      !skipAI &&
+      (contentType.includes('json') ||
+        contentType.includes('html') ||
+        contentType.includes('javascript'))
     ) {
       try {
         const bodyResponse = await fetch(endpoint.url, {
-          signal: AbortSignal.timeout(10000),
+          signal: AbortSignal.timeout(5000),
           headers: { 'User-Agent': 'DevFortress-SecurityScanner/1.0' },
           redirect: 'follow',
         });

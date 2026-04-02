@@ -70,15 +70,14 @@ export function MainNavigationClient({
     }
   }, [userMenuOpen]);
 
-  // Prevent body scroll when mobile menu is open
-  useEffect(() => {
+  // Close mobile menu when route changes
+  const [lastPathname, setLastPathname] = useState(pathname);
+  if (lastPathname !== pathname) {
+    setLastPathname(pathname);
     if (mobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = '';
-      };
+      setMobileMenuOpen(false);
     }
-  }, [mobileMenuOpen]);
+  }
 
   const closeMobileMenu = useCallback(() => {
     setMobileMenuOpen(false);
@@ -234,29 +233,26 @@ export function MainNavigationClient({
           },
         ]
       : []),
-    ...(!hasActiveSubscription
-      ? [
-          {
-            href: '/pricing',
-            label: 'Pricing',
-            icon: (
-              <svg
-                className="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            ),
-          },
-        ]
-      : []),
+    // Pricing link - always visible for all users
+    {
+      href: '/pricing',
+      label: 'Pricing',
+      icon: (
+        <svg
+          className="h-5 w-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+      ),
+    },
   ];
 
   const isActive = (href: string) => {
@@ -268,7 +264,7 @@ export function MainNavigationClient({
 
   return (
     <nav
-      className="sticky top-0 z-50 border-b border-neutral-200 bg-neutral-50 transition-colors duration-200 dark:border-neutral-800 dark:bg-neutral-950"
+      className="sticky top-0 z-50 border-b border-neutral-200 bg-neutral-50 transition-colors duration-200 dark:border-neutral-800 dark:bg-neutral-950 relative"
       aria-label="Main navigation"
     >
       <div className="mx-auto max-w-7xl min-w-0 px-4 sm:px-6 lg:px-8">
@@ -475,224 +471,241 @@ export function MainNavigationClient({
             </div>
           </div>
 
-          {/* Mobile: Hamburger button + essential icons */}
-          <div className="flex items-center gap-1 md:hidden">
-            {/* Job Status */}
-            {isAuthenticated && <JobStatusIndicator />}
+          {/* Hamburger menu — always visible, compact dropdown below icon */}
+          <div className="flex items-center gap-1.5 ml-2 shrink-0">
+            {/* Job Status (mobile only — desktop shows in nav row) */}
+            <span className="md:hidden">
+              {isAuthenticated && <JobStatusIndicator />}
+            </span>
 
-            {/* Notification Bell */}
-            {isAuthenticated && <NotificationBellIndicator />}
+            {/* Notification Bell (mobile only) */}
+            <span className="md:hidden">
+              {isAuthenticated && <NotificationBellIndicator />}
+            </span>
 
-            {/* Theme Toggle */}
-            <ThemeToggleButton />
+            {/* Theme Toggle (mobile only — desktop shows in nav row) */}
+            <span className="md:hidden">
+              <ThemeToggleButton />
+            </span>
 
-            {/* Hamburger Menu Button */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="inline-flex items-center justify-center rounded-lg p-2 text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
-              aria-expanded={mobileMenuOpen}
-              aria-label="Toggle navigation menu"
-            >
-              {mobileMenuOpen ? (
-                <svg
-                  className="h-6 w-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
+            {/* Hamburger Menu Button — relative anchor for dropdown */}
+            <div className="relative" ref={mobileMenuRef}>
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="inline-flex items-center justify-center rounded-lg p-2 text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+                aria-expanded={mobileMenuOpen}
+                aria-label="Toggle navigation menu"
+              >
+                {mobileMenuOpen ? (
+                  <svg
+                    className="h-6 w-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    className="h-6 w-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 6h16M4 12h16M4 18h16"
+                    />
+                  </svg>
+                )}
+              </button>
+
+              {/* Dropdown Menu — positioned directly below the hamburger button */}
+              {mobileMenuOpen && (
+                <>
+                  {/* Transparent backdrop to capture clicks outside the dropdown */}
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={closeMobileMenu}
+                    aria-hidden="true"
                   />
-                </svg>
-              ) : (
-                <svg
-                  className="h-6 w-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                </svg>
+
+                  {/* Compact dropdown panel — right-aligned directly below hamburger */}
+                  <div
+                    className="absolute right-0 top-full z-50 mt-2 w-64 max-h-[calc(100vh-5rem)] overflow-y-auto rounded-xl border border-neutral-200 bg-white shadow-xl ring-1 ring-black/5 dark:border-neutral-700 dark:bg-neutral-900 dark:ring-white/5"
+                    style={{ transformOrigin: 'top right' }}
+                    aria-label="Navigation menu"
+                  >
+                    {/* Navigation Links */}
+                    <div className="py-2">
+                      {navLinks.map(link =>
+                        link.external ? (
+                          <a
+                            key={link.href}
+                            href={link.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={closeMobileMenu}
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                          >
+                            {link.icon && (
+                              <span className="flex h-5 w-5 items-center justify-center text-neutral-400 dark:text-neutral-500 [&>svg]:h-5 [&>svg]:w-5 shrink-0">
+                                {link.icon}
+                              </span>
+                            )}
+                            <span className="flex-1">{link.label}</span>
+                            <svg
+                              className="h-3 w-3 text-neutral-400"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                              />
+                            </svg>
+                          </a>
+                        ) : (
+                          <Link
+                            key={link.href}
+                            href={link.href}
+                            onClick={closeMobileMenu}
+                            className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors ${
+                              isActive(link.href)
+                                ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-300'
+                                : 'text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800'
+                            }`}
+                          >
+                            {link.icon && (
+                              <span className="flex h-5 w-5 items-center justify-center text-neutral-400 dark:text-neutral-500 [&>svg]:h-5 [&>svg]:w-5 shrink-0">
+                                {link.icon}
+                              </span>
+                            )}
+                            <span>{link.label}</span>
+                          </Link>
+                        )
+                      )}
+                    </div>
+
+                    {/* Divider + Auth */}
+                    <div className="border-t border-neutral-100 dark:border-neutral-800">
+                      {!isInitialized ? (
+                        <div className="px-3.5 py-2.5">
+                          <div className="h-6 animate-pulse rounded bg-neutral-200 dark:bg-neutral-700" />
+                        </div>
+                      ) : !isAuthenticated ? (
+                        <div className="p-3">
+                          <Link
+                            href="/auth/signin"
+                            onClick={closeMobileMenu}
+                            className="flex w-full items-center justify-center rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+                          >
+                            Sign In
+                          </Link>
+                        </div>
+                      ) : (
+                        <>
+                          {/* User info */}
+                          <div className="px-4 py-2.5">
+                            <p className="text-sm font-medium text-neutral-900 truncate dark:text-neutral-100">
+                              {session?.user?.name || 'User'}
+                            </p>
+                            <p className="text-xs text-neutral-500 truncate dark:text-neutral-400">
+                              {session?.user?.email}
+                            </p>
+                          </div>
+                          <div className="border-t border-neutral-100 py-1.5 dark:border-neutral-800">
+                            <Link
+                              href="/dashboard"
+                              onClick={closeMobileMenu}
+                              className="flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                            >
+                              <svg
+                                className="h-4 w-4 text-neutral-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                                />
+                              </svg>
+                              Dashboard
+                            </Link>
+                            <Link
+                              href="/dashboard/settings"
+                              onClick={closeMobileMenu}
+                              className="flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                            >
+                              <svg
+                                className="h-4 w-4 text-neutral-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                                />
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                />
+                              </svg>
+                              Settings
+                            </Link>
+                          </div>
+                          <div className="border-t border-neutral-100 py-1.5 dark:border-neutral-800">
+                            <button
+                              onClick={() => {
+                                closeMobileMenu();
+                                signOut();
+                              }}
+                              className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
+                            >
+                              <svg
+                                className="h-4 w-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                                />
+                              </svg>
+                              Sign Out
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </>
               )}
-            </button>
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Mobile Menu Overlay */}
-      {mobileMenuOpen && (
-        <div
-          className="fixed inset-0 top-16 z-40 md:hidden"
-          aria-label="Mobile navigation menu"
-        >
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/20 dark:bg-black/40"
-            onClick={closeMobileMenu}
-          />
-
-          {/* Menu Panel */}
-          <div
-            ref={mobileMenuRef}
-            className="absolute inset-x-0 top-0 max-h-[calc(100vh-4rem)] overflow-y-auto border-b border-neutral-200 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-900"
-          >
-            <div className="space-y-1 px-4 py-3">
-              {navLinks.map(link =>
-                link.external ? (
-                  <a
-                    key={link.href}
-                    href={link.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={closeMobileMenu}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-                  >
-                    {link.icon && (
-                      <span className="flex h-5 w-5 items-center justify-center text-neutral-500 dark:text-neutral-400">
-                        {link.icon}
-                      </span>
-                    )}
-                    <span>{link.label}</span>
-                    <svg
-                      className="ml-auto h-3 w-3 opacity-50"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                      />
-                    </svg>
-                  </a>
-                ) : (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={closeMobileMenu}
-                    className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                      isActive(link.href)
-                        ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
-                        : 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800'
-                    }`}
-                  >
-                    {link.icon && (
-                      <span className="flex h-5 w-5 items-center justify-center text-neutral-500 dark:text-neutral-400">
-                        {link.icon}
-                      </span>
-                    )}
-                    <span>{link.label}</span>
-                  </Link>
-                )
-              )}
-            </div>
-
-            {/* Auth Section - Mobile Menu */}
-            <div className="border-t border-neutral-200 px-4 py-3 dark:border-neutral-700">
-              {!isInitialized ? (
-                <div className="h-10 animate-pulse rounded-lg bg-neutral-200 dark:bg-neutral-700" />
-              ) : !isAuthenticated ? (
-                <Link
-                  href="/auth/signin"
-                  onClick={closeMobileMenu}
-                  className="flex w-full items-center justify-center rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-700"
-                >
-                  Sign In
-                </Link>
-              ) : (
-                <div className="space-y-1">
-                  <div className="px-3 py-2">
-                    <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                      {session?.user?.name || 'User'}
-                    </p>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
-                      {session?.user?.email}
-                    </p>
-                  </div>
-                  <Link
-                    href="/dashboard"
-                    onClick={closeMobileMenu}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-                  >
-                    <svg
-                      className="h-5 w-5 text-neutral-500 dark:text-neutral-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-                      />
-                    </svg>
-                    Dashboard
-                  </Link>
-                  <Link
-                    href="/dashboard/settings"
-                    onClick={closeMobileMenu}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-                  >
-                    <svg
-                      className="h-5 w-5 text-neutral-500 dark:text-neutral-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                    </svg>
-                    Settings
-                  </Link>
-                  <button
-                    onClick={() => {
-                      closeMobileMenu();
-                      signOut();
-                    }}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-                  >
-                    <svg
-                      className="h-5 w-5 text-neutral-500 dark:text-neutral-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                      />
-                    </svg>
-                    Sign Out
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </nav>
   );
 }

@@ -28,45 +28,213 @@ const PRIVILEGED_ROLES: UserRole[] = ['ADMIN', 'OWNER', 'DEVELOPER'];
 
 /**
  * Tier order for comparison (higher = more privileges)
+ * ENTERPRISE is kept as alias for TEAM for backward compatibility
  */
 const TIER_ORDER: Record<SubscriptionTier, number> = {
   [SubscriptionTier.FREE]: 0,
   [SubscriptionTier.STARTER]: 1,
   [SubscriptionTier.PRO]: 2,
-  [SubscriptionTier.ENTERPRISE]: 3,
+  [SubscriptionTier.ENTERPRISE]: 3, // Legacy alias for TEAM
+  [SubscriptionTier.TEAM]: 3,
+  [SubscriptionTier.BUSINESS]: 4,
+  [SubscriptionTier.ENTERPRISE_PLUS]: 5,
 };
 
 /**
  * Premium feature flags - defines which features are available at each tier
+ * Pricing v3 key gating:
+ * - Starter: Alerts only (no automated actions/response)
+ * - Pro: Full closed-loop detection + 500 automated actions/mo
+ * - Team: Advanced response + compliance + 5K actions/mo
+ * - Business+: Everything unlimited (Coming Soon)
  */
 export const PREMIUM_FEATURES = {
   // BUILD Phase
-  patchMode: [SubscriptionTier.PRO, SubscriptionTier.ENTERPRISE],
-  customModels: [SubscriptionTier.ENTERPRISE],
+  patchMode: [
+    SubscriptionTier.PRO,
+    SubscriptionTier.TEAM,
+    SubscriptionTier.ENTERPRISE,
+    SubscriptionTier.BUSINESS,
+    SubscriptionTier.ENTERPRISE_PLUS,
+  ],
+  customModels: [
+    SubscriptionTier.TEAM,
+    SubscriptionTier.ENTERPRISE,
+    SubscriptionTier.BUSINESS,
+    SubscriptionTier.ENTERPRISE_PLUS,
+  ],
 
   // DEFEND Phase
-  liveMonitoring: [SubscriptionTier.PRO, SubscriptionTier.ENTERPRISE],
-  realTimeAlerts: [SubscriptionTier.PRO, SubscriptionTier.ENTERPRISE],
-  wafIntegration: [SubscriptionTier.PRO, SubscriptionTier.ENTERPRISE],
-  advancedWafRules: [SubscriptionTier.ENTERPRISE],
-  secureHeaders: [SubscriptionTier.PRO, SubscriptionTier.ENTERPRISE],
+  liveMonitoring: [
+    SubscriptionTier.PRO,
+    SubscriptionTier.TEAM,
+    SubscriptionTier.ENTERPRISE,
+    SubscriptionTier.BUSINESS,
+    SubscriptionTier.ENTERPRISE_PLUS,
+  ],
+  realTimeAlerts: [
+    SubscriptionTier.STARTER,
+    SubscriptionTier.PRO,
+    SubscriptionTier.TEAM,
+    SubscriptionTier.ENTERPRISE,
+    SubscriptionTier.BUSINESS,
+    SubscriptionTier.ENTERPRISE_PLUS,
+  ],
+  wafIntegration: [
+    SubscriptionTier.PRO,
+    SubscriptionTier.TEAM,
+    SubscriptionTier.ENTERPRISE,
+    SubscriptionTier.BUSINESS,
+    SubscriptionTier.ENTERPRISE_PLUS,
+  ],
+  advancedWafRules: [
+    SubscriptionTier.TEAM,
+    SubscriptionTier.ENTERPRISE,
+    SubscriptionTier.BUSINESS,
+    SubscriptionTier.ENTERPRISE_PLUS,
+  ],
+  secureHeaders: [
+    SubscriptionTier.PRO,
+    SubscriptionTier.TEAM,
+    SubscriptionTier.ENTERPRISE,
+    SubscriptionTier.BUSINESS,
+    SubscriptionTier.ENTERPRISE_PLUS,
+  ],
+
+  // Automated Response — Starter gets alerts only, Pro+ gets automated actions
+  automatedResponse: [
+    SubscriptionTier.PRO,
+    SubscriptionTier.TEAM,
+    SubscriptionTier.ENTERPRISE,
+    SubscriptionTier.BUSINESS,
+    SubscriptionTier.ENTERPRISE_PLUS,
+  ],
+  autoSessionRevocation: [
+    SubscriptionTier.PRO,
+    SubscriptionTier.TEAM,
+    SubscriptionTier.ENTERPRISE,
+    SubscriptionTier.BUSINESS,
+    SubscriptionTier.ENTERPRISE_PLUS,
+  ],
+  autoAccountLock: [
+    SubscriptionTier.TEAM,
+    SubscriptionTier.ENTERPRISE,
+    SubscriptionTier.BUSINESS,
+    SubscriptionTier.ENTERPRISE_PLUS,
+  ],
+  customPlaybooks: [
+    SubscriptionTier.TEAM,
+    SubscriptionTier.ENTERPRISE,
+    SubscriptionTier.BUSINESS,
+    SubscriptionTier.ENTERPRISE_PLUS,
+  ],
+  closedLoopAudit: [
+    SubscriptionTier.PRO,
+    SubscriptionTier.TEAM,
+    SubscriptionTier.ENTERPRISE,
+    SubscriptionTier.BUSINESS,
+    SubscriptionTier.ENTERPRISE_PLUS,
+  ],
 
   // LEARN Phase
-  predictiveAlerts: [SubscriptionTier.PRO, SubscriptionTier.ENTERPRISE],
-  advancedPredictive: [SubscriptionTier.ENTERPRISE],
-  automatedFixes: [SubscriptionTier.ENTERPRISE],
+  predictiveAlerts: [
+    SubscriptionTier.PRO,
+    SubscriptionTier.TEAM,
+    SubscriptionTier.ENTERPRISE,
+    SubscriptionTier.BUSINESS,
+    SubscriptionTier.ENTERPRISE_PLUS,
+  ],
+  advancedPredictive: [
+    SubscriptionTier.TEAM,
+    SubscriptionTier.ENTERPRISE,
+    SubscriptionTier.BUSINESS,
+    SubscriptionTier.ENTERPRISE_PLUS,
+  ],
+  automatedFixes: [
+    SubscriptionTier.TEAM,
+    SubscriptionTier.ENTERPRISE,
+    SubscriptionTier.BUSINESS,
+    SubscriptionTier.ENTERPRISE_PLUS,
+  ],
+
+  // AbuseIPDB — all get basic, Pro+ gets sync, Team+ gets configurable threshold
+  abuseipdbBasic: [
+    SubscriptionTier.STARTER,
+    SubscriptionTier.PRO,
+    SubscriptionTier.TEAM,
+    SubscriptionTier.ENTERPRISE,
+    SubscriptionTier.BUSINESS,
+    SubscriptionTier.ENTERPRISE_PLUS,
+  ],
+  abuseipdbSync: [
+    SubscriptionTier.PRO,
+    SubscriptionTier.TEAM,
+    SubscriptionTier.ENTERPRISE,
+    SubscriptionTier.BUSINESS,
+    SubscriptionTier.ENTERPRISE_PLUS,
+  ],
+  abuseipdbConfigurableThreshold: [
+    SubscriptionTier.TEAM,
+    SubscriptionTier.ENTERPRISE,
+    SubscriptionTier.BUSINESS,
+    SubscriptionTier.ENTERPRISE_PLUS,
+  ],
 
   // General
-  apiExport: [SubscriptionTier.PRO, SubscriptionTier.ENTERPRISE],
-  whitelabelDocs: [SubscriptionTier.ENTERPRISE],
-  ssoSaml: [SubscriptionTier.ENTERPRISE],
-  prioritySupport: [SubscriptionTier.ENTERPRISE],
+  apiExport: [
+    SubscriptionTier.PRO,
+    SubscriptionTier.TEAM,
+    SubscriptionTier.ENTERPRISE,
+    SubscriptionTier.BUSINESS,
+    SubscriptionTier.ENTERPRISE_PLUS,
+  ],
+  whitelabelDocs: [
+    SubscriptionTier.TEAM,
+    SubscriptionTier.ENTERPRISE,
+    SubscriptionTier.BUSINESS,
+    SubscriptionTier.ENTERPRISE_PLUS,
+  ],
+  ssoSaml: [
+    SubscriptionTier.TEAM,
+    SubscriptionTier.ENTERPRISE,
+    SubscriptionTier.BUSINESS,
+    SubscriptionTier.ENTERPRISE_PLUS,
+  ],
+  prioritySupport: [
+    SubscriptionTier.TEAM,
+    SubscriptionTier.ENTERPRISE,
+    SubscriptionTier.BUSINESS,
+    SubscriptionTier.ENTERPRISE_PLUS,
+  ],
   emailNotifications: [
     SubscriptionTier.STARTER,
     SubscriptionTier.PRO,
+    SubscriptionTier.TEAM,
     SubscriptionTier.ENTERPRISE,
+    SubscriptionTier.BUSINESS,
+    SubscriptionTier.ENTERPRISE_PLUS,
   ],
-  secureFrontendComponents: [SubscriptionTier.ENTERPRISE],
+  secureFrontendComponents: [
+    SubscriptionTier.TEAM,
+    SubscriptionTier.ENTERPRISE,
+    SubscriptionTier.BUSINESS,
+    SubscriptionTier.ENTERPRISE_PLUS,
+  ],
+
+  // Enterprise-only features (Coming Soon)
+  mtlsAuth: [SubscriptionTier.BUSINESS, SubscriptionTier.ENTERPRISE_PLUS],
+  siemIntegration: [
+    SubscriptionTier.BUSINESS,
+    SubscriptionTier.ENTERPRISE_PLUS,
+  ],
+  complianceReports: [
+    SubscriptionTier.TEAM,
+    SubscriptionTier.ENTERPRISE,
+    SubscriptionTier.BUSINESS,
+    SubscriptionTier.ENTERPRISE_PLUS,
+  ],
+  dedicatedCSM: [SubscriptionTier.ENTERPRISE_PLUS],
+  onPremiseDeployment: [SubscriptionTier.ENTERPRISE_PLUS],
 } as const;
 
 export type PremiumFeature = keyof typeof PREMIUM_FEATURES;

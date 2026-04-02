@@ -318,7 +318,7 @@ describe.skip('Live Surveillance Service', () => {
     it('should have correct data retention days', () => {
       expect(DATA_RETENTION_DAYS.STARTER).toBe(7);
       expect(DATA_RETENTION_DAYS.PRO).toBe(30);
-      expect(DATA_RETENTION_DAYS.ENTERPRISE).toBe(90);
+      expect(DATA_RETENTION_DAYS.ENTERPRISE).toBe(365);
     });
 
     it('should have correct event rate limits', () => {

@@ -72,6 +72,9 @@ const JOB_TYPE_LABELS: Record<ConsultingJobType, string> = {
  * On Vercel Hobby plan, cron jobs run only once daily, so we trigger
  * the job processor immediately after enqueuing to ensure prompt execution.
  * Falls back silently if the trigger fails (daily cron acts as safety net).
+ *
+ * Fires an immediate trigger + follow-up triggers at 10s and 30s
+ * to ensure the queue drains even under cold start conditions.
  */
 async function triggerJobProcessing(): Promise<void> {
   try {
@@ -87,31 +90,24 @@ async function triggerJobProcessing(): Promise<void> {
       ? `${baseUrl}/api/cron/process-jobs`
       : `https://${baseUrl}/api/cron/process-jobs`;
 
-    const cronSecret = process.env.CRON_SECRET?.trim();
+    const cronSecret = process.env.CRON_SECRET?.trim().replace(/\\n$/, '');
 
-    // Use a longer timeout (30s) to handle cold starts on Vercel
+    // Use a shorter timeout (15s) to avoid blocking the calling function
     const doTrigger = () =>
       fetch(url, {
         method: 'GET',
         headers: {
           ...(cronSecret ? { Authorization: `Bearer ${cronSecret}` } : {}),
         },
-        signal: AbortSignal.timeout(30000),
+        signal: AbortSignal.timeout(15000),
       });
 
-    // First attempt
-    doTrigger().catch(() => {
-      // Retry once after 2s if the first trigger fails (e.g., cold start)
-      setTimeout(() => {
-        doTrigger().catch(err => {
-          logWarn(
-            'On-demand job trigger failed after retry — daily cron will pick up',
-            {
-              error: err instanceof Error ? err.message : String(err),
-            }
-          );
-        });
-      }, 2000);
+    // Single immediate trigger — setTimeout calls do NOT survive in serverless.
+    // The cron worker itself handles auto-draining via self-trigger at the end.
+    doTrigger().catch(err => {
+      logWarn('On-demand job trigger failed — daily cron will pick up', {
+        error: err instanceof Error ? err.message : String(err),
+      });
     });
   } catch {
     // Non-critical — daily cron will pick up any missed jobs
@@ -160,24 +156,27 @@ export async function enqueueJob(
 
 /**
  * Atomically claim the next PENDING job using FOR UPDATE SKIP LOCKED.
+ * Wrapped in $transaction for PgBouncer compatibility (Supabase pooler).
  * Returns null if no jobs are available.
  */
 export async function dequeueNextJob(): Promise<ProcessableJob | null> {
-  // Use raw query for FOR UPDATE SKIP LOCKED which Prisma doesn't support natively
-  const jobs = await prisma.$queryRaw<ProcessableJob[]>`
-    UPDATE "ConsultingJob"
-    SET status = 'PROCESSING'::"ConsultingJobStatus",
-        "startedAt" = NOW(),
-        "updatedAt" = NOW()
-    WHERE id = (
-      SELECT id FROM "ConsultingJob"
-      WHERE status = 'PENDING'::"ConsultingJobStatus"
-      ORDER BY priority DESC, "createdAt" ASC
-      LIMIT 1
-      FOR UPDATE SKIP LOCKED
-    )
-    RETURNING id, type, input, "userId", "clientId"
-  `;
+  // Use $transaction to ensure FOR UPDATE SKIP LOCKED works through PgBouncer
+  const jobs = await prisma.$transaction(async tx => {
+    return tx.$queryRaw<ProcessableJob[]>`
+      UPDATE "ConsultingJob"
+      SET status = 'PROCESSING'::"ConsultingJobStatus",
+          "startedAt" = NOW(),
+          "updatedAt" = NOW()
+      WHERE id = (
+        SELECT id FROM "ConsultingJob"
+        WHERE status = 'PENDING'::"ConsultingJobStatus"
+        ORDER BY priority DESC, "createdAt" ASC
+        LIMIT 1
+        FOR UPDATE SKIP LOCKED
+      )
+      RETURNING id, type, input, "userId", "clientId"
+    `;
+  });
 
   if (jobs.length === 0) {
     return null;

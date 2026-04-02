@@ -248,9 +248,34 @@ export default function HoneypotLogs({
             </h3>
             <p className="text-neutral-600 dark:text-neutral-400">
               {total === 0
-                ? "This honeypot hasn't detected any threats yet."
+                ? "This honeypot hasn't detected any threats yet. If you've already run tests, the webhook callback may not be reaching DevFortress."
                 : 'No events match your current filters.'}
             </p>
+            {total === 0 && (
+              <div className="mt-6 mx-auto max-w-md rounded-lg bg-blue-50 p-4 text-left dark:bg-blue-950/30">
+                <h4 className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-2">
+                  💡 Troubleshooting
+                </h4>
+                <ol className="text-xs text-blue-600 dark:text-blue-400 space-y-1 list-decimal list-inside">
+                  <li>
+                    Go to the &ldquo;Actions&rdquo; tab and click &ldquo;💉
+                    Direct Inject Events&rdquo; to verify the logs view works
+                  </li>
+                  <li>
+                    If direct inject works but &ldquo;Test Honeypot&rdquo;
+                    doesn&apos;t produce logs, the webhook relay may be broken
+                  </li>
+                  <li>
+                    Try &ldquo;🔄 Update Webhook URL&rdquo; then &ldquo;🚀
+                    Redeploy with Latest Code&rdquo;
+                  </li>
+                  <li>
+                    Check that HONEYPOT_WEBHOOK_SECRET matches between the
+                    server and the deployed honeypot
+                  </li>
+                </ol>
+              </div>
+            )}
           </div>
         ) : (
           <>

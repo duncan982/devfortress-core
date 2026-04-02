@@ -46,6 +46,8 @@ export interface ThreatPattern {
 export interface ThreatAggregation {
   totalThreats: number;
   criticalThreats: number;
+  honeypotThreats: number;
+  liveApiThreats: number;
   patterns: ThreatPattern[];
   topIPs: Array<{ ip: string; count: number }>;
   testResults: TestResultAggregation;
@@ -334,9 +336,12 @@ export async function aggregateThreatData(
         }),
     ]);
 
-    // Normalize both types of threats to a common format
+    // Normalize both types of threats to a common format with source tagging
     const threats = [
-      ...honeypotThreats,
+      ...honeypotThreats.map(ht => ({
+        ...ht,
+        source: 'honeypot' as const,
+      })),
       ...liveThreats.map(lt => ({
         id: lt.id,
         severity: lt.severity,
@@ -347,6 +352,7 @@ export async function aggregateThreatData(
           ...((lt.metadata as Record<string, unknown>) || {}),
         },
         detectedAt: lt.timestamp,
+        source: 'live_api' as const,
       })),
     ];
 
@@ -411,6 +417,8 @@ export async function aggregateThreatData(
 
     logInfo('Aggregated threat data', {
       totalThreats: threats.length,
+      honeypotThreats: honeypotThreats.length,
+      liveApiThreats: liveThreats.length,
       criticalThreats,
       patternsFound: patterns.length,
       topIPsCount: topIPs.length,
@@ -422,6 +430,8 @@ export async function aggregateThreatData(
     return {
       totalThreats: threats.length,
       criticalThreats,
+      honeypotThreats: honeypotThreats.length,
+      liveApiThreats: liveThreats.length,
       patterns,
       topIPs,
       testResults,

@@ -81,7 +81,7 @@ export function isPaymentProviderEnabled(
 }
 
 /**
- * Feature limits per tier
+ * Feature limits per tier — Aligned with devfortress-pricing-3.html (6-tier model)
  */
 export const FEATURE_LIMITS = {
   // API Generations per month
@@ -89,7 +89,10 @@ export const FEATURE_LIMITS = {
     FREE: 0, // Must use own API keys
     [SubscriptionTier.STARTER]: 25,
     [SubscriptionTier.PRO]: 60,
-    [SubscriptionTier.ENTERPRISE]: 250,
+    [SubscriptionTier.ENTERPRISE]: 250, // Legacy alias for TEAM
+    [SubscriptionTier.TEAM]: 250,
+    [SubscriptionTier.BUSINESS]: 500,
+    [SubscriptionTier.ENTERPRISE_PLUS]: -1, // Unlimited
   },
 
   // Honeypots allowed
@@ -97,15 +100,43 @@ export const FEATURE_LIMITS = {
     FREE: 0, // Must self-host
     [SubscriptionTier.STARTER]: 1,
     [SubscriptionTier.PRO]: 3,
-    [SubscriptionTier.ENTERPRISE]: 10,
+    [SubscriptionTier.ENTERPRISE]: 10, // Legacy alias for TEAM
+    [SubscriptionTier.TEAM]: 10,
+    [SubscriptionTier.BUSINESS]: 25,
+    [SubscriptionTier.ENTERPRISE_PLUS]: -1, // Unlimited
   },
 
-  // Data retention (days)
+  // Data retention (days) — Fixed to match pricing HTML
   dataRetention: {
     FREE: 0,
-    [SubscriptionTier.STARTER]: 7,
-    [SubscriptionTier.PRO]: 30,
-    [SubscriptionTier.ENTERPRISE]: 90,
+    [SubscriptionTier.STARTER]: 7, // Was 30, corrected to 7
+    [SubscriptionTier.PRO]: 30, // Was 60, corrected to 30
+    [SubscriptionTier.ENTERPRISE]: 365, // 1 year — matches pricing page
+    [SubscriptionTier.TEAM]: 365,
+    [SubscriptionTier.BUSINESS]: 365,
+    [SubscriptionTier.ENTERPRISE_PLUS]: -1, // Custom
+  },
+
+  // Events per month
+  eventsPerMonth: {
+    FREE: 0,
+    [SubscriptionTier.STARTER]: 50_000,
+    [SubscriptionTier.PRO]: 500_000,
+    [SubscriptionTier.ENTERPRISE]: 5_000_000, // Legacy alias for TEAM
+    [SubscriptionTier.TEAM]: 5_000_000,
+    [SubscriptionTier.BUSINESS]: 20_000_000,
+    [SubscriptionTier.ENTERPRISE_PLUS]: -1, // Unlimited
+  },
+
+  // Automated actions per month (Starter = 0, alerts only)
+  automatedActions: {
+    FREE: 0,
+    [SubscriptionTier.STARTER]: 0, // Alert only — no automated actions
+    [SubscriptionTier.PRO]: 500,
+    [SubscriptionTier.ENTERPRISE]: 5_000, // Legacy alias for TEAM
+    [SubscriptionTier.TEAM]: 5_000,
+    [SubscriptionTier.BUSINESS]: -1, // Unlimited
+    [SubscriptionTier.ENTERPRISE_PLUS]: -1, // Unlimited
   },
 
   // Bandwidth (GB)
@@ -113,7 +144,10 @@ export const FEATURE_LIMITS = {
     FREE: 0,
     [SubscriptionTier.STARTER]: 10,
     [SubscriptionTier.PRO]: 50,
-    [SubscriptionTier.ENTERPRISE]: 500,
+    [SubscriptionTier.ENTERPRISE]: 500, // Legacy alias for TEAM
+    [SubscriptionTier.TEAM]: 500,
+    [SubscriptionTier.BUSINESS]: 2000,
+    [SubscriptionTier.ENTERPRISE_PLUS]: -1, // Unlimited
   },
 } as const;
 
