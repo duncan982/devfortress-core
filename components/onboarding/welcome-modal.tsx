@@ -88,7 +88,7 @@ export function WelcomeModal({
   // Initialize state based on isOpen prop - reset on each open
   const [currentStep, setCurrentStep] = useState(0);
   // Track completed steps (used for potential future progress indicators)
-   
+
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
 
@@ -193,11 +193,11 @@ export function WelcomeModal({
           {currentStep === 0 && (
             <div className="grid grid-cols-2 gap-3 mb-6">
               <a
-                href="/dashboard/build"
+                href="/dashboard/credentials"
                 className="flex items-center gap-2 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
                 <Rocket className="h-5 w-5 text-green-500" />
-                <span className="text-sm font-medium">Generate API</span>
+                <span className="text-sm font-medium">Create Project</span>
               </a>
               <a
                 href="/docs/self-hosting"

@@ -1,13 +1,7 @@
 /**
- * Breadcrumb Navigation Constants
  * Shared breadcrumb paths for consistent navigation
- *
- * Active Defense Feedback Loop (5-Phase Architecture):
- * 1. BUILD - Generate secure APIs and honeypots
- * 2. DEFEND - Deploy surveillance and monitor threats
- * 3. COLLECT - Aggregate threat data from production APIs
- * 4. LEARN - AI analysis and pattern recognition
- * 5. PATCH - Apply learned insights to improve protection
+ * MVP Focus: Collect Phase — SDK Surveillance, Token Aliasing, CL Protection
+ * Other phases (BUILD, DEFEND, LEARN, PATCH) are commented out for post-MVP reinstatement.
  */
 
 export interface BreadcrumbItem {
@@ -15,32 +9,35 @@ export interface BreadcrumbItem {
   href: string;
 }
 
-/**
- * Predefined breadcrumb paths for common pages
- */
 export const BREADCRUMB_PATHS = {
   dashboard: { label: 'Dashboard', href: '/dashboard' },
-  build: { label: 'BUILD Phase', href: '/build' },
-  defend: { label: 'DEFEND Phase', href: '/defend' },
-  learn: { label: 'LEARN Phase', href: '/learn' },
-  collect: { label: 'COLLECT Phase', href: '/collect' },
-  patch: { label: 'PATCH Phase', href: '/patch' },
   accountManagement: { label: 'Account & Management', href: '/dashboard' },
 
-  // DEFEND Phase sub-pages - unified navigation
-  defendAlerts: { label: 'DEFEND Phase', href: '/defend' },
-  defendSurveillance: { label: 'DEFEND Phase', href: '/defend' },
-  defendEvents: { label: 'DEFEND Phase', href: '/defend' },
-  honeypots: { label: 'DEFEND Phase', href: '/defend' },
-  threats: { label: 'COLLECT Phase', href: '/collect' },
-
-  // BUILD Phase sub-pages
-  buildAdvanced: { label: 'Advanced Features', href: '/build' },
-
-  // Insights
+  // MVP: Collect Phase
+  collect: { label: 'COLLECT Phase', href: '/dashboard/collect/surveillance' },
+  collectSurveillance: {
+    label: 'Surveillance',
+    href: '/dashboard/collect/surveillance',
+  },
+  collectSecurity: {
+    label: 'Security Overview',
+    href: '/dashboard/collect/security',
+  },
+  credentials: { label: 'SDK Credentials', href: '/dashboard/credentials' },
+  projects: { label: 'Projects', href: '/dashboard/projects' },
   insights: { label: 'Insights', href: '/dashboard/insights' },
-
-  // Teams
   teams: { label: 'Teams', href: '/dashboard/teams' },
   teamMonitoring: { label: 'Team Monitoring', href: '/dashboard/monitoring' },
+
+  // POST-MVP deprecated aliases — all redirect to /dashboard until phases are reinstated
+  build: { label: 'BUILD Phase', href: '/dashboard' },
+  defend: { label: 'DEFEND Phase', href: '/dashboard' },
+  learn: { label: 'LEARN Phase', href: '/dashboard' },
+  patch: { label: 'PATCH Phase', href: '/dashboard' },
+  defendAlerts: { label: 'Alerts', href: '/dashboard' },
+  defendSurveillance: { label: 'Surveillance', href: '/dashboard/credentials' },
+  defendEvents: { label: 'Events', href: '/dashboard/collect/surveillance' },
+  honeypots: { label: 'Projects', href: '/dashboard/projects' },
+  threats: { label: 'COLLECT Phase', href: '/dashboard/collect/surveillance' },
+  buildAdvanced: { label: 'Advanced Features', href: '/dashboard' },
 } as const;
