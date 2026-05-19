@@ -1,0 +1,2056 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+model User {
+  id                   String                  @id @default(cuid())
+  email                String                  @unique
+  name                 String?
+  image                String?
+  emailVerified        DateTime?
+  role                 UserRole                @default(VIEWER)
+  preferredFramework   String?
+  threatsRetentionDays Int?                    @default(90)
+  alertsRetentionDays  Int?                    @default(60)
+  logsRetentionDays    Int?                    @default(30)
+  exportBeforeDelete   Boolean                 @default(false)
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  lastLoginAt          DateTime?
+  textbookPurchaser    Boolean                 @default(false)
+  hasAcceptedTerms     Boolean                 @default(false)
+  hasAcceptedWarranties Boolean                @default(false)
+  hasAcceptedOversight Boolean                 @default(false)
+  acceptedTermsAt      DateTime?
+  apiMonitors          APIMonitor[]            @relation("UserAPIMonitors")
+  accounts             Account[]
+  apiProjects          ApiProject[]            @relation("ApiProjectOwner")
+  auditLogs            AuditLog[]
+  auditReports         AuditReport[]
+  betaUsers            BetaUser[]              @relation("BetaUsers")
+  chatbotConversations ChatbotConversation[]
+  consultingClients    ConsultingClient[]
+  consultingJobs       ConsultingJob[]
+  creditBalance        CreditBalance?
+  creditTransactions   CreditTransaction[]
+  dataExports          DataExport[]
+  deploymentApprovals  DeploymentApproval[]    @relation("DeploymentApprover")
+  deploymentRequests   DeploymentApproval[]    @relation("DeploymentRequester")
+  quotes               EnterpriseQuote[]       @relation("UserQuotes")
+  flywheelInsights     FlywheelInsight[]       @relation("UserInsights")
+  honeypots            Honeypot[]              @relation("HoneypotOwner")
+  testResults          HoneypotTestResult[]
+  userNotifications    Notification[]
+  notifications        NotificationPreference?
+  organizationsOwned   Organization[]          @relation("OrganizationOwner")
+  organizations        OrganizationMember[]
+  repositories         Repository[]            @relation("RepositoryOwner")
+  scanSchedules        ScanSchedule[]
+  secrets              Secret[]                @relation("UserSecrets")
+  sessions             Session[]
+  subscriptions        Subscription[]
+  assignedTickets      SupportTicket[]         @relation("AssignedTickets")
+  supportTickets       SupportTicket[]
+  teamsCreated              Team[]                  @relation("TeamCreatedBy")
+  sentInvitations           TeamInvitation[]
+  teams                     TeamMember[]
+  ticketMessages            TicketMessage[]
+  apiKeys                   UserApiKey[]
+  feedbacks                 UserFeedback[]
+  grantedProjectAccess      TeamProjectAccess[]     @relation("GrantedProjectAccess")
+}
+
+model UserApiKey {
+  id           String    @id @default(cuid())
+  userId       String
+  type         String
+  label        String
+  encryptedKey String
+  iv           String
+  authTag      String
+  salt         String
+  maskedKey    String
+  isActive     Boolean   @default(true)
+  lastUsed     DateTime? @map("lastUsedAt")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+  @@index([userId])
+  @@index([type])
+}
+
+model Team {
+  id             String              @id @default(cuid())
+  name           String
+  slug           String              @unique
+  organizationId String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  createdById    String
+  apiMonitors    APIMonitor[]        @relation("TeamAPIMonitors")
+  apiProjects    ApiProject[]
+  honeypots      Honeypot[]
+  repositories   Repository[]
+  secrets        Secret[]            @relation("TeamSecrets")
+  createdBy      User                @relation("TeamCreatedBy", fields: [createdById], references: [id])
+  organization   Organization?       @relation(fields: [organizationId], references: [id])
+  invitations    TeamInvitation[]
+  members        TeamMember[]
+  projectAccess  TeamProjectAccess[]
+}
+
+model TeamMember {
+  id       String   @id @default(cuid())
+  teamId   String
+  userId   String
+  role     TeamRole @default(DEVELOPER)
+  joinedAt DateTime @default(now())
+  team     Team     @relation(fields: [teamId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@unique([teamId, userId])
+}
+
+model TeamInvitation {
+  id          String           @id @default(cuid())
+  teamId      String
+  email       String
+  role        TeamRole         @default(DEVELOPER)
+  invitedById String
+  invitedAt   DateTime         @default(now())
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  token       String           @unique
+  status      InvitationStatus @default(PENDING)
+  invitedBy   User             @relation(fields: [invitedById], references: [id])
+  team        Team             @relation(fields: [teamId], references: [id])
+
+  @@unique([teamId, email])
+}
+
+model Organization {
+  id                 String               @id @default(cuid())
+  name               String
+  slug               String               @unique
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  ownerId            String
+  apiProjects        ApiProject[]
+  creditBalance      CreditBalance?
+  creditTransactions CreditTransaction[]
+  honeypots          Honeypot[]
+  owner              User                 @relation("OrganizationOwner", fields: [ownerId], references: [id])
+  members            OrganizationMember[]
+  repositories       Repository[]
+  subscriptions      Subscription[]
+  teams              Team[]
+}
+
+model OrganizationMember {
+  id             String           @id @default(cuid())
+  organizationId String
+  userId         String
+  role           OrganizationRole @default(MEMBER)
+  joinedAt       DateTime         @default(now())
+  organization   Organization     @relation(fields: [organizationId], references: [id])
+  user           User             @relation(fields: [userId], references: [id])
+
+  @@unique([organizationId, userId])
+}
+
+model ApiProject {
+  id                 String              @id @default(cuid())
+  name               String
+  slug               String              @unique
+  description        String?
+  framework          String?
+  language           String?
+  specification      Json?
+  metadata           Json?
+  rawResponse        String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  createdById        String
+  teamId             String?
+  organizationId     String?
+  repositoryId       String?             @unique
+  surveillanceApiKey String?             @unique
+  webhookSecret      String?
+  createdBy          User                @relation("ApiProjectOwner", fields: [createdById], references: [id])
+  organization       Organization?       @relation(fields: [organizationId], references: [id])
+  repository         Repository?         @relation("ProjectRepository", fields: [repositoryId], references: [id])
+  team               Team?               @relation(fields: [teamId], references: [id])
+  auditLogs          AuditLog[]
+  blockedIps         BlockedIp[]
+  clAuditTrails      ClAuditTrail[]
+  credentialAliases  CredentialAlias[]
+  creditTransactions CreditTransaction[]
+  documentationNodes DocumentationNode[]
+  flywheelInsights   FlywheelInsight[]
+  honeypots          Honeypot[]
+  liveThreatEvents   LiveThreatEvent[]
+  threatEvents       ThreatEvent[]
+  webhookDeliveries  WebhookDelivery[]
+  teamAccess         TeamProjectAccess[]
+}
+
+model Repository {
+  id             String             @id @default(cuid())
+  provider       RepositoryProvider @default(GITHUB)
+  externalId     String             @unique
+  name           String
+  ownerLogin     String
+  installationId String?
+  defaultBranch  String             @default("main")
+  status         RepositoryStatus   @default(PENDING)
+  metadata       Json?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  ownerId        String
+  teamId         String?
+  organizationId String?
+  apiProject     ApiProject?        @relation("ProjectRepository")
+  honeypots      Honeypot[]
+  organization   Organization?      @relation(fields: [organizationId], references: [id])
+  owner          User               @relation("RepositoryOwner", fields: [ownerId], references: [id])
+  team           Team?              @relation(fields: [teamId], references: [id])
+  syncStates     SyncState[]
+}
+
+model Honeypot {
+  id                  String                @id @default(cuid())
+  name                String
+  slug                String                @unique
+  status              HoneypotStatus        @default(INACTIVE)
+  deploymentUrl       String?
+  vercelProjectName   String?
+  vercelProjectId     String?
+  tier                SubscriptionPlan
+  config              Json?
+  suspendedReason     String?
+  suspendedAt         DateTime?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  ownerId             String
+  teamId              String?
+  organizationId      String?
+  apiProjectId        String?
+  repositoryId        String?
+  consultingClientId  String?
+  anomalyTrainingData AnomalyTrainingData[]
+  apiProject          ApiProject?           @relation(fields: [apiProjectId], references: [id])
+  consultingClient    ConsultingClient?     @relation(fields: [consultingClientId], references: [id])
+  organization        Organization?         @relation(fields: [organizationId], references: [id])
+  owner               User                  @relation("HoneypotOwner", fields: [ownerId], references: [id])
+  repository          Repository?           @relation(fields: [repositoryId], references: [id])
+  team                Team?                 @relation(fields: [teamId], references: [id])
+  alerts              HoneypotAlert[]
+  testResults         HoneypotTestResult[]
+  traffic             HoneypotTraffic[]
+  incidents           Incident[]
+  threatEvents        ThreatEvent[]
+
+  @@index([consultingClientId])
+}
+
+model HoneypotTestResult {
+  id          String   @id @default(cuid())
+  honeypotId  String
+  userId      String
+  attacksSent Int      @default(0)
+  results     Json
+  createdAt   DateTime @default(now())
+  honeypot    Honeypot @relation(fields: [honeypotId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@index([honeypotId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model HoneypotTraffic {
+  id              String   @id @default(cuid())
+  honeypotId      String
+  timestamp       DateTime @default(now())
+  ip              String
+  method          String
+  path            String
+  userAgent       String?
+  headers         Json?
+  body            Json?
+  statusCode      Int?
+  threatsDetected Int      @default(0)
+  threatDetails   Json?
+  honeypot        Honeypot @relation(fields: [honeypotId], references: [id], onDelete: Cascade)
+
+  @@index([honeypotId, timestamp])
+  @@index([ip])
+}
+
+model HoneypotAlert {
+  id             String         @id @default(cuid())
+  honeypotId     String
+  severity       ThreatSeverity @default(MEDIUM)
+  type           String
+  description    String
+  threats        Json
+  recommendation String
+  ip             String
+  path           String
+  timestamp      DateTime       @default(now())
+  autoBlocked    Boolean        @default(false)
+  resolved       Boolean        @default(false)
+  resolvedAt     DateTime?
+  resolution     String?
+  honeypot       Honeypot       @relation(fields: [honeypotId], references: [id], onDelete: Cascade)
+
+  @@index([honeypotId, resolved])
+  @@index([severity])
+  @@index([timestamp])
+}
+
+model ThreatEvent {
+  id              String         @id @default(cuid())
+  honeypotId      String
+  apiProjectId    String?
+  sourceIp        String
+  userAgent       String?
+  payload         Json?
+  detectedAt      DateTime       @default(now())
+  severity        ThreatSeverity @default(MEDIUM)
+  tags            String[]       @default([])
+  isFalsePositive Boolean        @default(false)
+  apiProject      ApiProject?    @relation(fields: [apiProjectId], references: [id])
+  honeypot        Honeypot       @relation(fields: [honeypotId], references: [id])
+}
+
+model LiveThreatEvent {
+  id                       String         @id @default(cuid())
+  eventType                String
+  timestamp                DateTime       @default(now())
+  ip                       String
+  userAgent                String?
+  requestPath              String?
+  statusCode               Int?
+  method                   String?
+  headers                  Json?
+  body                     Json?
+  severity                 ThreatSeverity @default(MEDIUM)
+  metadata                 Json?
+  projectId                String
+  createdAt                DateTime       @default(now())
+  actionTaken              String?
+  appId                    String?
+  authPhase                String?
+  clMode                   String?
+  environment              String?
+  responseLatencyMs        Int?
+  sessionActiveAfterAction Boolean?
+  sessionId                String?
+  userId                   String?
+  project                  ApiProject     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([timestamp])
+  @@index([eventType])
+  @@index([severity])
+  @@index([ip])
+  @@index([authPhase])
+  @@index([actionTaken])
+}
+
+model AnomalyTrainingData {
+  id          String         @id @default(cuid())
+  honeypotId  String
+  sourceIp    String
+  anomalyType String
+  confidence  Float
+  severity    ThreatSeverity
+  features    Json
+  detectedAt  DateTime       @default(now())
+  validated   Boolean?
+  validatedAt DateTime?
+  validatedBy String?
+  honeypot    Honeypot       @relation(fields: [honeypotId], references: [id])
+}
+
+model FlywheelInsight {
+  id           String      @id @default(cuid())
+  apiProjectId String?
+  type         InsightType @default(VULNERABILITY_TREND)
+  summary      String
+  details      Json?
+  generatedAt  DateTime    @default(now())
+  modelVersion String?
+  confidence   Float?
+  ownerId      String?
+  apiProject   ApiProject? @relation(fields: [apiProjectId], references: [id])
+  owner        User?       @relation("UserInsights", fields: [ownerId], references: [id])
+
+  @@index([ownerId])
+  @@index([apiProjectId])
+}
+
+model DocumentationNode {
+  id           String     @id @default(cuid())
+  apiProjectId String
+  title        String
+  content      Json
+  locale       String     @default("en")
+  version      String     @default("latest")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  apiProject   ApiProject @relation(fields: [apiProjectId], references: [id])
+}
+
+model CreditBalance {
+  id             String              @id @default(cuid())
+  userId         String?             @unique
+  organizationId String?             @unique
+  available      Int                 @default(0)
+  consumed       Int                 @default(0)
+  lastNotifiedAt DateTime?
+  updatedAt      DateTime            @updatedAt
+  organization   Organization?       @relation(fields: [organizationId], references: [id])
+  user           User?               @relation(fields: [userId], references: [id])
+  transactions   CreditTransaction[]
+}
+
+model CreditTransaction {
+  id             String                @id @default(cuid())
+  userId         String
+  apiProjectId   String?
+  balanceId      String?
+  amount         Int
+  type           CreditTransactionType
+  description    String?
+  referenceId    String?
+  referenceType  String?
+  reason         String?
+  metadata       Json?
+  createdAt      DateTime              @default(now())
+  organizationId String?
+  apiProject     ApiProject?           @relation(fields: [apiProjectId], references: [id])
+  balance        CreditBalance?        @relation(fields: [balanceId], references: [id])
+  organization   Organization?         @relation(fields: [organizationId], references: [id])
+  user           User                  @relation(fields: [userId], references: [id])
+}
+
+model Subscription {
+  id                String             @id @default(cuid())
+  plan              SubscriptionPlan
+  status            SubscriptionStatus @default(TRIALING)
+  provider          String
+  providerReference String             @unique
+  seats             Int                @default(1)
+  renewsAt          DateTime?
+  canceledAt        DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  userId            String?
+  organizationId    String?
+  organization      Organization?      @relation(fields: [organizationId], references: [id])
+  user              User?              @relation(fields: [userId], references: [id])
+}
+
+model SyncState {
+  id           String     @id @default(cuid())
+  repositoryId String
+  lastSyncedAt DateTime?
+  lastRevision String?
+  state        Json?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  repository   Repository @relation(fields: [repositoryId], references: [id])
+}
+
+model AuditLog {
+  id           String      @id @default(cuid())
+  userId       String?
+  apiProjectId String?
+  action       String
+  resource     String
+  resourceId   String?
+  level        LogLevel    @default(INFO)
+  message      String
+  details      Json?
+  ipAddress    String?
+  userAgent    String?
+  timestamp    DateTime    @default(now())
+  createdAt    DateTime    @default(now())
+  apiProject   ApiProject? @relation(fields: [apiProjectId], references: [id])
+  user         User?       @relation(fields: [userId], references: [id])
+}
+
+model NotificationPreference {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  creditAlertsEnabled   Boolean  @default(true)
+  securityAlertsEnabled Boolean  @default(true)
+  marketingOptIn        Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  user                  User     @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id        String             @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  metadata  Json?
+  status    NotificationStatus @default(UNREAD)
+  readAt    DateTime?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Account {
+  id                       String  @id @default(cuid())
+  userId                   String
+  type                     String
+  provider                 String
+  providerAccountId        String
+  refresh_token            String?
+  access_token             String?
+  expires_at               Int?
+  token_type               String?
+  scope                    String?
+  id_token                 String?
+  session_state            String?
+  oauth_token_secret       String?
+  oauth_token              String?
+  refresh_token_expires_in Int?
+  user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @id
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model BetaUser {
+  id            String         @id @default(cuid())
+  userId        String
+  email         String
+  role          BetaUserRole   @default(TESTER)
+  status        BetaUserStatus @default(INVITED)
+  invitedAt     DateTime       @default(now())
+  activatedAt   DateTime?
+  completedAt   DateTime?
+  testScenarios String[]       @default([])
+  feedbackCount Int            @default(0)
+  metadata      Json?
+  feedback      BetaFeedback[]
+  user          User           @relation("BetaUsers", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+}
+
+model TestScenario {
+  id              String               @id @default(cuid())
+  name            String
+  description     String
+  category        TestScenarioCategory
+  priority        TestScenarioPriority
+  steps           String[]
+  expectedOutcome String
+  status          TestScenarioStatus   @default(DRAFT)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  feedback        BetaFeedback[]
+
+  @@index([category])
+  @@index([priority])
+  @@index([status])
+}
+
+model BetaFeedback {
+  id               String           @id @default(cuid())
+  betaUserId       String
+  scenarioId       String?
+  type             FeedbackType
+  severity         FeedbackSeverity
+  title            String
+  description      String
+  steps            String[]         @default([])
+  expectedBehavior String?
+  actualBehavior   String?
+  screenshots      String[]         @default([])
+  status           FeedbackStatus   @default(NEW)
+  createdAt        DateTime         @default(now())
+  resolvedAt       DateTime?
+  metadata         Json?
+  betaUser         BetaUser         @relation(fields: [betaUserId], references: [id], onDelete: Cascade)
+  scenario         TestScenario?    @relation(fields: [scenarioId], references: [id])
+
+  @@index([betaUserId])
+  @@index([scenarioId])
+  @@index([type])
+  @@index([severity])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model APIMonitor {
+  id                   String            @id @default(cuid())
+  userId               String
+  teamId               String?
+  name                 String
+  endpoint             String
+  method               String            @default("GET")
+  headers              Json              @default("{}")
+  body                 String?
+  expectedStatusCode   Int               @default(200)
+  expectedResponseTime Int               @default(5000)
+  frequency            MonitorFrequency  @default(FIVE_MINUTES)
+  status               MonitorStatus     @default(ACTIVE)
+  alertEmail           String?
+  lastCheckedAt        DateTime          @default(now())
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  team                 Team?             @relation("TeamAPIMonitors", fields: [teamId], references: [id], onDelete: Cascade)
+  user                 User              @relation("UserAPIMonitors", fields: [userId], references: [id], onDelete: Cascade)
+  checks               MonitorCheck[]
+  incidents            MonitorIncident[]
+
+  @@index([userId])
+  @@index([teamId])
+  @@index([status])
+  @@index([lastCheckedAt])
+}
+
+model MonitorCheck {
+  id           String     @id @default(cuid())
+  monitorId    String
+  statusCode   Int
+  responseTime Int
+  success      Boolean
+  error        String?
+  checkedAt    DateTime   @default(now())
+  monitor      APIMonitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+
+  @@index([monitorId])
+  @@index([checkedAt])
+  @@index([success])
+}
+
+model MonitorIncident {
+  id             String           @id @default(cuid())
+  monitorId      String
+  severity       IncidentSeverity
+  status         IncidentStatus   @default(OPEN)
+  message        String
+  detectedAt     DateTime         @default(now())
+  lastOccurredAt DateTime         @default(now())
+  resolvedAt     DateTime?
+  monitor        APIMonitor       @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+
+  @@index([monitorId])
+  @@index([severity])
+  @@index([status])
+  @@index([detectedAt])
+}
+
+model Secret {
+  id                   String              @id @default(cuid())
+  userId               String
+  teamId               String?
+  name                 String
+  type                 SecretType
+  value                String
+  status               SecretStatus        @default(ACTIVE)
+  lastRotatedAt        DateTime            @default(now())
+  nextRotationAt       DateTime?
+  rotationIntervalDays Int                 @default(90)
+  metadata             Json                @default("{}")
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  team                 Team?               @relation("TeamSecrets", fields: [teamId], references: [id], onDelete: Cascade)
+  user                 User                @relation("UserSecrets", fields: [userId], references: [id], onDelete: Cascade)
+  rotationLogs         SecretRotationLog[]
+
+  @@index([userId])
+  @@index([teamId])
+  @@index([status])
+  @@index([nextRotationAt])
+}
+
+model SecretRotationLog {
+  id            String           @id @default(cuid())
+  secretId      String
+  strategy      RotationStrategy
+  previousValue String
+  newValue      String
+  rotatedAt     DateTime         @default(now())
+  expiresAt     DateTime?
+  secret        Secret           @relation(fields: [secretId], references: [id], onDelete: Cascade)
+
+  @@index([secretId])
+  @@index([rotatedAt])
+}
+
+model EnterpriseQuote {
+  id                        String      @id @default(cuid())
+  userId                    String?
+  companyName               String
+  contactName               String
+  contactEmail              String
+  teamSize                  Int
+  expectedAPIs              Int
+  expectedEventsPerMonth    Int
+  requiresSupport           Boolean     @default(false)
+  requiresSLA               Boolean     @default(false)
+  requiresCustomIntegration Boolean     @default(false)
+  additionalNotes           String?
+  breakdown                 Json
+  status                    QuoteStatus @default(PENDING)
+  validUntil                DateTime
+  createdAt                 DateTime    @default(now())
+  updatedAt                 DateTime    @updatedAt
+  user                      User?       @relation("UserQuotes", fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([contactEmail])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model HelpArticle {
+  id         String          @id @default(cuid())
+  title      String
+  slug       String          @unique
+  content    String
+  category   ArticleCategory
+  audience   ArticleAudience @default(ALL)
+  tags       String[]
+  published  Boolean         @default(true)
+  viewCount  Int             @default(0)
+  helpful    Int             @default(0)
+  notHelpful Int             @default(0)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@index([category])
+  @@index([audience])
+  @@index([published])
+  @@index([slug])
+}
+
+model HelpFAQ {
+  id       String          @id @default(cuid())
+  question String
+  answer   String
+  category ArticleCategory
+  order    Int             @default(0)
+
+  @@index([category])
+  @@index([order])
+}
+
+model UserConsent {
+  id          String   @id @default(cuid())
+  userId      String
+  necessary   Boolean  @default(true)
+  analytics   Boolean  @default(false)
+  marketing   Boolean  @default(false)
+  preferences Boolean  @default(false)
+  ipAddress   String?
+  userAgent   String?
+  consentedAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([consentedAt])
+}
+
+model DataRequest {
+  id          String          @id @default(cuid())
+  userId      String
+  type        DataRequestType
+  status      RequestStatus   @default(PENDING)
+  requestedAt DateTime        @default(now())
+  completedAt DateTime?
+  notes       String?
+
+  @@index([userId])
+  @@index([status])
+  @@index([requestedAt])
+}
+
+model UserOnboarding {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  currentStep    Int       @default(1)
+  completedSteps Json      @default("[]")
+  skipped        Boolean   @default(false)
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([completedAt])
+}
+
+model UserMFA {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  secret      String
+  enabled     Boolean  @default(false)
+  backupCodes String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model UserSession {
+  id               String    @id @default(cuid())
+  userId           String
+  accessToken      String    @unique
+  refreshToken     String    @unique
+  expiresAt        DateTime
+  refreshExpiresAt DateTime
+  ipAddress        String?
+  userAgent        String?
+  lastActivity     DateTime  @default(now())
+  mfaVerified      Boolean   @default(false)
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([userId])
+  @@index([accessToken])
+  @@index([refreshToken])
+  @@index([expiresAt])
+}
+
+model SecurityScan {
+  id           String   @id @default(cuid())
+  scanId       String   @unique
+  targetUrl    String
+  scanType     String
+  startTime    DateTime
+  endTime      DateTime
+  duration     Int
+  highAlerts   Int      @default(0)
+  mediumAlerts Int      @default(0)
+  lowAlerts    Int      @default(0)
+  infoAlerts   Int      @default(0)
+  alerts       Json
+  reportPath   String?
+  createdAt    DateTime @default(now())
+
+  @@index([targetUrl])
+  @@index([scanType])
+  @@index([startTime])
+}
+
+model Incident {
+  id              String         @id @default(cuid())
+  honeypotId      String
+  sourceIp        String
+  severity        ThreatSeverity
+  type            String
+  description     String
+  detectedAt      DateTime       @default(now())
+  responded       Boolean        @default(false)
+  responseActions String[]       @default([])
+  resolvedAt      DateTime?
+  resolution      String?
+  createdAt       DateTime       @default(now())
+  honeypot        Honeypot       @relation(fields: [honeypotId], references: [id])
+
+  @@index([honeypotId])
+  @@index([severity])
+  @@index([detectedAt])
+  @@index([responded])
+}
+
+model ChatbotConversation {
+  id              String                    @id @default(cuid())
+  userId          String?
+  sessionId       String                    @unique
+  status          ChatbotConversationStatus @default(ACTIVE)
+  topic           String?
+  escalatedAt     DateTime?
+  escalatedReason String?
+  resolvedAt      DateTime?
+  satisfaction    Int?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  user            User?                     @relation(fields: [userId], references: [id])
+  messages        ChatbotMessage[]
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ChatbotMessage {
+  id             String              @id @default(cuid())
+  conversationId String
+  role           ChatbotMessageRole
+  content        String
+  metadata       Json?
+  createdAt      DateTime            @default(now())
+  conversation   ChatbotConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([createdAt])
+}
+
+model SupportTicket {
+  id               String          @id @default(cuid())
+  ticketNumber     String          @unique
+  userId           String?
+  assignedToId     String?
+  subject          String
+  description      String
+  status           TicketStatus    @default(OPEN)
+  priority         TicketPriority  @default(MEDIUM)
+  source           TicketSource    @default(MANUAL)
+  category         String?
+  tags             String[]        @default([])
+  externalId       String?
+  externalUrl      String?
+  conversationId   String?
+  firstResponseAt  DateTime?
+  resolvedAt       DateTime?
+  closedAt         DateTime?
+  responseTime     Int?
+  resolutionTime   Int?
+  satisfaction     Int?
+  satisfactionNote String?
+  metadata         Json?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  assignedTo       User?           @relation("AssignedTickets", fields: [assignedToId], references: [id])
+  user             User?           @relation(fields: [userId], references: [id])
+  messages         TicketMessage[]
+
+  @@index([userId])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([priority])
+  @@index([source])
+  @@index([category])
+  @@index([createdAt])
+  @@index([ticketNumber])
+}
+
+model TicketMessage {
+  id          String        @id @default(cuid())
+  ticketId    String
+  authorId    String?
+  content     String
+  isInternal  Boolean       @default(false)
+  isAutomated Boolean       @default(false)
+  attachments String[]      @default([])
+  metadata    Json?
+  createdAt   DateTime      @default(now())
+  author      User?         @relation(fields: [authorId], references: [id])
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([authorId])
+  @@index([createdAt])
+}
+
+model AppSettings {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedBy   String?
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@index([key])
+}
+
+model AIPerformanceLog {
+  id               String     @id @default(cuid())
+  taskType         AITaskType
+  provider         AIProvider
+  inputHash        String
+  outputSample     String?
+  accuracy         Float?
+  costUsd          Float
+  latencyMs        Int
+  errorOccurred    Boolean    @default(false)
+  errorType        String?
+  mlConfidence     Float?
+  nlUsedAsFallback Boolean    @default(false)
+  metadata         Json?
+  createdAt        DateTime   @default(now())
+
+  @@index([taskType])
+  @@index([provider])
+  @@index([createdAt])
+  @@index([errorOccurred])
+}
+
+model DeploymentApproval {
+  id                String                   @id @default(cuid())
+  requesterId       String
+  environment       DeploymentEnvironment
+  status            DeploymentApprovalStatus @default(PENDING)
+  branch            String
+  commit            String
+  changes           Json?
+  deploymentDetails Json?
+  requestedAt       DateTime                 @default(now())
+  expiresAt         DateTime
+  approvedById      String?
+  approvedAt        DateTime?
+  rejectedReason    String?
+  deploymentUrl     String?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  approvedBy        User?                    @relation("DeploymentApprover", fields: [approvedById], references: [id])
+  requester         User                     @relation("DeploymentRequester", fields: [requesterId], references: [id])
+
+  @@index([requesterId])
+  @@index([status])
+  @@index([environment])
+  @@index([requestedAt])
+  @@index([expiresAt])
+}
+
+model UserFeedback {
+  id          String             @id @default(cuid())
+  userId      String?
+  type        UserFeedbackType
+  sentiment   Int?
+  category    String?
+  page        String?
+  title       String?
+  description String?
+  metadata    Json?
+  votes       Int                @default(1)
+  status      UserFeedbackStatus @default(NEW)
+  adminNotes  String?
+  resolvedAt  DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  user        User?              @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([category])
+  @@index([sentiment])
+  @@index([createdAt])
+}
+
+model DataExport {
+  id              String       @id @default(cuid())
+  userId          String
+  status          ExportStatus @default(PENDING)
+  downloadUrl     String?
+  format          String       @default("json")
+  includeThreats  Boolean      @default(true)
+  includeAlerts   Boolean      @default(true)
+  includeLogs     Boolean      @default(true)
+  includeProjects Boolean      @default(true)
+  startDate       DateTime?
+  endDate         DateTime?
+  fileSize        Int?
+  requestedAt     DateTime     @default(now())
+  completedAt     DateTime?
+  expiresAt       DateTime?
+  errorMessage    String?
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([requestedAt])
+  @@index([expiresAt])
+}
+
+model ConsultingJob {
+  id          String              @id @default(cuid())
+  type        ConsultingJobType
+  status      ConsultingJobStatus @default(PENDING)
+  input       Json
+  output      Json?
+  progress    Int                 @default(0)
+  userId      String
+  clientId    String?
+  error       String?
+  priority    Int                 @default(0)
+  createdAt   DateTime            @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+  updatedAt   DateTime            @updatedAt
+  auditReport AuditReport?
+  client      ConsultingClient?   @relation(fields: [clientId], references: [id])
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, priority])
+  @@index([userId])
+  @@index([clientId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model ConsultingClient {
+  id            String          @id @default(cuid())
+  name          String
+  email         String?
+  company       String?
+  websiteUrl    String?
+  notes         String?
+  branding      Json?
+  shareToken    String?         @unique @default(cuid())
+  createdById   String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  auditReports  AuditReport[]
+  createdBy     User            @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  jobs          ConsultingJob[]
+  honeypots     Honeypot[]
+  scanSchedules ScanSchedule[]
+
+  @@index([createdById])
+  @@index([email])
+  @@index([shareToken])
+}
+
+model AuditReport {
+  id               String            @id @default(cuid())
+  userId           String
+  clientId         String?
+  jobId            String?           @unique
+  targetUrl        String?
+  status           AuditReportStatus @default(GENERATING)
+  reportJson       Json?
+  executiveSummary String?
+  overallScore     Int?
+  criticalCount    Int               @default(0)
+  highCount        Int               @default(0)
+  mediumCount      Int               @default(0)
+  lowCount         Int               @default(0)
+  pdfUrl           String?
+  shareToken       String?           @unique @default(cuid())
+  createdAt        DateTime          @default(now())
+  completedAt      DateTime?
+  updatedAt        DateTime          @updatedAt
+  client           ConsultingClient? @relation(fields: [clientId], references: [id])
+  job              ConsultingJob?    @relation(fields: [jobId], references: [id])
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([clientId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([shareToken])
+}
+
+model ScanSchedule {
+  id        String            @id @default(cuid())
+  userId    String
+  clientId  String?
+  targetUrl String
+  frequency ScanFrequency
+  isActive  Boolean           @default(true)
+  lastRunAt DateTime?
+  nextRunAt DateTime?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  client    ConsultingClient? @relation(fields: [clientId], references: [id])
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isActive, nextRunAt])
+}
+
+model ClAuditTrail {
+  id            String     @id @default(cuid())
+  projectId     String
+  detectEventId String
+  action        String
+  clMode        String
+  authPhase     String?
+  ip            String?
+  userId        String?
+  confirmed     Boolean    @default(false)
+  confirmedAt   DateTime?
+  latencyMs     Int?
+  success       Boolean?
+  failureReason String?
+  metadata      Json?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  project       ApiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([detectEventId])
+  @@index([createdAt])
+  @@index([confirmed])
+  @@index([action])
+}
+
+model BlockedIp {
+  id             String     @id @default(cuid())
+  projectId      String
+  ip             String
+  compositeScore Float?
+  abuseIpDbScore Float?
+  dfSignalScore  Float?
+  source         String     @default("auto")
+  reason         String?
+  blockedAt      DateTime   @default(now())
+  expiresAt      DateTime?
+  unblockedAt    DateTime?
+  metadata       Json?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  project        ApiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, ip])
+  @@index([projectId])
+  @@index([ip])
+  @@index([blockedAt])
+  @@index([expiresAt])
+}
+
+model WebhookDelivery {
+  id            String     @id @default(cuid())
+  projectId     String
+  eventType     String
+  targetUrl     String
+  payload       Json
+  hmacSignature String?
+  httpStatus    Int?
+  responseBody  String?
+  success       Boolean    @default(false)
+  attempt       Int        @default(1)
+  maxAttempts   Int        @default(3)
+  nextRetryAt   DateTime?
+  error         String?
+  deliveredAt   DateTime?
+  createdAt     DateTime   @default(now())
+  project       ApiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([success])
+  @@index([createdAt])
+  @@index([nextRetryAt])
+}
+
+model EnterpriseSSOConfig {
+  id               String                 @id @default(cuid())
+  orgId            String
+  provider         EnterpriseSSOProvider
+  status           EnterpriseSSOStatus    @default(PENDING_SETUP)
+  displayName      String
+  metadataUrl      String?
+  entityId         String?
+  ssoUrl           String?
+  sloUrl           String?
+  certificate      String?
+  attributeMapping Json
+  enforceSSO       Boolean                @default(false)
+  jitProvisioning  Boolean                @default(false)
+  defaultRole      String                 @default("VIEWER")
+  allowedDomains   String[]               @default([])
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  sessions         EnterpriseSSOSession[]
+
+  @@index([orgId])
+  @@index([provider])
+  @@index([status])
+}
+
+model EnterpriseSSOSession {
+  id              String                @id @default(cuid())
+  configId        String
+  userId          String
+  provider        EnterpriseSSOProvider
+  idpSessionId    String
+  nameId          String
+  attributes      Json
+  authenticatedAt DateTime              @default(now())
+  expiresAt       DateTime
+  config          EnterpriseSSOConfig   @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  @@index([configId])
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model EnterpriseMTLSConfig {
+  id                     String                  @id @default(cuid())
+  orgId                  String                  @unique
+  enabled                Boolean                 @default(false)
+  enforceForAllEndpoints Boolean                 @default(false)
+  requiredEndpoints      String[]                @default([])
+  autoRotationEnabled    Boolean                 @default(true)
+  autoRotationDaysBefore Int                     @default(30)
+  autoRotationNotifyDays Int[]                   @default([90, 60, 30, 14, 7, 1])
+  maxValidityDays        Int                     @default(365)
+  allowedKeyAlgorithms   String[]                @default(["RSA-2048", "RSA-4096", "ECDSA-P256", "ECDSA-P384"])
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  certificates           EnterpriseCertificate[]
+
+  @@index([orgId])
+}
+
+model EnterpriseCertificate {
+  id               String                @id @default(cuid())
+  orgId            String
+  configId         String?
+  type             EnterpriseCertType
+  status           EnterpriseCertStatus  @default(PENDING)
+  commonName       String
+  serialNumber     String                @unique
+  fingerprint      String
+  issuer           String
+  subject          String
+  validFrom        DateTime
+  validUntil       DateTime
+  revokedAt        DateTime?
+  revocationReason String?
+  metadata         Json?
+  createdAt        DateTime              @default(now())
+  config           EnterpriseMTLSConfig? @relation(fields: [configId], references: [id])
+
+  @@index([orgId])
+  @@index([status])
+  @@index([fingerprint])
+  @@index([validUntil])
+}
+
+model EnterpriseSIEMConfig {
+  id                  String                 @id @default(cuid())
+  orgId               String
+  provider            EnterpriseSIEMProvider
+  enabled             Boolean                @default(true)
+  endpoint            String
+  authToken           String?
+  apiKey              String?
+  hecToken            String?
+  ddApiKey            String?
+  ddSite              String?
+  sentinelWorkspaceId String?
+  sentinelSharedKey   String?
+  customHeaders       Json?
+  minSeverity         Int                    @default(1)
+  threatTypeFilter    String[]               @default([])
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  @@index([orgId])
+  @@index([provider])
+  @@index([enabled])
+}
+
+model EnterprisePlaybook {
+  id          String   @id @default(cuid())
+  orgId       String
+  name        String
+  description String?
+  enabled     Boolean  @default(true)
+  priority    Int      @default(50)
+  rules       Json
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([orgId])
+  @@index([enabled])
+  @@index([priority])
+}
+
+model EnterpriseAccountLock {
+  id          String                      @id @default(cuid())
+  userId      String
+  status      EnterpriseAccountLockStatus @default(ACTIVE)
+  reason      String
+  lockedAt    DateTime                    @default(now())
+  expiresAt   DateTime?
+  lockedBy    String
+  unlockToken String?
+  metadata    Json?
+  unlockedAt  DateTime?
+  unlockedBy  String?
+  createdAt   DateTime                    @default(now())
+  updatedAt   DateTime                    @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+model EnterpriseAccountLockHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  reason    String?
+  details   Json?
+  timestamp DateTime @default(now())
+
+  @@index([userId])
+  @@index([timestamp])
+}
+
+model EnterpriseUsagePeriod {
+  id               String   @id @default(cuid())
+  orgId            String
+  periodKey        String
+  periodStart      DateTime
+  periodEnd        DateTime
+  events           Int      @default(0)
+  automatedActions Int      @default(0)
+  abuseipdbChecks  Int      @default(0)
+  apiGenerations   Int      @default(0)
+  lastUpdated      DateTime @default(now())
+  createdAt        DateTime @default(now())
+
+  @@unique([orgId, periodKey])
+  @@index([orgId])
+  @@index([periodStart])
+}
+
+model EnterpriseContract {
+  id                 String                   @id @default(cuid())
+  orgId              String
+  orgName            String
+  status             EnterpriseContractStatus @default(PENDING)
+  tier               String
+  annualValue        Int
+  monthlyEquivalent  Int
+  includedEndpoints  Int
+  startDate          DateTime
+  endDate            DateTime
+  autoRenew          Boolean                  @default(true)
+  poNumber           String?
+  compliance         String[]                 @default([])
+  securityTier       String
+  deploymentModel    String
+  slaTier            String
+  implementationFee  Int                      @default(0)
+  implementationPaid Boolean                  @default(false)
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+  invoices           EnterpriseInvoice[]
+
+  @@index([orgId])
+  @@index([status])
+}
+
+model EnterpriseInvoice {
+  id            String                  @id @default(cuid())
+  contractId    String
+  orgId         String
+  orgName       String
+  invoiceNumber String                  @unique
+  status        EnterpriseInvoiceStatus @default(DRAFT)
+  currency      String                  @default("USD")
+  lineItems     Json
+  subtotal      Int
+  tax           Int                     @default(0)
+  taxRate       Float                   @default(0)
+  total         Int
+  dueDate       DateTime
+  issuedAt      DateTime                @default(now())
+  paidAt        DateTime?
+  poNumber      String?
+  notes         String?
+  createdAt     DateTime                @default(now())
+  contract      EnterpriseContract      @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId])
+  @@index([orgId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+model CredentialAlias {
+  id               String     @id @default(cuid())
+  projectId        String
+  workload         String     @default("custom")
+  label            String
+  aliasKeyHash     String
+  state            String     @default("active")
+  familyId         String?
+  scope            String?
+  tags             String?
+  maxUses          Int?
+  expiresAt        DateTime?
+  usageCount       Int        @default(0)
+  lastUsedAt       DateTime?
+  rotatedFromId    String?
+  rotatedToId      String?
+  revokedAt        DateTime?
+  revocationReason String?
+  bindingIpCidr    String?
+  bindingRegions   String[]
+  bindingTimeZone  String?
+  bindingTimeStart String?
+  bindingTimeEnd   String?
+  bindingWorkloadId String?
+  bindingDeviceId  String?
+  bindingAppBundle String?
+  bindingAgentTools String[]
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  project          ApiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([state])
+  @@index([familyId])
+  @@index([rotatedFromId])
+}
+
+model NewsletterSubscriber {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  status         String    @default("active")
+  segment        String    @default("general")
+  source         String    @default("api")
+  consentGiven   Boolean   @default(false)
+  consentAt      DateTime?
+  unsubscribedAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([email])
+  @@index([status])
+}
+
+model EnterpriseOnboardingRecord {
+  id               String   @id @default(cuid())
+  orgId            String   @unique
+  orgName          String
+  contractSignedAt DateTime
+  kickoffDate      DateTime
+  targetGoLiveDate DateTime
+  csmAssignment    Json
+  steps            Json
+  currentPhase     String
+  overallProgress  Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([orgId])
+  @@index([currentPhase])
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  DEVELOPER
+  VIEWER
+}
+
+enum TeamRole {
+  OWNER
+  ADMIN
+  DEVELOPER
+  VIEWER
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELLED
+}
+
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum RepositoryProvider {
+  GITHUB
+  GITLAB
+  BITBUCKET
+}
+
+enum RepositoryStatus {
+  PENDING
+  CONNECTED
+  DISCONNECTED
+}
+
+enum HoneypotStatus {
+  INACTIVE
+  DEPLOYING
+  DEPLOYED
+  ACTIVE
+  PAUSED
+  SUSPENDED
+  ERROR
+  DECOMMISSIONED
+}
+
+enum SubscriptionPlan {
+  STARTER
+  PRO
+  ENTERPRISE
+  TEAM
+  BUSINESS
+  ENTERPRISE_PLUS
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+enum ThreatSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum CreditTransactionType {
+  ALLOCATION
+  CONSUMPTION
+  PURCHASE
+  ADJUSTMENT
+  REFUND
+}
+
+enum LogLevel {
+  INFO
+  WARN
+  ERROR
+  DEBUG
+}
+
+enum InsightType {
+  VULNERABILITY_TREND
+  ATTACK_PATTERN
+  PERFORMANCE
+  POLICY_VIOLATION
+}
+
+enum ExportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  EXPIRED
+}
+
+enum NotificationType {
+  FEEDBACK
+  CHAT_ESCALATION
+  SYSTEM
+  SECURITY
+  BILLING
+  UPDATE
+  BLOG_SCHEDULE
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
+  DISMISSED
+}
+
+enum BetaUserRole {
+  TESTER
+  LEAD_TESTER
+  OBSERVER
+}
+
+enum BetaUserStatus {
+  INVITED
+  ACTIVE
+  INACTIVE
+  COMPLETED
+}
+
+enum TestScenarioCategory {
+  API_GENERATION
+  SECURITY_SCAN
+  DEPLOYMENT
+  MONITORING
+  GENERAL
+}
+
+enum TestScenarioPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum TestScenarioStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  DEPRECATED
+}
+
+enum FeedbackType {
+  BUG
+  FEATURE_REQUEST
+  USABILITY
+  PERFORMANCE
+  GENERAL
+}
+
+enum FeedbackSeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum FeedbackStatus {
+  NEW
+  TRIAGED
+  IN_PROGRESS
+  RESOLVED
+  WONT_FIX
+}
+
+enum MonitorStatus {
+  ACTIVE
+  PAUSED
+  DISABLED
+}
+
+enum MonitorFrequency {
+  ONE_MINUTE
+  FIVE_MINUTES
+  FIFTEEN_MINUTES
+  THIRTY_MINUTES
+  ONE_HOUR
+}
+
+enum IncidentSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IncidentStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+enum SecretType {
+  API_KEY
+  ACCESS_TOKEN
+  DATABASE_PASSWORD
+  WEBHOOK_SECRET
+  ENCRYPTION_KEY
+}
+
+enum SecretStatus {
+  ACTIVE
+  ROTATING
+  DEPRECATED
+  REVOKED
+}
+
+enum RotationStrategy {
+  MANUAL
+  SCHEDULED
+  ON_DEMAND
+  EMERGENCY
+}
+
+enum QuoteStatus {
+  PENDING
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum ArticleCategory {
+  GETTING_STARTED
+  API_GENERATION
+  SECURITY
+  HONEYPOTS
+  MONITORING
+  BILLING
+  TROUBLESHOOTING
+  TEAMS
+  INTEGRATIONS
+}
+
+enum ArticleAudience {
+  ALL
+  DEVELOPER
+  ADMIN
+  USER
+}
+
+enum ConsentType {
+  NECESSARY
+  ANALYTICS
+  MARKETING
+  PREFERENCES
+}
+
+enum DataRequestType {
+  ACCESS
+  DELETION
+  PORTABILITY
+  RECTIFICATION
+  RESTRICTION
+  OBJECTION
+}
+
+enum RequestStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+}
+
+enum ChatbotConversationStatus {
+  ACTIVE
+  RESOLVED
+  ESCALATED
+  CLOSED
+}
+
+enum ChatbotMessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  AWAITING_RESPONSE
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum TicketSource {
+  EMAIL
+  CHATBOT
+  MANUAL
+  API
+  PHONE
+}
+
+enum AIProvider {
+  NL_GPT4
+  ML_HF
+}
+
+enum AITaskType {
+  API_GENERATION
+  SECURITY_SCAN
+  THREAT_ANALYSIS
+  VULNERABILITY_DETECTION
+  CODE_REVIEW
+  COMPLIANCE_CHECK
+}
+
+enum DeploymentApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum DeploymentEnvironment {
+  PREVIEW
+  PRODUCTION
+}
+
+enum UserFeedbackType {
+  THUMBS_UP
+  THUMBS_DOWN
+  FEATURE_REQUEST
+  BUG_REPORT
+  GENERAL
+}
+
+enum UserFeedbackStatus {
+  NEW
+  REVIEWED
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  WONT_FIX
+  DUPLICATE
+}
+
+enum ConsultingJobType {
+  AUDIT
+  URL_SCAN
+  BATCH_BUILD
+  BATCH_ANALYZE
+  HONEYPOT_DEPLOY
+}
+
+enum ConsultingJobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum AuditReportStatus {
+  GENERATING
+  COMPLETED
+  FAILED
+}
+
+enum ScanFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum EnterpriseSSOProvider {
+  OKTA
+  AZURE_AD
+  GOOGLE_WORKSPACE
+  ONELOGIN
+  JUMPCLOUD
+  GENERIC_SAML
+}
+
+enum EnterpriseSSOStatus {
+  PENDING_SETUP
+  CONFIGURING
+  TESTING
+  ACTIVE
+  ERROR
+  DISABLED
+}
+
+enum EnterpriseCertStatus {
+  ACTIVE
+  PENDING
+  REVOKED
+  EXPIRED
+  ROTATING
+}
+
+enum EnterpriseCertType {
+  ROOT_CA
+  INTERMEDIATE_CA
+  CLIENT
+  SERVER
+}
+
+enum EnterpriseSIEMProvider {
+  SPLUNK
+  DATADOG
+  SENTINEL
+  GENERIC_WEBHOOK
+  GENERIC_SYSLOG
+}
+
+enum EnterpriseAccountLockStatus {
+  ACTIVE
+  LOCKED
+  TEMPORARILY_LOCKED
+  PENDING_REVIEW
+}
+
+enum EnterpriseContractStatus {
+  ACTIVE
+  PENDING
+  EXPIRED
+  CANCELLED
+}
+
+enum EnterpriseInvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  VOID
+}
+
+model License {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email      String   @unique
+  productId  String   @map("product_id")
+  purchaseId String   @map("purchase_id")
+  licenseKey String?  @map("license_key")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@map("licenses")
+}
+
+model BlogSchedule {
+  id            String   @id @default(cuid())
+  postSlug      String   @unique
+  scheduledDate DateTime
+  revealed      Boolean  @default(false)
+  notified48h   Boolean  @default(false)
+  notifiedDay0  Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model TeamProjectAccess {
+  id          String     @id @default(cuid())
+  teamId      String
+  projectId   String
+  grantedById String
+  grantedAt   DateTime   @default(now())
+  team        Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  project     ApiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  granter     User       @relation("GrantedProjectAccess", fields: [grantedById], references: [id])
+
+  @@unique([teamId, projectId])
+}
+
