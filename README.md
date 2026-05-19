@@ -45,11 +45,11 @@ Full documentation: [devfortress.net/docs](https://devfortress.net/docs)
 This repository contains the **open platform layer** — the interfaces,
 schemas, and UI that the npm-installed SDK communicates with.
 
-| Path                       | Description                         |
-| -------------------------- | ----------------------------------- |
-| `app/api/events/ingest/`   | Event ingestion interface           |
-| `app/api/sdk/credentials/` | SDK credential management interface |
-| `app/collect/`             | Collect phase UI                    |
+| Path                       | Description                             |
+| -------------------------- | --------------------------------------- |
+| `app/api/events/ingest/`   | Event ingestion interface               |
+| `app/api/sdk/credentials/` | SDK credential management interface     |
+| `app/collect/`             | Collect phase UI                        |
 | `prisma/migrations/`       | Database schema — PostgreSQL migrations |
 
 The hosted platform — LEARN phase, Platform Intelligence (B1–B12), threat

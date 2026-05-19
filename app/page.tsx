@@ -1,19 +1,88 @@
-// Version: v9.0.0 - IP-Protected Homepage: Credential Isolation, Agent Security, No Mechanism Disclosure
+// Open-core home page — @core/* imports replaced with inline equivalents
 import Link from 'next/link';
 import { Metadata } from 'next';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import {
-  organizationSchema,
-  webApplicationSchema,
-  renderJsonLd,
-} from '@core/lib/seo/structured-data';
-import {
-  AuthAwareHomeContent,
-  AuthAwareFeatureLink,
-  AuthAwareGetStartedButton,
-} from '@core/components/home/auth-aware-content';
-import { ValidationBadge } from './components/ValidationBadge';
+
+// ── Inline structured data (replaces @core/lib/seo/structured-data) ──────────
+
+function renderJsonLd(data: unknown) {
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
+  );
+}
+
+const organizationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'DevFortress',
+  url: 'https://devfortress.net',
+  logo: 'https://devfortress.net/logo.png',
+  description:
+    'Application and API security platform with AI-powered threat detection and automated response.',
+};
+
+const webApplicationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'DevFortress Platform',
+  url: 'https://devfortress.net',
+  description:
+    'Real-time threat detection across applications, APIs, and AI agents — automated response and full audit trail.',
+  applicationCategory: 'DeveloperApplication',
+  operatingSystem: 'Web Browser',
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+};
+
+// ── Inline auth-aware components (replaces @core/components/home/auth-aware-content) ─
+
+function AuthAwareHomeContent() {
+  return (
+    <div className="mt-4 flex flex-wrap gap-4 justify-center">
+      <Link
+        href="/dashboard"
+        className="inline-flex items-center rounded-lg bg-primary-600 px-6 py-3 text-sm font-semibold text-white hover:bg-primary-700"
+      >
+        Go to Dashboard →
+      </Link>
+    </div>
+  );
+}
+
+function AuthAwareFeatureLink({
+  unauthenticatedHref,
+  unauthenticatedLabel,
+  className,
+}: {
+  authenticatedHref: string;
+  authenticatedLabel: string;
+  unauthenticatedHref: string;
+  unauthenticatedLabel: string;
+  className?: string;
+  showSignUpHint?: boolean;
+}) {
+  return (
+    <Link href={unauthenticatedHref} className={className}>
+      {unauthenticatedLabel}
+    </Link>
+  );
+}
+
+function AuthAwareGetStartedButton() {
+  return (
+    <Link
+      href="/auth/signin"
+      className="rounded-lg bg-primary-600 px-6 py-3 font-semibold text-white hover:bg-primary-700"
+    >
+      Get Started
+    </Link>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 /** Read SDK version from the devfortress-sdk package.json at build time. */
 function getSdkVersion(): string {
@@ -39,7 +108,6 @@ export const metadata: Metadata = {
   keywords: [
     'API security',
     'automated threat response',
-    'AbuseIPDB integration',
     'credential isolation',
     'unified application security',
     'OWASP compliance',
@@ -49,7 +117,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'DevFortress - Application and API Security Platform',
     description:
-      'Stop attacks across applications and APIs automatically. Unified detection, response, and confirmation with global threat intelligence and full audit trail.',
+      'Stop attacks across applications and APIs automatically. Unified detection, response, and confirmation with a full audit trail.',
     type: 'website',
   },
 };
@@ -92,7 +160,6 @@ export default async function Home() {
                 blocking, and credential isolation — in under 2 seconds. No
                 human intervention required.
               </p>
-              {/* Hero CTAs — single group keeps dashboard button above the fold */}
               <div className="mt-6 flex flex-col items-center gap-4 w-full">
                 <a
                   href="https://devfortress.gumroad.com/l/master-edition"
@@ -103,7 +170,6 @@ export default async function Home() {
                   📖 Read the Book: Token-Aliased Closed-Loop Security
                   <span className="text-blue-400/60">→</span>
                 </a>
-                <ValidationBadge />
                 <AuthAwareHomeContent />
               </div>
             </div>
@@ -261,7 +327,7 @@ export default async function Home() {
                       />
                     </svg>
                   </span>
-                  AbuseIPDB global threat intelligence enrichment
+                  Global threat intelligence enrichment
                 </li>
               </ul>
               <AuthAwareFeatureLink
@@ -607,7 +673,7 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* How It Works - Step by Step */}
+        {/* How It Works */}
         <section className="mx-auto max-w-6xl px-6 py-20 sm:px-8 lg:px-12">
           <div className="text-center">
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
@@ -627,7 +693,6 @@ export default async function Home() {
                 Add the DevFortress SDK to your application or API. One import.
                 Your API key from the dashboard. Done.
               </p>
-              {/* Connector line - hidden on mobile */}
               <div className="absolute right-0 top-7 hidden h-0.5 w-[calc(50%-2rem)] bg-gradient-to-r from-blue-200 to-transparent dark:from-blue-800 md:block" />
             </div>
             <div className="relative text-center">
@@ -660,184 +725,6 @@ export default async function Home() {
                 the loop.
               </p>
               <div className="absolute left-0 top-7 hidden h-0.5 w-[calc(50%-2rem)] bg-gradient-to-l from-purple-200 to-transparent dark:from-purple-800 md:block" />
-            </div>
-          </div>
-        </section>
-
-        {/* Why DevFortress */}
-        <section className="mx-auto max-w-6xl px-6 py-20 sm:px-8 lg:px-12">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Why DevFortress
-            </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-neutral-600 dark:text-neutral-400">
-              Enterprise-grade security for applications, APIs and AI agents
-            </p>
-          </div>
-          <div className="mt-12 grid gap-8 sm:grid-cols-2">
-            {/* One SDK — Three Environments */}
-            <div className="flex flex-col items-center rounded-xl border border-neutral-200 bg-white p-6 text-center shadow-sm dark:border-neutral-800 dark:bg-neutral-900/50">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
-                <svg
-                  className="h-6 w-6 text-blue-600 dark:text-blue-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                  />
-                </svg>
-              </div>
-              <h3 className="mt-4 font-semibold">
-                One SDK — Three Environments
-              </h3>
-              <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-                The same SDK protects traditional applications, REST and GraphQL
-                APIs, and AI agents (LangChain, OpenAI, MCP). One integration,
-                full coverage across all three environments.
-              </p>
-            </div>
-
-            {/* Closed-Loop by Design */}
-            <div className="flex flex-col items-center rounded-xl border border-neutral-200 bg-white p-6 text-center shadow-sm dark:border-neutral-800 dark:bg-neutral-900/50">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                <svg
-                  className="h-6 w-6 text-green-600 dark:text-green-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                  />
-                </svg>
-              </div>
-              <h3 className="mt-4 font-semibold">
-                Unified Application Security
-              </h3>
-              <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-                Most security tools detect and alert. DevFortress detects,
-                responds, and confirms. Every threat has a documented outcome —
-                remediated, blocked, or escalated — with the timestamp to prove
-                it.
-              </p>
-            </div>
-
-            {/* Global Threat Intelligence */}
-            <div className="flex flex-col items-center rounded-xl border border-neutral-200 bg-white p-6 text-center shadow-sm dark:border-neutral-800 dark:bg-neutral-900/50">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30">
-                <svg
-                  className="h-6 w-6 text-orange-600 dark:text-orange-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
-              <h3 className="mt-4 font-semibold">Global Threat Intelligence</h3>
-              <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-                AbuseIPDB integration enriches every event with community threat
-                data from hundreds of thousands of contributors.
-                Application-specific signals are combined with global reputation
-                for accurate, low-noise scoring.
-              </p>
-            </div>
-
-            {/* Built for Compliance */}
-            <div className="flex flex-col items-center rounded-xl border border-neutral-200 bg-white p-6 text-center shadow-sm dark:border-neutral-800 dark:bg-neutral-900/50">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-teal-100 dark:bg-teal-900/30">
-                <svg
-                  className="h-6 w-6 text-teal-600 dark:text-teal-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-                  />
-                </svg>
-              </div>
-              <h3 className="mt-4 font-semibold">Built for Compliance</h3>
-              <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-                Every security decision — detection, action, confirmation — is
-                logged with a timestamp and audit identifier. Export evidence
-                for PCI-DSS, SOC 2, GDPR, and HIPAA requirements directly from
-                the dashboard.
-              </p>
-            </div>
-
-            {/* Deploy in Minutes */}
-            <div className="flex flex-col items-center rounded-xl border border-neutral-200 bg-white p-6 text-center shadow-sm dark:border-neutral-800 dark:bg-neutral-900/50">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/30">
-                <svg
-                  className="h-6 w-6 text-indigo-600 dark:text-indigo-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                  />
-                </svg>
-              </div>
-              <h3 className="mt-4 font-semibold">Deploy in Minutes</h3>
-              <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-                The SDK installs with one command. No infrastructure changes. No
-                gateway configuration. No agent to manage. Security runs inside
-                your existing application.
-              </p>
-            </div>
-
-            {/* Token-Aliased Agent Security */}
-            <div className="flex flex-col items-center rounded-xl border border-neutral-200 bg-white p-6 text-center shadow-sm dark:border-neutral-800 dark:bg-neutral-900/50">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
-                <svg
-                  className="h-6 w-6 text-red-600 dark:text-red-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4"
-                  />
-                </svg>
-              </div>
-              <h3 className="mt-4 font-semibold">
-                Token-Aliased AI Agent Security
-              </h3>
-              <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-                Protect autonomous AI agents from credential theft and prompt
-                injection. Replace raw keys with stateful aliases and enforce
-                strict operational scope limits in real-time.
-              </p>
             </div>
           </div>
         </section>

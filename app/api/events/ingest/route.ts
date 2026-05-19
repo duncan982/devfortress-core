@@ -1,5 +1,5 @@
 /**
- * API Route: Live Event Ingestion - Premium A3
+ * API Route: Live Event Ingestion
  *
  * POST /api/events/ingest - Ingest live events from SDK
  * Authenticated via surveillance API key
@@ -10,19 +10,18 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  validateSurveillanceApiKey,
-  ingestLiveEvent,
-  type IncomingLiveEvent,
-} from '@core/lib/surveillance/live-surveillance';
-import { logError, logWarn, logDebug } from '@core/lib/logger';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { z } from 'zod';
 
+// Prisma singleton — prevents multiple instances in dev hot-reload
+declare global {
+  var __prismaIngest: PrismaClient | undefined;
+}
+const prisma = globalThis.__prismaIngest ?? new PrismaClient();
+if (process.env.NODE_ENV !== 'production') globalThis.__prismaIngest = prisma;
+
 /**
- * Edge Runtime is NOT possible for this route because:
- *   - live-surveillance.ts imports Prisma (Node.js-only ORM)
- *   - Prisma requires fs, net, tls — unavailable in Edge
- * Explicitly set nodejs to prevent accidental Edge fallback.
+ * Edge Runtime is NOT possible for this route because Prisma requires Node.js.
  */
 export const runtime = 'nodejs';
 
@@ -34,21 +33,99 @@ const corsHeaders = {
     'Content-Type, Authorization, X-API-Key, X-DevFortress-Key',
 };
 
+/** Validate API key against DB and return project info */
+async function validateSurveillanceApiKey(
+  apiKey: string
+): Promise<
+  | { valid: true; project: { id: string; ownerId: string; tier: string } }
+  | { valid: false; error: string }
+> {
+  try {
+    const project = await prisma.apiProject.findFirst({
+      where: { surveillanceApiKey: apiKey },
+      select: {
+        id: true,
+        createdById: true,
+        createdBy: {
+          select: {
+            subscriptions: {
+              where: { status: { in: ['ACTIVE', 'TRIALING'] } },
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+              select: { plan: true },
+            },
+          },
+        },
+      },
+    });
+    if (!project) {
+      return { valid: false, error: 'Invalid API key' };
+    }
+    const plan = project.createdBy.subscriptions[0]?.plan;
+    // Self-hosted instances default to ENTERPRISE so all CL modes are available
+    const tier = (plan as string | undefined) ?? 'ENTERPRISE';
+    return {
+      valid: true,
+      project: { id: project.id, ownerId: project.createdById, tier },
+    };
+  } catch {
+    return { valid: false, error: 'Key validation failed' };
+  }
+}
+
+/** Write a validated event to the database */
+async function ingestLiveEvent(
+  projectId: string,
+  event: NormalizedEvent
+): Promise<{ success: boolean; eventId?: string; error?: string }> {
+  try {
+    const record = await prisma.liveThreatEvent.create({
+      data: {
+        projectId,
+        eventType: event.eventType,
+        ip: event.ip,
+        userAgent: event.userAgent,
+        requestPath: event.requestPath,
+        statusCode: event.statusCode,
+        method: event.method,
+        headers: event.headers as Record<string, string> | undefined,
+        body: event.body as Prisma.InputJsonValue | undefined,
+        severity: (event.severity ?? 'MEDIUM') as
+          | 'LOW'
+          | 'MEDIUM'
+          | 'HIGH'
+          | 'CRITICAL',
+        metadata: event.metadata as Prisma.InputJsonValue | undefined,
+        userId: event.userId ?? undefined,
+        sessionId: event.sessionId ?? undefined,
+        clMode: event.clMode,
+        authPhase: event.authPhase,
+        actionTaken: event.actionTaken,
+        responseLatencyMs: event.responseLatencyMs,
+        sessionActiveAfterAction: event.sessionActiveAfterAction,
+        appId: event.appId,
+        environment: event.environment,
+        timestamp: event.timestamp
+          ? new Date(event.timestamp as string)
+          : new Date(),
+      },
+      select: { id: true },
+    });
+    return { success: true, eventId: record.id };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Ingestion failed',
+    };
+  }
+}
+
 /**
  * Normalize raw SDK payload from snake_case to camelCase.
- *
- * The vendored SDK v4.0.0 sends: event_type, user_agent, status_code, body_summary
- * The platform expects: eventType, userAgent, statusCode, body
- * This function bridges the gap so both old and new SDK payloads are accepted.
- *
- * Also extracts v4.3 observability fields from metadata when they're embedded
- * there by the client application (e.g. HubCommerce puts authPhase/actionTaken
- * in metadata).
  */
 function normalizeRawPayload(raw: Record<string, any>): Record<string, any> {
   const normalized = { ...raw };
 
-  // ── Snake_case → camelCase field mapping ──────────────────────────────
   if (raw.event_type && !raw.eventType) {
     normalized.eventType = raw.event_type;
     delete normalized.event_type;
@@ -102,26 +179,17 @@ function normalizeRawPayload(raw: Record<string, any>): Record<string, any> {
     delete normalized.app_id;
   }
 
-  // ── Extract v4.3 fields from metadata when embedded there ─────────────
   const meta = normalized.metadata || normalized.meta || {};
-  if (!normalized.authPhase && meta.authPhase) {
+  if (!normalized.authPhase && meta.authPhase)
     normalized.authPhase = meta.authPhase;
-  }
-  if (!normalized.actionTaken && meta.actionTaken) {
+  if (!normalized.actionTaken && meta.actionTaken)
     normalized.actionTaken = meta.actionTaken;
-  }
-  if (!normalized.clMode && meta.clMode) {
-    normalized.clMode = meta.clMode;
-  }
+  if (!normalized.clMode && meta.clMode) normalized.clMode = meta.clMode;
 
-  // ── Strip SDK-only fields that aren't in the Zod schema ───────────────
   delete normalized.api_key;
   delete normalized.sdk_version;
   delete normalized.meta;
 
-  // ── Default v4.3 observability fields when absent ─────────────────────
-  // These are required by the schema but older SDK versions don't send them.
-  // Track field quality (Items #1-6 / M13) — log when mandatory fields are missing
   const missingFields: string[] = [];
   if (!normalized.clMode) {
     missingFields.push('clMode');
@@ -139,23 +207,17 @@ function normalizeRawPayload(raw: Record<string, any>): Record<string, any> {
     missingFields.push('responseLatencyMs');
     normalized.responseLatencyMs = 0;
   }
-  if (!normalized.userId) {
-    missingFields.push('userId');
-  }
-  if (normalized.sessionActiveAfterAction == null) {
+  if (!normalized.userId) missingFields.push('userId');
+  if (normalized.sessionActiveAfterAction == null)
     missingFields.push('sessionActiveAfterAction');
-  }
 
-  // Log field quality warning for SDK version tracking (M13)
   if (missingFields.length > 0) {
-    logDebug('SDK event missing v4.3 mandatory fields', {
-      missingFields,
-      eventType: normalized.eventType,
-      sdkVersion: raw.sdk_version || raw.sdkVersion || 'unknown',
-    });
+    console.debug(
+      '[events/ingest] SDK missing v4.3 fields:',
+      missingFields.join(', ')
+    );
   }
 
-  // ── Ensure metadata is an object ──────────────────────────────────────
   if (normalized.metadata && typeof normalized.metadata !== 'object') {
     normalized.metadata = {};
   }
@@ -163,40 +225,29 @@ function normalizeRawPayload(raw: Record<string, any>): Record<string, any> {
   return normalized;
 }
 
-/**
- * Schema for validating incoming events.
- * v4.3 observability fields are present after normalizeRawPayload applies defaults.
- */
 const eventSchema = z.object({
   eventType: z.string().min(1),
   timestamp: z.union([z.string(), z.date()]).optional(),
   ip: z.string().min(1),
   userAgent: z.string().optional(),
   requestPath: z.string().optional(),
-  path: z.string().optional(), // Alias for requestPath (SDK compatibility)
+  path: z.string().optional(),
   statusCode: z.number().optional(),
   method: z.string().min(1),
   headers: z.record(z.string(), z.string()).optional(),
   body: z.unknown().optional(),
   severity: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
   metadata: z.record(z.string(), z.any()).optional(),
-  // v3.1 observability fields — defaults applied by normalizeRawPayload
   userId: z.string().nullable().optional(),
   sessionId: z.string().nullable().optional(),
   clMode: z.string().min(1).max(50),
   authPhase: z.string().min(1).max(50),
-  // Free-form string — accepts predefined values (blocked, rate_limited, etc.)
-  // AND custom actions (account_suspended, mfa_enforced, gdpr_export_blocked, etc.)
-  // Predefined display badges: blocked, rate_limited, session_revoked,
-  // captcha_challenged, flagged, allowed, monitored, key_rotated
-  // Any other value displays as a plain grey badge.
   actionTaken: z.string().min(1).max(100),
   responseLatencyMs: z.number(),
   sessionActiveAfterAction: z.boolean().optional(),
   appId: z.string().optional(),
   environment: z.string().optional(),
-  responseTime: z.number().nullable().optional(), // SDK compat alias
-  // v4.0 agentic fields
+  responseTime: z.number().nullable().optional(),
   isAgent: z.boolean().optional(),
   agentId: z.string().optional(),
   agentType: z.string().optional(),
@@ -206,27 +257,22 @@ const batchEventSchema = z.object({
   events: z.array(eventSchema).min(1).max(100),
 });
 
-/**
- * Normalize validated event fields for storage.
- * Maps `path` → `requestPath` and `responseTime` → `responseLatencyMs`.
- */
-function normalizeEvent(event: z.infer<typeof eventSchema>): IncomingLiveEvent {
+function normalizeEvent(event: z.infer<typeof eventSchema>) {
   const { path, responseTime, ...rest } = event;
   return {
     ...rest,
     requestPath: rest.requestPath || path,
-    responseLatencyMs: rest.responseLatencyMs || (responseTime ?? undefined),
-  } as IncomingLiveEvent;
+    responseLatencyMs: rest.responseLatencyMs ?? responseTime ?? 0,
+  };
 }
+
+type NormalizedEvent = ReturnType<typeof normalizeEvent>;
 
 /**
  * POST /api/events/ingest
- *
- * Ingest live threat events from user's APIs via SDK
  */
 export async function POST(req: NextRequest) {
   try {
-    // Parse request body first — SDK sends api_key in the body, not headers
     let body: Record<string, any>;
     try {
       body = await req.json();
@@ -237,8 +283,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Extract API key — supports headers AND body for SDK compatibility
-    // SDK v4.0 sends api_key in the request body payload
     const authHeader = req.headers.get('authorization');
     const apiKey = authHeader?.startsWith('Bearer ')
       ? authHeader.substring(7)
@@ -254,11 +298,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate API key
     const validation = await validateSurveillanceApiKey(apiKey);
 
-    if (!validation.valid || !validation.project) {
-      logWarn('Invalid surveillance API key', { error: validation.error });
+    if (!validation.valid) {
+      console.warn('[events/ingest] Invalid API key:', validation.error);
       return NextResponse.json(
         { error: validation.error || 'Invalid API key', code: 'UNAUTHORIZED' },
         { status: 401, headers: corsHeaders }
@@ -267,23 +310,6 @@ export async function POST(req: NextRequest) {
 
     const { project } = validation;
 
-    // A19B: Verify SDK request signature (graceful degradation for pre-v4.9 clients)
-    const { verifySDKRequest } = await import('@/lib/verify-sdk-request');
-    const sdkVerification = await verifySDKRequest(req);
-    if (!sdkVerification.verified) {
-      if (sdkVerification.reason === 'timestamp_expired') {
-        return NextResponse.json(
-          {
-            error: 'Request verification failed',
-            reason: sdkVerification.reason,
-          },
-          { status: 400 }
-        );
-      }
-      console.warn('[A19B] Verification failed:', sdkVerification.reason);
-    }
-
-    // Mode enforcement: downgrade unsupported CL modes
     const tierModes: Record<string, string[]> = {
       STARTER: ['external'],
       PRO: ['external', 'internal'],
@@ -293,8 +319,7 @@ export async function POST(req: NextRequest) {
       ENTERPRISE_PLUS: ['external', 'internal', 'hybrid'],
     };
 
-    const ownerTier: string = (project as any).tier ?? 'STARTER';
-    const allowedModes: string[] = tierModes[ownerTier] ?? tierModes.STARTER;
+    const allowedModes: string[] = tierModes[project.tier] ?? tierModes.STARTER;
 
     function enforceTierMode(
       event: Record<string, unknown>
@@ -310,9 +335,7 @@ export async function POST(req: NextRequest) {
       return event;
     }
 
-    // Check if batch or single event
     if (body.events) {
-      // Batch ingestion — normalize each event before validation
       const normalizedEvents = (body.events as Record<string, unknown>[]).map(
         normalizeRawPayload
       );
@@ -322,10 +345,7 @@ export async function POST(req: NextRequest) {
 
       if (!parseResult.success) {
         return NextResponse.json(
-          {
-            error: 'Invalid request body',
-            details: parseResult.error.issues,
-          },
+          { error: 'Invalid request body', details: parseResult.error.issues },
           { status: 400 }
         );
       }
@@ -343,14 +363,9 @@ export async function POST(req: NextRequest) {
         );
         const result = await ingestLiveEvent(
           project.id,
-          project.ownerId,
-          project.tier,
           normalizeEvent(enforced as unknown as z.infer<typeof eventSchema>)
         );
-        results.push({
-          ...result,
-          event_id: result.eventId, // SDK reads event_id (snake_case)
-        });
+        results.push({ ...result, event_id: result.eventId });
       }
 
       const successCount = results.filter(r => r.success).length;
@@ -367,16 +382,12 @@ export async function POST(req: NextRequest) {
         { headers: corsHeaders }
       );
     } else {
-      // Single event — normalize snake_case → camelCase before validation
       const normalizedBody = normalizeRawPayload(body);
       const parseResult = eventSchema.safeParse(normalizedBody);
 
       if (!parseResult.success) {
         return NextResponse.json(
-          {
-            error: 'Invalid event format',
-            details: parseResult.error.issues,
-          },
+          { error: 'Invalid event format', details: parseResult.error.issues },
           { status: 400 }
         );
       }
@@ -386,13 +397,10 @@ export async function POST(req: NextRequest) {
       );
       const result = await ingestLiveEvent(
         project.id,
-        project.ownerId,
-        project.tier,
         normalizeEvent(enforced as unknown as z.infer<typeof eventSchema>)
       );
 
       if (!result.success) {
-        // Differentiate rate limit (429) from server errors (500)
         const isRateLimited =
           result.error?.includes('Rate limit') ||
           result.error?.includes('Monthly event limit reached');
@@ -409,15 +417,16 @@ export async function POST(req: NextRequest) {
         {
           success: true,
           eventId: result.eventId,
-          event_id: result.eventId, // SDK reads event_id (snake_case)
+          event_id: result.eventId,
         },
         { headers: corsHeaders }
       );
     }
   } catch (error) {
-    logError('Event ingestion failed', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    console.error(
+      '[events/ingest] Failed:',
+      error instanceof Error ? error.message : error
+    );
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500, headers: corsHeaders }
