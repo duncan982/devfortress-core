@@ -1,6 +1,7 @@
 /**
  * SDK Credentials Management Page
  * Create projects and manage SDK credentials for applications, APIs, and agents.
+ * Includes A19 Credential Alias inventory tab.
  *
  * MVP Focus: Collect Phase — SDK Surveillance
  * Connects to /api/sdk/credentials for real credential management.
@@ -10,8 +11,6 @@
 
 import { useState, useCallback, useEffect, Fragment } from 'react';
 import Link from 'next/link';
-import { BreadcrumbNav } from '@core/components/navigation/BreadcrumbNav';
-import { BREADCRUMB_PATHS } from '@core/components/navigation/breadcrumb-constants';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -29,6 +28,7 @@ interface SdkCredential {
   status: 'active' | 'revoked';
 }
 
+/* A19 Alias Types */
 type AliasWorkload =
   | 'ci'
   | 'agent'
@@ -167,7 +167,7 @@ async def devfortress_middleware(request, call_next):
 
     return await call_next(request)`,
     curl: `# Test event ingestion (all 3 credentials required)
-curl -X POST https://www.devfortress.net/api/events/ingest \\
+curl -X POST https://your-platform/api/events/ingest \\
   -H "Content-Type: application/json" \\
   -H "x-api-key: ${apiKey}" \\
   -d '{
@@ -194,7 +194,6 @@ curl -X POST https://www.devfortress.net/api/events/ingest \\
 /* ------------------------------------------------------------------ */
 
 export default function CredentialsPage() {
-  /* Page tab: 'credentials' | 'aliases' */
   const [pageTab, setPageTab] = useState<'credentials' | 'aliases'>(
     'credentials'
   );
@@ -214,7 +213,6 @@ export default function CredentialsPage() {
   );
   const [error, setError] = useState<string | null>(null);
 
-  /* A19 Alias tab state */
   const [aliases, setAliases] = useState<CredentialAlias[]>([]);
   const [aliasLoading, setAliasLoading] = useState(false);
   const [aliasError, setAliasError] = useState<string | null>(null);
@@ -224,7 +222,6 @@ export default function CredentialsPage() {
   const [newAliasWorkload, setNewAliasWorkload] =
     useState<AliasWorkload>('custom');
   const [creatingAlias, setCreatingAlias] = useState(false);
-  /* View-once alias key state — key is shown exactly once after creation */
   const [viewOnceKey, setViewOnceKey] = useState<{
     aliasId: string;
     aliasKey: string;
@@ -232,7 +229,6 @@ export default function CredentialsPage() {
   } | null>(null);
   const [viewOnceCopied, setViewOnceCopied] = useState(false);
 
-  /* Revoke confirmation state */
   const [revokeModal, setRevokeModal] = useState<{
     projectId: string;
     aliasId: string;
@@ -240,7 +236,6 @@ export default function CredentialsPage() {
   } | null>(null);
   const [isRevokingFamily, setIsRevokingFamily] = useState(false);
 
-  /* Load existing credentials on mount */
   useEffect(() => {
     async function loadCredentials() {
       try {
@@ -258,7 +253,6 @@ export default function CredentialsPage() {
     loadCredentials();
   }, []);
 
-  /* Load aliases when alias tab becomes active */
   useEffect(() => {
     if (pageTab !== 'aliases') return;
     async function loadAliases() {
@@ -290,7 +284,6 @@ export default function CredentialsPage() {
     loadAliases();
   }, [pageTab, credentials]);
 
-  /* Create new alias */
   const handleCreateAlias = useCallback(async () => {
     if (!newAliasProjectId || !newAliasLabel.trim() || creatingAlias) return;
     setCreatingAlias(true);
@@ -307,7 +300,6 @@ export default function CredentialsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to create alias');
       const cred = credentials.find(c => c.projectId === newAliasProjectId);
-      // Build local alias record (aliasKey is NOT stored — show once only)
       const newAliasRecord: CredentialAlias = {
         id: data.aliasId,
         projectId: newAliasProjectId,
@@ -326,7 +318,6 @@ export default function CredentialsPage() {
       setAliases(prev => [newAliasRecord, ...prev]);
       setShowCreateAlias(false);
       setNewAliasLabel('');
-      // Show the raw key exactly once
       setViewOnceKey({
         aliasId: data.aliasId,
         aliasKey: data.aliasKey,
@@ -348,15 +339,12 @@ export default function CredentialsPage() {
     credentials,
   ]);
 
-  /* Rotate alias */
   const handleRotateAlias = useCallback(
     async (projectId: string, aliasId: string) => {
       try {
         const res = await fetch(
           `/api/projects/${projectId}/aliases/${aliasId}/rotate`,
-          {
-            method: 'POST',
-          }
+          { method: 'POST' }
         );
         if (res.ok) {
           const data = await res.json();
@@ -379,7 +367,6 @@ export default function CredentialsPage() {
     []
   );
 
-  /* Revoke alias */
   const handleRevokeAlias = useCallback(
     async (projectId: string, aliasId: string, revokeFamily = false) => {
       try {
@@ -417,7 +404,6 @@ export default function CredentialsPage() {
     []
   );
 
-  /* Create new credential via API */
   const handleCreate = useCallback(async () => {
     if (!newProjectName.trim() || creating) return;
     setCreating(true);
@@ -490,7 +476,7 @@ export default function CredentialsPage() {
   }, []);
 
   const maskKey = (key: string, visible: boolean) =>
-    visible ? key : key.slice(0, 10) + '\u2022'.repeat(20) + key.slice(-4);
+    visible ? key : key.slice(0, 10) + '•'.repeat(20) + key.slice(-4);
 
   const activeCred = credentials.find(c => c.projectId === selectedCredential);
   const examples = activeCred
@@ -514,13 +500,19 @@ export default function CredentialsPage() {
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Breadcrumb Navigation */}
-        <div className="mb-4">
-          <BreadcrumbNav
-            items={[BREADCRUMB_PATHS.dashboard]}
-            currentPage="SDK Credentials"
-          />
-        </div>
+        {/* Breadcrumb */}
+        <nav className="mb-4 flex items-center gap-2 text-sm text-neutral-500">
+          <Link
+            href="/dashboard"
+            className="hover:text-neutral-700 dark:hover:text-neutral-300"
+          >
+            Dashboard
+          </Link>
+          <span>/</span>
+          <span className="text-neutral-900 dark:text-white">
+            SDK Credentials
+          </span>
+        </nav>
 
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
@@ -777,8 +769,8 @@ export default function CredentialsPage() {
                               }`}
                             >
                               {cred.status === 'active'
-                                ? '\u25CF Active'
-                                : '\u2717 Revoked'}
+                                ? '● Active'
+                                : '✗ Revoked'}
                             </span>
                             <svg
                               className={`h-5 w-5 text-neutral-400 transition-transform ${isSelected ? 'rotate-180' : ''}`}
@@ -821,8 +813,8 @@ export default function CredentialsPage() {
                                   title="Copy Project ID"
                                 >
                                   {copiedField === `pid-${cred.projectId}`
-                                    ? '\u2705'
-                                    : '\uD83D\uDCCB'}
+                                    ? '✅'
+                                    : '📋'}
                                 </button>
                               </div>
                             </div>
@@ -843,9 +835,7 @@ export default function CredentialsPage() {
                                   className="rounded-lg border border-neutral-200 p-2 text-neutral-500 hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
                                   title={isKeyVisible ? 'Hide' : 'Show'}
                                 >
-                                  {isKeyVisible
-                                    ? '\uD83D\uDE48'
-                                    : '\uD83D\uDC41\uFE0F'}
+                                  {isKeyVisible ? '🙈' : '👁️'}
                                 </button>
                                 <button
                                   onClick={() =>
@@ -858,8 +848,8 @@ export default function CredentialsPage() {
                                   title="Copy"
                                 >
                                   {copiedField === `key-${cred.projectId}`
-                                    ? '\u2705'
-                                    : '\uD83D\uDCCB'}
+                                    ? '✅'
+                                    : '📋'}
                                 </button>
                               </div>
                             </div>
@@ -884,8 +874,8 @@ export default function CredentialsPage() {
                                   title="Copy"
                                 >
                                   {copiedField === `secret-${cred.projectId}`
-                                    ? '\u2705'
-                                    : '\uD83D\uDCCB'}
+                                    ? '✅'
+                                    : '📋'}
                                 </button>
                               </div>
                             </div>
@@ -905,8 +895,8 @@ export default function CredentialsPage() {
                                 className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-blue-700"
                               >
                                 {copiedField === `env-${cred.projectId}`
-                                  ? '\u2705 Copied .env variables!'
-                                  : '\uD83D\uDCCB Copy as .env variables'}
+                                  ? '✅ Copied .env variables!'
+                                  : '📋 Copy as .env variables'}
                               </button>
                             </div>
 
@@ -973,8 +963,8 @@ export default function CredentialsPage() {
                       className="absolute right-3 top-3 rounded-md bg-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-200 transition-colors hover:bg-neutral-600"
                     >
                       {copiedField === `example-${activeExample}`
-                        ? '\u2705 Copied'
-                        : '\uD83D\uDCCB Copy'}
+                        ? '✅ Copied'
+                        : '📋 Copy'}
                     </button>
                     <pre className="overflow-x-auto whitespace-pre font-mono text-sm text-green-400">
                       {examples[activeExample as keyof typeof examples]}
@@ -985,12 +975,6 @@ export default function CredentialsPage() {
             )}
 
             <div className="mt-8 flex flex-wrap gap-4">
-              <Link
-                href="/docs/validation-guide"
-                className="inline-flex items-center text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
-              >
-                🧪 Validate your integration →
-              </Link>
               <Link
                 href="/dashboard/collect/surveillance"
                 className="inline-flex items-center text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
@@ -1010,12 +994,12 @@ export default function CredentialsPage() {
         {/* ── ALIASES TAB (A19) ── */}
         {pageTab === 'aliases' && (
           <div>
-            {/* A19 explanation banner */}
             <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
               <div className="flex items-start gap-3">
                 <span className="text-2xl">🎭</span>
                 <div>
                   <p className="font-semibold text-amber-900 dark:text-amber-200">
+                    Credential Aliases — A19
                   </p>
                   <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">
                     Issue short-lived alias tokens per workload (CI, agent,
@@ -1039,7 +1023,6 @@ export default function CredentialsPage() {
               </div>
             )}
 
-            {/* Create Alias Form */}
             {showCreateAlias && (
               <div className="mb-6 rounded-2xl border border-primary-200 bg-white p-6 shadow-sm dark:border-primary-800 dark:bg-neutral-900">
                 <h2 className="mb-4 text-lg font-semibold text-neutral-900 dark:text-white">
@@ -1191,7 +1174,7 @@ export default function CredentialsPage() {
                           <div className="font-medium text-neutral-900 dark:text-white">
                             {alias.label}
                           </div>
-                          <div className="font-mono text-xs text-neutral-500 dark:text-neutral-500">
+                          <div className="font-mono text-xs text-neutral-500">
                             {alias.aliasToken?.slice(0, 16)}…
                           </div>
                         </td>
@@ -1233,7 +1216,6 @@ export default function CredentialsPage() {
                                     handleRotateAlias(alias.projectId, alias.id)
                                   }
                                   className="rounded px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
-                                  title="Rotate alias token"
                                 >
                                   🔄 Rotate
                                 </button>
@@ -1246,7 +1228,6 @@ export default function CredentialsPage() {
                                     })
                                   }
                                   className="rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
-                                  title="Revoke alias"
                                 >
                                   🚫 Revoke
                                 </button>
@@ -1268,12 +1249,6 @@ export default function CredentialsPage() {
               >
                 📁 Manage projects →
               </Link>
-              <a
-                href="https://devfortress.net/docs/credential-aliasing"
-                className="inline-flex items-center text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
-              >
-                📖 A19 aliasing docs →
-              </a>
             </div>
           </div>
         )}
@@ -1296,9 +1271,8 @@ export default function CredentialsPage() {
             </div>
             <div className="mb-4 rounded-lg border border-red-500/50 bg-red-950/30 p-3 text-sm text-red-300">
               ⚠️ <strong>This key will never be shown again.</strong> Copy it
-              now and store it securely (e.g. your CI/CD secrets vault or
-              password manager). DevFortress only stores a hash — not the raw
-              key.
+              now and store it securely. DevFortress only stores a hash — not
+              the raw key.
             </div>
             <div className="mb-4 flex items-center gap-2">
               <code className="flex-1 overflow-x-auto rounded-lg bg-neutral-800 px-3 py-2 font-mono text-sm text-green-400 select-all whitespace-nowrap">

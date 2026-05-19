@@ -4,20 +4,30 @@
  * POST /api/sdk/credentials - Create project + generate SDK credentials
  * GET  /api/sdk/credentials - List user's projects with SDK credentials
  * DELETE /api/sdk/credentials - Revoke SDK credentials for a project
- *
- * MVP Focus: Collect Phase — SDK Surveillance
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { prisma, safePrismaQuery } from '@core/lib/prisma';
-import {
-  generateSurveillanceApiKey,
-  generateWebhookSecret,
-} from '@core/lib/surveillance/live-surveillance';
-import { logError, logInfo } from '@core/lib/logger';
+import { PrismaClient } from '@prisma/client';
+import { randomBytes } from 'crypto';
 import { z } from 'zod';
+
+// Prisma singleton — prevents multiple instances in dev hot-reload
+declare global {
+  var __prismaCredentials: PrismaClient | undefined;
+}
+const prisma = globalThis.__prismaCredentials ?? new PrismaClient();
+if (process.env.NODE_ENV !== 'production')
+  globalThis.__prismaCredentials = prisma;
+
+function generateSurveillanceApiKey(): string {
+  return `vx_live_${randomBytes(24).toString('hex')}`;
+}
+
+function generateWebhookSecret(): string {
+  return `whsec_${randomBytes(32).toString('hex')}`;
+}
 
 const createSchema = z.object({
   name: z.string().min(1).max(100),
@@ -64,7 +74,6 @@ export async function POST(request: NextRequest) {
 
     const { name, projectType, description } = parsed.data;
 
-    // Generate unique slug from project name
     const baseSlug = name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
@@ -72,11 +81,9 @@ export async function POST(request: NextRequest) {
     const uniqueSuffix = Date.now().toString(36);
     const slug = `${baseSlug}-${uniqueSuffix}`;
 
-    // Generate API key and webhook secret
     const apiKey = generateSurveillanceApiKey();
     const webhookSecret = generateWebhookSecret();
 
-    // Create project with SDK credentials in one transaction
     const project = await prisma.apiProject.create({
       data: {
         name,
@@ -105,11 +112,12 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    logInfo('SDK credentials created', {
-      projectId: project.id,
-      projectType,
-      userId: user.id,
-    });
+    console.info(
+      '[sdk/credentials] Created project',
+      project.id,
+      'for user',
+      user.id
+    );
 
     return NextResponse.json({
       success: true,
@@ -124,9 +132,10 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    logError('SDK credential creation failed', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    console.error(
+      '[sdk/credentials] Creation failed:',
+      error instanceof Error ? error.message : error
+    );
     return NextResponse.json(
       { error: 'Failed to create credentials' },
       { status: 500 }
@@ -162,26 +171,36 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const projects = await safePrismaQuery(
-      () =>
-        prisma.apiProject.findMany({
-          where: {
-            createdById: user.id,
-            surveillanceApiKey: { not: null },
-          },
-          select: {
-            id: true,
-            name: true,
-            framework: true,
-            surveillanceApiKey: true,
-            webhookSecret: true,
-            createdAt: true,
-            metadata: true,
-          },
-          orderBy: { createdAt: 'desc' },
-        }),
-      []
-    );
+    let projects: Array<{
+      id: string;
+      name: string;
+      framework: string | null;
+      surveillanceApiKey: string | null;
+      webhookSecret: string | null;
+      createdAt: Date;
+      metadata: unknown;
+    }> = [];
+
+    try {
+      projects = await prisma.apiProject.findMany({
+        where: {
+          createdById: user.id,
+          surveillanceApiKey: { not: null },
+        },
+        select: {
+          id: true,
+          name: true,
+          framework: true,
+          surveillanceApiKey: true,
+          webhookSecret: true,
+          createdAt: true,
+          metadata: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    } catch {
+      projects = [];
+    }
 
     const credentials = projects.map(p => {
       const metadata = p.metadata as Record<string, unknown> | null;
@@ -199,9 +218,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ credentials });
   } catch (error) {
-    logError('SDK credential listing failed', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    console.error(
+      '[sdk/credentials] Listing failed:',
+      error instanceof Error ? error.message : error
+    );
     return NextResponse.json(
       { error: 'Failed to list credentials' },
       { status: 500 }
@@ -247,7 +267,6 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Verify ownership
     const project = await prisma.apiProject.findFirst({
       where: { id: projectId, createdById: user.id },
     });
@@ -264,19 +283,22 @@ export async function DELETE(request: NextRequest) {
       },
     });
 
-    logInfo('SDK credentials revoked', {
+    console.info(
+      '[sdk/credentials] Revoked project',
       projectId,
-      userId: user.id,
-    });
+      'for user',
+      user.id
+    );
 
     return NextResponse.json({
       success: true,
       message: 'Credentials revoked',
     });
   } catch (error) {
-    logError('SDK credential revocation failed', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
+    console.error(
+      '[sdk/credentials] Revocation failed:',
+      error instanceof Error ? error.message : error
+    );
     return NextResponse.json(
       { error: 'Failed to revoke credentials' },
       { status: 500 }
