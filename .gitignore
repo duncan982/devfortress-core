@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Next.js build output
+.next/
+out/
+
+# Environment files — NEVER commit real secrets
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Prisma generated client
+node_modules/.prisma/
+
+# Misc
+.DS_Store
+*.log
+npm-debug.log*
+pnpm-debug.log*
+.vercel
+next-env.d.ts
