@@ -10,14 +10,122 @@ import {
   Fragment,
 } from 'react';
 import Link from 'next/link';
-import { UpgradeBanner } from '@core/components/ui/upgrade-banner';
-import { BreadcrumbNav } from '@core/components/navigation/BreadcrumbNav';
-import { BREADCRUMB_PATHS } from '@core/components/navigation/breadcrumb-constants';
-import {
-  ModeToggle,
-  type SurveillanceMode,
-  filterEventsByMode,
-} from '@core/components/dashboard/mode-toggle';
+// ── Inline replacements for private-repo path-alias imports (open-core compatibility) ────────
+
+/** Upgrade banner shown when a feature requires a higher tier. */
+function UpgradeBanner({
+  featureName,
+  requiredTier,
+}: {
+  variant?: string;
+  featureName: string;
+  requiredTier: string;
+  dismissible?: boolean;
+}) {
+  return (
+    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center dark:border-amber-800 dark:bg-amber-900/20">
+      <div className="mb-3 text-4xl">🔒</div>
+      <h2 className="text-xl font-semibold text-neutral-900 dark:text-white">
+        {featureName} requires {requiredTier}
+      </h2>
+      <p className="mt-2 text-neutral-600 dark:text-neutral-400">
+        Upgrade your plan at{' '}
+        <a href="/pricing" className="font-medium text-primary-600 underline">
+          devfortress.net/pricing
+        </a>{' '}
+        to unlock this feature.
+      </p>
+    </div>
+  );
+}
+
+/** Simple breadcrumb navigation component. */
+function BreadcrumbNav({
+  items,
+  currentPage,
+}: {
+  items: Array<{ label: string; href?: string }>;
+  currentPage: string;
+}) {
+  return (
+    <nav className="flex items-center gap-1.5 text-sm text-neutral-500 dark:text-neutral-400">
+      {items.map((item, idx) => (
+        <span key={idx} className="flex items-center gap-1.5">
+          {item.href ? (
+            <a
+              href={item.href}
+              className="hover:text-neutral-700 dark:hover:text-neutral-200"
+            >
+              {item.label}
+            </a>
+          ) : (
+            <span>{item.label}</span>
+          )}
+          <span>/</span>
+        </span>
+      ))}
+      <span className="font-medium text-neutral-900 dark:text-white">
+        {currentPage}
+      </span>
+    </nav>
+  );
+}
+
+/** Breadcrumb path constants. */
+const BREADCRUMB_PATHS = {
+  dashboard: { label: 'Dashboard', href: '/dashboard' },
+  collect: { label: 'Collect' },
+};
+
+/** Surveillance mode — filters between all events, agentic, and non-agentic. */
+type SurveillanceMode = 'all' | 'agentic' | 'non-agentic';
+
+/** Filter events by surveillance mode using clMode field. */
+function filterEventsByMode<T extends { clMode?: string }>(
+  events: T[],
+  mode: SurveillanceMode
+): T[] {
+  if (mode === 'all') return events;
+  if (mode === 'agentic')
+    return events.filter(e => e.clMode === 'internal' || e.clMode === 'hybrid');
+  return events.filter(e => !e.clMode || e.clMode === 'external');
+}
+
+/** Toggle between surveillance modes. */
+function ModeToggle({
+  defaultMode = 'all',
+  onChange,
+}: {
+  defaultMode?: SurveillanceMode;
+  onChange: (mode: SurveillanceMode) => void;
+  persistKey?: string;
+}) {
+  const modes: SurveillanceMode[] = ['all', 'agentic', 'non-agentic'];
+  const [active, setActive] = useState<SurveillanceMode>(defaultMode);
+  function handle(m: SurveillanceMode) {
+    setActive(m);
+    onChange(m);
+  }
+  return (
+    <div className="inline-flex gap-0.5 rounded-lg border border-neutral-200 bg-neutral-100 p-0.5 dark:border-neutral-700 dark:bg-neutral-800">
+      {modes.map(m => (
+        <button
+          key={m}
+          onClick={() => handle(m)}
+          className={`rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-all ${
+            active === m
+              ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-700 dark:text-white'
+              : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400'
+          }`}
+        >
+          {m}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 interface CollectedEvent {
   id: string;

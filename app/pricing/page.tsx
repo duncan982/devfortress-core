@@ -17,30 +17,105 @@ import {
   useRef,
 } from 'react';
 import Link from 'next/link';
-import { generateFAQSchema, renderJsonLd } from '@core/lib/seo/structured-data';
-import {
-  SUBSCRIPTION_PRICING,
-  SubscriptionTier,
-} from '@core/lib/payments/types';
-import { logError } from '@core/lib/logger/client';
 import { initializePaddle, Paddle } from '@paddle/paddle-js';
+// ── Inline replacements for private-repo path-alias imports (open-core compatibility) ────────
+
+/** Enterprise intake modal stub — full calculator lives in the private platform repository. */
+function EnterpriseIntakeModal({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  invoiceType?: string;
+}) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-lg rounded-2xl bg-white p-8 dark:bg-neutral-900">
+        <h2 className="mb-4 text-xl font-bold text-neutral-900 dark:text-white">
+          Get an Enterprise Quote
+        </h2>
+        <p className="mb-6 text-neutral-600 dark:text-neutral-400">
+          Email{' '}
+          <a
+            href="mailto:support@devfortress.net"
+            className="font-medium text-primary-600 underline"
+          >
+            support@devfortress.net
+          </a>{' '}
+          with your requirements and we will respond within one business day.
+        </p>
+        <button
+          onClick={onClose}
+          className="rounded-xl border border-neutral-300 px-6 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-200"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Render a JSON-LD script tag for structured data. */
+function renderJsonLd(data: unknown) {
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
+  );
+}
+
+/** Generate FAQ schema for structured data. */
+function generateFAQSchema(faqs: Array<{ question: string; answer: string }>) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map(faq => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: { '@type': 'Answer', text: faq.answer },
+    })),
+  };
+}
+
+/** No-op logger for open-core (closed platform handles error logging). */
+const logError = (message: string, context?: unknown) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.error('[devfortress]', message, context);
+  }
+};
+
+/** Subscription tier — mirrors closed platform values. */
+const SubscriptionTier = {
+  STARTER: 'STARTER',
+  PRO: 'PRO',
+  TEAM: 'TEAM',
+  ENTERPRISE: 'ENTERPRISE',
+} as const;
+type SubscriptionTier =
+  (typeof SubscriptionTier)[keyof typeof SubscriptionTier];
+
+/**
+ * Subscription pricing constants.
+ * Monthly prices in USD. Annual prices are monthly × 10 (2 months free).
+ * These are public-facing prices shown on devfortress.net/pricing.
+ */
+const SUBSCRIPTION_PRICING: Record<
+  SubscriptionTier,
+  { monthlyPrice: number; annualPrice: number }
+> = {
+  [SubscriptionTier.STARTER]: { monthlyPrice: 99, annualPrice: 79 },
+  [SubscriptionTier.PRO]: { monthlyPrice: 149, annualPrice: 119 },
+  [SubscriptionTier.TEAM]: { monthlyPrice: 499, annualPrice: 399 },
+  [SubscriptionTier.ENTERPRISE]: { monthlyPrice: 0, annualPrice: 0 },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 /* ─── Types ─── */
 type BillingCycle = 'monthly' | 'annual';
-type CalcGroup = 'ep' | 'sec' | 'dep' | 'sla' | 'advancedSec';
-
-interface CalcState {
-  ep: number;
-  sec: string;
-  dep: string;
-  sla: string;
-  comp: string[];
-  advancedSec: number;
-  integrationCount: number;
-}
-
-/* ─── Calculator Constants ─── */
-const EP_BASE = [14000, 24000, 48000, 72000, 96000];
 
 /* ─── Tier base resources (mirrors TIER_BASE_RESOURCES in types.ts) ─── */
 const TIER_RESOURCES = {
@@ -178,62 +253,6 @@ const ADDON_CATALOGUE: AddonItem[] = [
     maxUnits: 1,
     proOnly: true,
   },
-];
-
-const COMP_ADD: Record<string, number> = {
-  gdpr: 2000,
-  pci: 4000,
-  soc2: 3000,
-  hipaa: 3500,
-  none: 0,
-};
-const SEC_ADD: Record<string, number> = {
-  hmac: 0,
-  mtls: 6000,
-  icl: 8000,
-  mtls_icl: 12000,
-};
-const DEP_ADD: Record<string, number> = { cloud: 0, onprem: 12000 };
-const SLA_ADD: Record<string, number> = { standard: 0, premium: 8000 };
-
-const AGENT_CL_OPTIONS = [
-  { label: 'No AI Agent Security', value: 0 },
-  { label: 'Up to 25 agents — $500/mo', value: 500 },
-  { label: 'Up to 100 agents — $1,500/mo', value: 1500 },
-  { label: 'Up to 500 agents — $5,000/mo', value: 5000 },
-  {
-    label: 'Unlimited agents — Custom (contact sales)',
-    value: 0,
-    isCustom: true,
-  },
-];
-
-const EP_OPTIONS = [
-  { label: 'Up to 50', val: 0 },
-  { label: 'Up to 100', val: 1 },
-  { label: 'Up to 250', val: 2 },
-  { label: 'Up to 500', val: 3 },
-  { label: '500+', val: 4 },
-];
-
-const COMPLIANCE_OPTIONS = [
-  { label: 'GDPR / DPA — Coming Soon', val: 'gdpr' },
-  { label: 'PCI-DSS — Coming Soon', val: 'pci' },
-  { label: 'SOC2 — Coming Soon', val: 'soc2' },
-  { label: 'HIPAA — Coming Soon', val: 'hipaa' },
-  { label: 'None required', val: 'none' },
-];
-
-const SECURITY_OPTIONS = [
-  { label: 'HMAC (standard)', val: 'hmac' },
-  { label: 'mTLS (regulated) — Coming Soon', val: 'mtls' },
-  { label: 'HMAC + Hybrid security mode', val: 'icl' },
-  { label: 'mTLS + Hybrid security mode — Coming Soon', val: 'mtls_icl' },
-];
-
-const SLA_OPTIONS = [
-  { label: 'Standard — 99.9%', val: 'standard' },
-  { label: 'Premium — 99.95% + dedicated CSM — Coming Soon', val: 'premium' },
 ];
 
 /* ─── FAQs ─── */
@@ -849,17 +868,7 @@ export default function PricingPage() {
   const [addonQty, setAddonQty] = useState<Record<string, number>>({});
   const [addonLoading, setAddonLoading] = useState<string | null>(null);
   const [addonSuccess, setAddonSuccess] = useState<string | null>(null);
-
-  /* ─── Calculator state ─── */
-  const [calcState, setCalcState] = useState<CalcState>({
-    ep: 0,
-    sec: 'hmac',
-    dep: 'cloud',
-    sla: 'standard',
-    comp: [],
-    advancedSec: 0,
-    integrationCount: 5,
-  });
+  const [isIntakeModalOpen, setIsIntakeModalOpen] = useState(false);
 
   /* ─── Subscription handler (Paddle) ─── */
   const handleSubscribe = useCallback(
@@ -964,44 +973,6 @@ export default function PricingPage() {
     [addonQty, paddle]
   );
 
-  /* ─── Calculator logic ─── */
-  const calcTotal = useMemo(() => {
-    let total = EP_BASE[calcState.ep] || EP_BASE[0];
-    calcState.comp.forEach(c => {
-      total += COMP_ADD[c] || 0;
-    });
-    total += SEC_ADD[calcState.sec] || 0;
-    total += DEP_ADD[calcState.dep] || 0;
-    total += SLA_ADD[calcState.sla] || 0;
-    const selectedAgentOpt = AGENT_CL_OPTIONS[calcState.advancedSec];
-    if (selectedAgentOpt && selectedAgentOpt.value) {
-      total += selectedAgentOpt.value * 12; // multiply monthly value by 12 for annual total
-    }
-    return total;
-  }, [calcState]);
-
-  const calcMonthly = useMemo(
-    () => Math.round(calcTotal / 12 / 100) * 100,
-    [calcTotal]
-  );
-
-  const handleCalcSelect = useCallback(
-    (group: CalcGroup, val: string | number) => {
-      setCalcState(prev => ({ ...prev, [group]: val }));
-    },
-    []
-  );
-
-  const handleCalcToggleComp = useCallback((val: string) => {
-    setCalcState(prev => {
-      if (val === 'none') return { ...prev, comp: [] };
-      const next = prev.comp.includes(val)
-        ? prev.comp.filter(v => v !== val)
-        : [...prev.comp, val];
-      return { ...prev, comp: next };
-    });
-  }, []);
-
   /* ─── Pricing display ─── */
   const starterPrice =
     billing === 'annual'
@@ -1009,7 +980,7 @@ export default function PricingPage() {
       : SUBSCRIPTION_PRICING[SubscriptionTier.STARTER].monthlyPrice;
   const proPrice =
     billing === 'annual'
-      ? (SUBSCRIPTION_PRICING[SubscriptionTier.PRO].annualPrice ?? 199)
+      ? (SUBSCRIPTION_PRICING[SubscriptionTier.PRO].annualPrice ?? 119)
       : SUBSCRIPTION_PRICING[SubscriptionTier.PRO].monthlyPrice;
   const teamsPrice =
     billing === 'annual'
@@ -1068,7 +1039,7 @@ export default function PricingPage() {
               <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
                 40% beta discount active ·{' '}
                 <span className="text-yellow-600 dark:text-yellow-400">
-                  Beta ends Tuesday 12 August 2026
+                  Beta ends Saturday 22 August 2026
                 </span>
               </span>
             </div>
@@ -1555,6 +1526,10 @@ export default function PricingPage() {
                   seats — scale with add-ons up to 20 each. Hybrid closed-loop
                   mode by default. Unlocks Platform Intelligence and API Key
                   &amp; Payload Protection.
+                  <span className="text-neutral-400 dark:text-neutral-500 text-sm font-normal">
+                    {' '}
+                    (Coming Soon)
+                  </span>
                 </p>
                 <button
                   onClick={() => handleSubscribe(SubscriptionTier.TEAM)}
@@ -1708,12 +1683,12 @@ export default function PricingPage() {
                   mode, mTLS, custom playbooks, compliance evidence, dedicated
                   SLA, and full onboarding.
                 </p>
-                <a
-                  href="#enterprise"
+                <button
+                  onClick={() => setIsIntakeModalOpen(true)}
                   className="mb-2 block w-full rounded-xl bg-success-500 py-3.5 text-center text-sm font-semibold text-white shadow-md transition-all hover:bg-success-600 hover:shadow-lg"
                 >
                   Get a Quote →
-                </a>
+                </button>
                 <a
                   href="mailto:support@devfortress.net"
                   className="block w-full rounded-xl border border-neutral-300 bg-transparent py-3.5 text-center text-sm font-semibold text-neutral-700 transition-all hover:border-success-500 hover:text-success-600 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-success-500 dark:hover:text-success-400"
@@ -1794,8 +1769,8 @@ export default function PricingPage() {
               <p className="mx-auto mb-6 max-w-xl text-base leading-relaxed text-neutral-600 dark:text-neutral-400">
                 No fixed price. Enterprise is scoped to your exact requirements
                 — API endpoints, compliance frameworks, SLA tier, and deployment
-                model. Use the calculator below to generate an indicative quote,
-                then email{' '}
+                model. Click &ldquo;Get a Quote&rdquo; to configure and get an
+                indicative estimate, or email{' '}
                 <strong className="text-success-600 dark:text-success-400">
                   support@devfortress.net
                 </strong>{' '}
@@ -1833,228 +1808,6 @@ export default function PricingPage() {
               >
                 Read the Textbook: Token-Aliased Closed-Loop Security →
               </a>
-            </div>
-
-            {/* ─── Quote Calculator ─── */}
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 text-center">
-              Enterprise only — for Starter / Pro / Teams pricing, see tier
-              cards above ↑
-            </p>
-            <div className="mx-auto mb-16 max-w-[820px] rounded-2xl border border-success-200 bg-white/90 p-8 shadow-xl backdrop-blur-sm dark:border-success-900/30 dark:bg-neutral-900/80 sm:p-10">
-              <h3 className="mb-1.5 text-lg font-bold text-neutral-900 dark:text-white">
-                Enterprise Quote Calculator
-              </h3>
-              <p className="mb-8 text-sm text-neutral-600 dark:text-neutral-400">
-                Indicative pricing — final quote confirmed after a 30-minute
-                scoping call.
-              </p>
-
-              {/* Row 1: Endpoints */}
-              <div className="mb-6">
-                <p className="mb-2.5 font-mono text-[10px] uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
-                  API Endpoints to Monitor
-                </p>
-                <div className="flex flex-wrap gap-2.5">
-                  {EP_OPTIONS.map(opt => (
-                    <button
-                      key={opt.val}
-                      onClick={() => handleCalcSelect('ep', opt.val)}
-                      className={`rounded-lg border px-4 py-2.5 text-sm font-medium transition-all ${
-                        calcState.ep === opt.val
-                          ? 'border-success-500 bg-success-500 text-white shadow-md'
-                          : 'border-neutral-300 text-neutral-500 hover:border-success-500 hover:text-neutral-700 dark:border-neutral-700 dark:text-neutral-400 dark:hover:border-success-500 dark:hover:text-neutral-200'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Row 2: Compliance (multi-select) */}
-              <div className="mb-6">
-                <p className="mb-2.5 font-mono text-[10px] uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
-                  Compliance Requirements{' '}
-                  <span className="normal-case tracking-normal text-neutral-400 dark:text-neutral-600">
-                    (select all that apply)
-                  </span>
-                </p>
-                <div className="flex flex-wrap gap-2.5">
-                  {COMPLIANCE_OPTIONS.map(opt => {
-                    const isSelected =
-                      opt.val === 'none'
-                        ? calcState.comp.length === 0
-                        : calcState.comp.includes(opt.val);
-                    return (
-                      <button
-                        key={opt.val}
-                        onClick={() => handleCalcToggleComp(opt.val)}
-                        className={`rounded-lg border px-4 py-2.5 text-sm font-medium transition-all ${
-                          isSelected
-                            ? 'border-success-500 bg-success-500/15 text-success-700 dark:text-success-400'
-                            : 'border-neutral-300 text-neutral-500 hover:border-success-500 dark:border-neutral-700 dark:text-neutral-400 dark:hover:border-success-500'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Row 3: Security */}
-              <div className="mb-6">
-                <p className="mb-2.5 font-mono text-[10px] uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
-                  Security Requirements
-                </p>
-                <div className="flex flex-wrap gap-2.5">
-                  {SECURITY_OPTIONS.map(opt => (
-                    <button
-                      key={opt.val}
-                      onClick={() => handleCalcSelect('sec', opt.val)}
-                      className={`rounded-lg border px-4 py-2.5 text-sm font-medium transition-all ${
-                        calcState.sec === opt.val
-                          ? 'border-success-500 bg-success-500 text-white shadow-md'
-                          : 'border-neutral-300 text-neutral-500 hover:border-success-500 dark:border-neutral-700 dark:text-neutral-400 dark:hover:border-success-500'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Row 4: Deployment */}
-              <div className="mb-6">
-                <p className="mb-2.5 font-mono text-[10px] uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
-                  Deployment Model
-                </p>
-                <div className="flex flex-wrap gap-2.5">
-                  <button
-                    onClick={() => handleCalcSelect('dep', 'cloud')}
-                    className={`rounded-lg border px-4 py-2.5 text-sm font-medium transition-all ${
-                      calcState.dep === 'cloud'
-                        ? 'border-success-500 bg-success-500 text-white shadow-md'
-                        : 'border-neutral-300 text-neutral-500 hover:border-success-500 dark:border-neutral-700 dark:text-neutral-400 dark:hover:border-success-500'
-                    }`}
-                  >
-                    Cloud-hosted (SaaS)
-                  </button>
-                  <button
-                    disabled
-                    title="Coming soon"
-                    className="cursor-not-allowed rounded-lg border border-neutral-200 px-4 py-2.5 text-sm font-medium text-neutral-400 opacity-50 dark:border-neutral-800 dark:text-neutral-600"
-                  >
-                    On-premise / Private cloud{' '}
-                    <span className="ml-1 rounded bg-warning-500/15 px-1.5 py-px font-mono text-[9px] tracking-wider text-warning-500 dark:text-warning-400">
-                      Coming Soon
-                    </span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Row 5: SLA */}
-              <div className="mb-6">
-                <p className="mb-2.5 font-mono text-[10px] uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
-                  SLA Tier
-                </p>
-                <div className="flex flex-wrap gap-2.5">
-                  {SLA_OPTIONS.map(opt => (
-                    <button
-                      key={opt.val}
-                      onClick={() => handleCalcSelect('sla', opt.val)}
-                      className={`rounded-lg border px-4 py-2.5 text-sm font-medium transition-all ${
-                        calcState.sla === opt.val
-                          ? 'border-success-500 bg-success-500 text-white shadow-md'
-                          : 'border-neutral-300 text-neutral-500 hover:border-success-500 dark:border-neutral-700 dark:text-neutral-400 dark:hover:border-success-500'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Row 6: Advanced Security Add-on (STEALTH) */}
-              <div className="mb-8">
-                <p className="mb-2.5 font-mono text-[10px] uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
-                  AI Agent Security Add-on{' '}
-                  <span className="ml-1 rounded bg-violet-500/15 px-1.5 py-px font-mono text-[9px] tracking-wider text-violet-600 dark:text-violet-400">
-                    NEW
-                  </span>
-                </p>
-                <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
-                  Enterprise AI Agent Security scales by agent count. Includes
-                  per-agent credential isolation, behavioral baselines, scope
-                  enforcement, shadow agent detection (B10), agent exfiltration
-                  detection (B7), and multi-hop trust chain management (B4).
-                  This calculator is for Enterprise-scale deployments only. For
-                  other tiers: Starter includes 1 agent; Pro includes 1 agent
-                  with add-ons to 5 at $25/agent/mo; Teams includes 5 agents
-                  with add-ons to 20 at $20/agent/mo — see tier cards above.
-                </p>
-                <div className="flex flex-wrap gap-2.5">
-                  {AGENT_CL_OPTIONS.map((opt, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleCalcSelect('advancedSec', i)}
-                      className={`rounded-lg border px-4 py-2.5 text-sm font-medium transition-all ${
-                        calcState.advancedSec === i
-                          ? 'border-violet-500 bg-violet-500 text-white shadow-md'
-                          : 'border-neutral-300 text-neutral-500 hover:border-violet-500 dark:border-neutral-700 dark:text-neutral-400 dark:hover:border-violet-500'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Result */}
-              <div className="flex flex-wrap items-center justify-between gap-5 rounded-2xl border border-success-300/30 bg-success-50 px-8 py-7 dark:border-success-500/20 dark:bg-success-500/5">
-                <div>
-                  <p className="mb-1.5 font-mono text-[10px] uppercase tracking-widest text-success-600 dark:text-success-400">
-                    Indicative Annual Price
-                  </p>
-                  {AGENT_CL_OPTIONS[calcState.advancedSec]?.isCustom ? (
-                    <p className="text-[42px] font-extrabold leading-none tracking-tight text-neutral-900 dark:text-white">
-                      Contact Sales
-                    </p>
-                  ) : (
-                    <>
-                      <p className="text-[42px] font-extrabold leading-none tracking-tight text-neutral-900 dark:text-white">
-                        ${calcTotal.toLocaleString()}
-                      </p>
-                      <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                        ~${calcMonthly.toLocaleString()}/month · billed annually
-                      </p>
-                      <p className="mt-2 text-[11px] italic text-neutral-400 dark:text-neutral-600">
-                        + one-time implementation fee — quoted separately
-                      </p>
-                    </>
-                  )}
-                </div>
-                <div className="flex flex-col gap-2.5">
-                  <a
-                    href="mailto:admin@devfortress.net"
-                    className="whitespace-nowrap rounded-xl bg-success-500 px-8 py-3.5 text-center text-sm font-semibold text-white shadow-md transition-colors hover:bg-success-600 hover:shadow-lg"
-                  >
-                    Contact Sales →
-                  </a>
-                  <a
-                    href="mailto:admin@devfortress.net"
-                    className="rounded-xl border border-neutral-300 px-8 py-3.5 text-center text-xs font-medium text-neutral-700 transition-all hover:border-success-500 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-success-500"
-                  >
-                    admin@devfortress.net
-                  </a>
-                </div>
-              </div>
-
-              <p className="mt-4 text-center text-[11px] text-neutral-400 dark:text-neutral-600">
-                Prices shown in USD. Quotes are indicative — final pricing
-                confirmed after scoping call. Volume discounts available for
-                multi-year contracts.
-              </p>
             </div>
 
             {/* All Enterprise plans include */}
@@ -2099,12 +1852,12 @@ export default function PricingPage() {
                 fixed-price proposal within 48 hours.
               </p>
               <div className="flex flex-wrap justify-center gap-3">
-                <a
-                  href="mailto:support@devfortress.net"
+                <button
+                  onClick={() => setIsIntakeModalOpen(true)}
                   className="rounded-xl bg-success-500 px-8 py-3.5 text-sm font-semibold text-white shadow-md transition-colors hover:bg-success-600 hover:shadow-lg"
                 >
-                  Contact Sales →
-                </a>
+                  Get a Quote →
+                </button>
                 <Link
                   href="/enterprise"
                   className="rounded-xl border border-neutral-300 px-8 py-3.5 text-sm font-medium text-neutral-700 transition-all hover:border-success-500 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-success-500"
@@ -2452,6 +2205,12 @@ export default function PricingPage() {
           </div>
         </section>
       </main>
+
+      <EnterpriseIntakeModal
+        isOpen={isIntakeModalOpen}
+        onClose={() => setIsIntakeModalOpen(false)}
+        invoiceType="platform_annual"
+      />
     </>
   );
 }

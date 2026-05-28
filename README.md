@@ -40,6 +40,64 @@ export async function middleware(request: NextRequest) {
 
 Full documentation: [devfortress.net/docs](https://devfortress.net/docs)
 
+## Getting Started
+
+### Prerequisites
+
+| Requirement | Version | Notes |
+| ----------- | ------- | ----- |
+| Node.js | 20 LTS+ | [nodejs.org](https://nodejs.org) |
+| npm | 10+ | Bundled with Node.js 20 |
+| pnpm | 9+ | `npm install -g pnpm` |
+| Docker Desktop | Latest | Required for local Supabase |
+| Supabase CLI | Latest | `npm install -g supabase` |
+| devfortress-sdk | Latest | `npm install devfortress-sdk` |
+
+### Quick Start (≤10 commands)
+
+```bash
+git clone https://github.com/duncan982/devfortress-core.git
+cd devfortress-core
+cp .env.example .env.local
+# Edit .env.local — fill in your Supabase credentials (see Environment Variables below)
+pnpm install
+supabase start
+# Copy the API URL, anon key, and service_role key printed above into .env.local
+npx prisma migrate deploy
+pnpm dev
+# Open http://localhost:3001
+```
+
+> **Note:** Run `npx prisma migrate deploy` after `supabase start` to apply the schema. All variables are documented inline in `.env.example`.
+
+### Environment Variables
+
+Copy `.env.example` to `.env.local` and fill in your Supabase credentials from `supabase start` output:
+
+| Variable | Description | Where to get it |
+| -------- | ----------- | --------------- |
+| `DATABASE_URL` | PostgreSQL connection string (pooled, port 6543) | `supabase start` output → DB URL |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | `supabase start` output → API URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key | `supabase start` output → anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | `supabase start` output → service_role key |
+| `DEVFORTRESS_API_KEY` | Your DevFortress API key | [devfortress.net/dashboard](https://devfortress.net/dashboard) |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Cloudflare Turnstile site key | [dash.cloudflare.com](https://dash.cloudflare.com) → Turnstile |
+| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key | Same as above |
+
+The `.env.example` contains Cloudflare Turnstile test keys that pass all checks — safe for local development without a Cloudflare account.
+
+### Available scripts
+
+| Command | Description |
+| ------- | ----------- |
+| `pnpm dev` | Start development server (port 3001) |
+| `pnpm build` | Production build |
+| `pnpm start` | Start production server |
+| `pnpm lint` | Run ESLint |
+| `npx prisma generate` | Regenerate Prisma client after schema changes |
+| `npx prisma migrate deploy` | Apply pending migrations |
+| `npx prisma studio` | Open Prisma database browser |
+
 ## What's in this repository
 
 This repository contains the **open platform layer** — the interfaces,
@@ -73,6 +131,8 @@ via [devfortress.net](https://devfortress.net).
 
 ## Contributing
 
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+
 **This repository does not accept pull requests or external code contributions.**
 
 The platform layer shown here is maintained solely by the core team. The SDK
@@ -87,6 +147,29 @@ You are welcome to:
 - Star and watch the repo for updates
 
 This policy will be revisited as the project matures.
+
+## About the Author
+
+DevFortress is designed and built by **Duncan Ndungu Ndegwa**, a software
+engineer and security researcher based in Nairobi, Kenya.
+
+The architecture behind this platform — Token-Aliased Closed-Loop Security,
+the Platform Intelligence layer, and the agentic detection models — is
+documented in depth in:
+
+**[Book title and link — TO BE FILLED BY HUMAN before merge]**
+A technical deep-dive into the threat models, design decisions, and
+implementation patterns that underpin DevFortress. Written for engineers
+who want to understand not just how to use the platform, but why it is
+built the way it is.
+
+**[Substack newsletter — TO BE FILLED BY HUMAN before merge]**
+Engineering notes, security research, and DevFortress development updates.
+Subscribe for architecture breakdowns and early access announcements.
+
+These are shared here as context for the open-core — not as a requirement
+to use the platform. The README and docs contain everything needed to run
+DevFortress independently.
 
 ## License
 
