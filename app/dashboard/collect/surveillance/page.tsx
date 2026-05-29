@@ -362,7 +362,7 @@ export default function CollectSurveillancePage() {
         }));
       });
 
-      // Also fetch threat stats to include honeypot data
+      // Also fetch threat stats for enriched IP deduplication
       const threatResponse = await fetch(
         `/api/threats?projectId=${selectedProject}`
       );

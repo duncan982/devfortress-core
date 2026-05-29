@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     'API security',
     'API generation',
     'threat intelligence',
-    'honeypots',
+    'live threat detection',
   ],
   openGraph: {
     title: 'Features - DevFortress',
@@ -90,7 +90,7 @@ export default function FeaturesPage() {
               DEFEND
             </h2>
             <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-              Deploy honeypots and monitor for threats
+              Real-time threat detection and automated response
             </p>
           </Link>
 
@@ -179,17 +179,6 @@ export default function FeaturesPage() {
               <p className="text-sm text-neutral-600 dark:text-neutral-400">
                 Role-based access control with team workspaces, permissions, and
                 activity audit trails
-              </p>
-            </div>
-
-            {/* Honeypot Premium Services */}
-            <div className="rounded-xl border border-neutral-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-900">
-              <h3 className="mb-2 text-lg font-semibold">
-                HPS (Honeypot Premium)
-              </h3>
-              <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                Advanced honeypot features with quota tracking, webhook
-                integration, and cost estimation
               </p>
             </div>
 
