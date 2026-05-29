@@ -114,6 +114,32 @@ The hosted platform — LEARN phase, Platform Intelligence (B1–B12), threat
 classifiers, and the blocking decision engine — is proprietary and available
 via [devfortress.net](https://devfortress.net).
 
+## What the Hosted Platform Adds
+
+Self-hosting the open-core gives you the instrumentation layer —
+events flow in, your dashboard shows activity, and the SDK observes
+every request. The hosted platform at [devfortress.net](https://devfortress.net)
+adds the intelligence layer that acts on what the SDK sees:
+
+| Capability | Open-Core (self-hosted) | Hosted Platform |
+|---|---|---|
+| Event ingestion | ✅ Full | ✅ Full |
+| SDK observe() hooks | ✅ Full | ✅ Full |
+| Security headers | ✅ Full | ✅ Full |
+| Dashboard UI | ✅ Shell + basic views | ✅ Full threat intelligence |
+| Threat classification | ❌ | ✅ ML-powered, real-time |
+| IP reputation (AbuseIPDB) | ❌ | ✅ 10K–unlimited checks/mo |
+| Automated blocking | ❌ | ✅ <2s session revocation |
+| Closed-loop response | ❌ | ✅ External / Internal / Hybrid |
+| Platform Intelligence | ❌ | ✅ B1–B12 behaviour analytics |
+| LEARN phase analytics | ❌ | ✅ Included |
+| AI security insights | ❌ | ✅ Pro+ |
+
+The open-core is production-ready for event collection and SDK integration.
+Connect it to the hosted platform to activate threat response.
+
+[Start free at devfortress.net →](https://devfortress.net)
+
 ## SDK Specialization Modes
 
 | Mode                       | Description                             | Availability |
