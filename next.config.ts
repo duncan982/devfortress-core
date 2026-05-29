@@ -84,7 +84,9 @@ const nextConfig: NextConfig = {
     ];
 
     if (isServer) {
-      // Suppress "Module not found" warnings for optional SDK peer deps
+      // Suppress "Module not found" for optional SDK peer deps not bundled in open-core
+      config.externals = [
+        ...(Array.isArray(config.externals) ? config.externals : []),
         'fastify',
         'hono',
         'express',
@@ -92,10 +94,7 @@ const nextConfig: NextConfig = {
           { request }: { request?: string },
           callback: (err?: Error | null, result?: string) => void
         ) => {
-          if (
-            request &&
-            (/\.node$/.test(request))
-          ) {
+          if (request && /\.node$/.test(request)) {
             return callback(null, `commonjs ${request}`);
           }
           callback();
