@@ -259,14 +259,19 @@ export default function CollectSurveillancePage() {
     return filterEventsByMode(events, surveillanceMode);
   }, [events, surveillanceMode]);
 
-  // Fetch projects
+  // Fetch projects — graceful degradation: /api/projects may not exist in open-core
   useEffect(() => {
     async function fetchProjects() {
       try {
         const response = await fetch('/api/projects');
+        if (!response.ok) {
+          setProjects([]);
+          setIsLoading(false);
+          return;
+        }
         const data = await response.json();
         const projectList = Array.isArray(data) ? data : data.projects || [];
-        if (response.ok && projectList.length > 0) {
+        if (projectList.length > 0) {
           setProjects(projectList);
           setDiagnostics(prev => ({ ...prev, hasProjects: true }));
           if (!selectedProject) {
@@ -277,6 +282,7 @@ export default function CollectSurveillancePage() {
             }));
           }
         } else {
+          setProjects([]);
           setIsLoading(false);
           setDiagnostics(prev => ({
             ...prev,
@@ -287,15 +293,9 @@ export default function CollectSurveillancePage() {
             ],
           }));
         }
-      } catch (err) {
+      } catch {
+        setProjects([]);
         setIsLoading(false);
-        setDiagnostics(prev => ({
-          ...prev,
-          apiErrors: [
-            ...prev.apiErrors,
-            `Failed to fetch projects: ${err instanceof Error ? err.message : 'Unknown error'}`,
-          ],
-        }));
       }
     }
     fetchProjects();
@@ -1370,7 +1370,6 @@ export default function CollectSurveillancePage() {
                         'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
                       mfa_enforced:
                         'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
-                      // Any unknown actionTaken falls back to grey via the || fallback below
                     };
                     // Resolve latency
                     const latencyMs =
@@ -1541,9 +1540,6 @@ export default function CollectSurveillancePage() {
                                     {actionTaken
                                       ? actionTaken.replace(/_/g, ' ')
                                       : 'Not specified'}
-                                    {/* Only show session status when the action could affect the session
-                                        (blocked, session_revoked, rate_limited, captcha_challenged).
-                                        For allowed/monitored/flagged, session status is irrelevant. */}
                                     {event.sessionActiveAfterAction !==
                                       undefined &&
                                       event.sessionActiveAfterAction !== null &&
@@ -1584,7 +1580,7 @@ export default function CollectSurveillancePage() {
                                   </p>
                                 </div>
 
-                                {/* Metadata / Extra Context */}
+                                {/* Event ID */}
                                 <div>
                                   <h5 className="mb-1 text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">
                                     Event ID
