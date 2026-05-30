@@ -44,14 +44,14 @@ Full documentation: [devfortress.net/docs](https://devfortress.net/docs)
 
 ### Prerequisites
 
-| Requirement | Version | Notes |
-| ----------- | ------- | ----- |
-| Node.js | 20 LTS+ | [nodejs.org](https://nodejs.org) |
-| npm | 10+ | Bundled with Node.js 20 |
-| pnpm | 9+ | `npm install -g pnpm` |
-| Docker Desktop | Latest | Required for local Supabase |
-| Supabase CLI | Latest | `npm install -g supabase` |
-| devfortress-sdk | Latest | `npm install devfortress-sdk` |
+| Requirement     | Version | Notes                            |
+| --------------- | ------- | -------------------------------- |
+| Node.js         | 20 LTS+ | [nodejs.org](https://nodejs.org) |
+| npm             | 10+     | Bundled with Node.js 20          |
+| pnpm            | 9+      | `npm install -g pnpm`            |
+| Docker Desktop  | Latest  | Required for local Supabase      |
+| Supabase CLI    | Latest  | `npm install -g supabase`        |
+| devfortress-sdk | Latest  | `npm install devfortress-sdk`    |
 
 ### Quick Start (≤10 commands)
 
@@ -64,7 +64,7 @@ pnpm install
 supabase start
 # Copy the API URL, anon key, and service_role key printed above into .env.local
 npx prisma migrate deploy
-pnpm dev
+pnpm dev  # or: npm run dev
 # Open http://localhost:3001
 ```
 
@@ -74,29 +74,29 @@ pnpm dev
 
 Copy `.env.example` to `.env.local` and fill in your Supabase credentials from `supabase start` output:
 
-| Variable | Description | Where to get it |
-| -------- | ----------- | --------------- |
-| `DATABASE_URL` | PostgreSQL connection string (pooled, port 6543) | `supabase start` output → DB URL |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | `supabase start` output → API URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key | `supabase start` output → anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | `supabase start` output → service_role key |
-| `DEVFORTRESS_API_KEY` | Your DevFortress API key | [devfortress.net/dashboard](https://devfortress.net/dashboard) |
-| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Cloudflare Turnstile site key | [dash.cloudflare.com](https://dash.cloudflare.com) → Turnstile |
-| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key | Same as above |
+| Variable                         | Description                                      | Where to get it                                                |
+| -------------------------------- | ------------------------------------------------ | -------------------------------------------------------------- |
+| `DATABASE_URL`                   | PostgreSQL connection string (pooled, port 6543) | `supabase start` output → DB URL                               |
+| `NEXT_PUBLIC_SUPABASE_URL`       | Supabase project URL                             | `supabase start` output → API URL                              |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`  | Supabase anon key                                | `supabase start` output → anon key                             |
+| `SUPABASE_SERVICE_ROLE_KEY`      | Supabase service role key                        | `supabase start` output → service_role key                     |
+| `DEVFORTRESS_API_KEY`            | Your DevFortress API key                         | [devfortress.net/dashboard](https://devfortress.net/dashboard) |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Cloudflare Turnstile site key                    | [dash.cloudflare.com](https://dash.cloudflare.com) → Turnstile |
+| `TURNSTILE_SECRET_KEY`           | Cloudflare Turnstile secret key                  | Same as above                                                  |
 
 The `.env.example` contains Cloudflare Turnstile test keys that pass all checks — safe for local development without a Cloudflare account.
 
 ### Available scripts
 
-| Command | Description |
-| ------- | ----------- |
-| `pnpm dev` | Start development server (port 3001) |
-| `pnpm build` | Production build |
-| `pnpm start` | Start production server |
-| `pnpm lint` | Run ESLint |
-| `npx prisma generate` | Regenerate Prisma client after schema changes |
-| `npx prisma migrate deploy` | Apply pending migrations |
-| `npx prisma studio` | Open Prisma database browser |
+| Command                     | Description                                   |
+| --------------------------- | --------------------------------------------- |
+| `pnpm dev` / `npm run dev`  | Start development server on port 3001         |
+| `pnpm build`                | Production build                              |
+| `pnpm start`                | Start production server                       |
+| `pnpm lint`                 | Run ESLint                                    |
+| `npx prisma generate`       | Regenerate Prisma client after schema changes |
+| `npx prisma migrate deploy` | Apply pending migrations                      |
+| `npx prisma studio`         | Open Prisma database browser                  |
 
 ## What's in this repository
 
@@ -113,32 +113,6 @@ schemas, and UI that the npm-installed SDK communicates with.
 The hosted platform — LEARN phase, Platform Intelligence (B1–B12), threat
 classifiers, and the blocking decision engine — is proprietary and available
 via [devfortress.net](https://devfortress.net).
-
-## What the Hosted Platform Adds
-
-Self-hosting the open-core gives you the instrumentation layer —
-events flow in, your dashboard shows activity, and the SDK observes
-every request. The hosted platform at [devfortress.net](https://devfortress.net)
-adds the intelligence layer that acts on what the SDK sees:
-
-| Capability | Open-Core (self-hosted) | Hosted Platform |
-|---|---|---|
-| Event ingestion | ✅ Full | ✅ Full |
-| SDK observe() hooks | ✅ Full | ✅ Full |
-| Security headers | ✅ Full | ✅ Full |
-| Dashboard UI | ✅ Shell + basic views | ✅ Full threat intelligence |
-| Threat classification | ❌ | ✅ ML-powered, real-time |
-| IP reputation (AbuseIPDB) | ❌ | ✅ 10K–unlimited checks/mo |
-| Automated blocking | ❌ | ✅ <2s session revocation |
-| Closed-loop response | ❌ | ✅ External / Internal / Hybrid |
-| Platform Intelligence | ❌ | ✅ B1–B12 behaviour analytics |
-| LEARN phase analytics | ❌ | ✅ Included |
-| AI security insights | ❌ | ✅ Pro+ |
-
-The open-core is production-ready for event collection and SDK integration.
-Connect it to the hosted platform to activate threat response.
-
-[Start free at devfortress.net →](https://devfortress.net)
 
 ## SDK Specialization Modes
 

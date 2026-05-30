@@ -1,6 +1,7 @@
 /**
  * SDK Credentials Management Page
  * Create projects and manage SDK credentials for applications, APIs, and agents.
+ * Includes A19 Credential Alias inventory tab.
  *
  * MVP Focus: Collect Phase — SDK Surveillance
  * Connects to /api/sdk/credentials for real credential management.
@@ -25,6 +26,32 @@ interface SdkCredential {
   webhookSecret: string;
   createdAt: string;
   status: 'active' | 'revoked';
+}
+
+/* A19 Alias Types */
+type AliasWorkload =
+  | 'ci'
+  | 'agent'
+  | 'plugin'
+  | 'browser'
+  | 'server'
+  | 'custom';
+type AliasStatus = 'active' | 'rotated' | 'revoked';
+
+interface CredentialAlias {
+  id: string;
+  projectId: string;
+  projectName: string;
+  workload: AliasWorkload;
+  label: string;
+  aliasToken: string;
+  status: AliasStatus;
+  createdAt: string;
+  expiresAt: string | null;
+  lastUsedAt: string | null;
+  rotationCount: number;
+  scope: string[];
+  tags: Record<string, string>;
 }
 
 const TYPE_META: Record<
@@ -167,6 +194,10 @@ curl -X POST https://your-platform/api/events/ingest \\
 /* ------------------------------------------------------------------ */
 
 export default function CredentialsPage() {
+  const [pageTab, setPageTab] = useState<'credentials' | 'aliases'>(
+    'credentials'
+  );
+
   const [credentials, setCredentials] = useState<SdkCredential[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -181,6 +212,29 @@ export default function CredentialsPage() {
     null
   );
   const [error, setError] = useState<string | null>(null);
+
+  const [aliases, setAliases] = useState<CredentialAlias[]>([]);
+  const [aliasLoading, setAliasLoading] = useState(false);
+  const [aliasError, setAliasError] = useState<string | null>(null);
+  const [showCreateAlias, setShowCreateAlias] = useState(false);
+  const [newAliasProjectId, setNewAliasProjectId] = useState('');
+  const [newAliasLabel, setNewAliasLabel] = useState('');
+  const [newAliasWorkload, setNewAliasWorkload] =
+    useState<AliasWorkload>('custom');
+  const [creatingAlias, setCreatingAlias] = useState(false);
+  const [viewOnceKey, setViewOnceKey] = useState<{
+    aliasId: string;
+    aliasKey: string;
+    label: string;
+  } | null>(null);
+  const [viewOnceCopied, setViewOnceCopied] = useState(false);
+
+  const [revokeModal, setRevokeModal] = useState<{
+    projectId: string;
+    aliasId: string;
+    label: string;
+  } | null>(null);
+  const [isRevokingFamily, setIsRevokingFamily] = useState(false);
 
   useEffect(() => {
     async function loadCredentials() {
@@ -198,6 +252,157 @@ export default function CredentialsPage() {
     }
     loadCredentials();
   }, []);
+
+  useEffect(() => {
+    if (pageTab !== 'aliases') return;
+    async function loadAliases() {
+      setAliasLoading(true);
+      setAliasError(null);
+      try {
+        const all: CredentialAlias[] = [];
+        for (const cred of credentials) {
+          const res = await fetch(`/api/projects/${cred.projectId}/aliases`);
+          if (res.ok) {
+            const data = await res.json();
+            const list = (data.aliases || data || []) as CredentialAlias[];
+            all.push(
+              ...list.map(a => ({
+                ...a,
+                projectName: cred.projectName,
+                projectId: cred.projectId,
+              }))
+            );
+          }
+        }
+        setAliases(all);
+      } catch {
+        setAliasError('Failed to load aliases');
+      } finally {
+        setAliasLoading(false);
+      }
+    }
+    loadAliases();
+  }, [pageTab, credentials]);
+
+  const handleCreateAlias = useCallback(async () => {
+    if (!newAliasProjectId || !newAliasLabel.trim() || creatingAlias) return;
+    setCreatingAlias(true);
+    setAliasError(null);
+    try {
+      const res = await fetch(`/api/projects/${newAliasProjectId}/aliases`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workload: newAliasWorkload,
+          label: newAliasLabel.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to create alias');
+      const cred = credentials.find(c => c.projectId === newAliasProjectId);
+      const newAliasRecord: CredentialAlias = {
+        id: data.aliasId,
+        projectId: newAliasProjectId,
+        projectName: cred?.projectName ?? '',
+        workload: data.workload ?? newAliasWorkload,
+        label: data.label ?? newAliasLabel.trim(),
+        aliasToken: '[hidden after creation]',
+        status: 'active',
+        createdAt: data.createdAt ?? new Date().toISOString(),
+        expiresAt: data.expiresAt ?? null,
+        lastUsedAt: null,
+        rotationCount: 0,
+        scope: data.scope ?? [],
+        tags: data.tags ?? {},
+      };
+      setAliases(prev => [newAliasRecord, ...prev]);
+      setShowCreateAlias(false);
+      setNewAliasLabel('');
+      setViewOnceKey({
+        aliasId: data.aliasId,
+        aliasKey: data.aliasKey,
+        label: newAliasRecord.label,
+      });
+      setViewOnceCopied(false);
+    } catch (err) {
+      setAliasError(
+        err instanceof Error ? err.message : 'Failed to create alias'
+      );
+    } finally {
+      setCreatingAlias(false);
+    }
+  }, [
+    newAliasProjectId,
+    newAliasLabel,
+    newAliasWorkload,
+    creatingAlias,
+    credentials,
+  ]);
+
+  const handleRotateAlias = useCallback(
+    async (projectId: string, aliasId: string) => {
+      try {
+        const res = await fetch(
+          `/api/projects/${projectId}/aliases/${aliasId}/rotate`,
+          { method: 'POST' }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setAliases(prev =>
+            prev.map(a =>
+              a.id === aliasId
+                ? {
+                    ...a,
+                    aliasToken: data.alias?.aliasToken ?? a.aliasToken,
+                    rotationCount: (a.rotationCount || 0) + 1,
+                  }
+                : a
+            )
+          );
+        }
+      } catch {
+        /* silent */
+      }
+    },
+    []
+  );
+
+  const handleRevokeAlias = useCallback(
+    async (projectId: string, aliasId: string, revokeFamily = false) => {
+      try {
+        const res = await fetch(
+          `/api/projects/${projectId}/aliases/${aliasId}`,
+          {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ revokeFamily }),
+          }
+        );
+        if (res.ok) {
+          if (revokeFamily) {
+            setAliases(prev =>
+              prev.map(a =>
+                a.projectId === projectId
+                  ? { ...a, status: 'revoked' as const }
+                  : a
+              )
+            );
+          } else {
+            setAliases(prev =>
+              prev.map(a =>
+                a.id === aliasId ? { ...a, status: 'revoked' as const } : a
+              )
+            );
+          }
+        }
+      } catch {
+        /* silent */
+      } finally {
+        setRevokeModal(null);
+      }
+    },
+    []
+  );
 
   const handleCreate = useCallback(async () => {
     if (!newProjectName.trim() || creating) return;
@@ -321,7 +526,8 @@ export default function CredentialsPage() {
               <strong>API Key</strong>, and <strong>Webhook Secret</strong>.
             </p>
           </div>
-          <button
+          {pageTab === 'credentials' && (
+            <button
               onClick={() => setShowCreate(true)}
               className="inline-flex items-center rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
             >
@@ -340,10 +546,64 @@ export default function CredentialsPage() {
               </svg>
               New Project
             </button>
+          )}
+          {pageTab === 'aliases' && (
+            <button
+              onClick={() => setShowCreateAlias(true)}
+              className="inline-flex items-center rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+            >
+              <svg
+                className="mr-2 h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              New Alias
+            </button>
+          )}
         </div>
 
-        {/* ── CREDENTIALS ── */}
-        <>
+        {/* Page Tabs */}
+        <div className="mb-6 flex gap-1 rounded-xl border border-neutral-200 bg-white p-1 dark:border-neutral-800 dark:bg-neutral-900 w-fit">
+          {[
+            { id: 'credentials', label: '🔑 SDK Credentials' },
+            { id: 'aliases', label: '🎭 Credential Aliases', badge: 'A19' },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setPageTab(tab.id as 'credentials' | 'aliases')}
+              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                pageTab === tab.id
+                  ? 'bg-primary-600 text-white shadow-sm'
+                  : 'text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white'
+              }`}
+            >
+              {tab.label}
+              {tab.badge && (
+                <span
+                  className={`rounded px-1.5 py-0.5 text-xs font-bold ${
+                    pageTab === tab.id
+                      ? 'bg-primary-500 text-white'
+                      : 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300'
+                  }`}
+                >
+                  {tab.badge}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* ── CREDENTIALS TAB ── */}
+        {pageTab === 'credentials' && (
+          <>
             {error && (
               <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
                 {error}
@@ -729,7 +989,388 @@ export default function CredentialsPage() {
               </Link>
             </div>
           </>
+        )}
+
+        {/* ── ALIASES TAB (A19) ── */}
+        {pageTab === 'aliases' && (
+          <div>
+            <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">🎭</span>
+                <div>
+                  <p className="font-semibold text-amber-900 dark:text-amber-200">
+                    Credential Aliases — A19
+                  </p>
+                  <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">
+                    Issue short-lived alias tokens per workload (CI, agent,
+                    plugin, browser) so your real API key never leaves your
+                    server. Each alias is independently rotatable and revocable
+                    without rotating your primary key.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {aliasError && (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+                {aliasError}
+                <button
+                  onClick={() => setAliasError(null)}
+                  className="ml-2 underline"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
+
+            {showCreateAlias && (
+              <div className="mb-6 rounded-2xl border border-primary-200 bg-white p-6 shadow-sm dark:border-primary-800 dark:bg-neutral-900">
+                <h2 className="mb-4 text-lg font-semibold text-neutral-900 dark:text-white">
+                  New Credential Alias
+                </h2>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                      Project
+                    </label>
+                    <select
+                      value={newAliasProjectId}
+                      onChange={e => setNewAliasProjectId(e.target.value)}
+                      className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-900 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
+                    >
+                      <option value="">Select project…</option>
+                      {credentials
+                        .filter(c => c.status === 'active')
+                        .map(c => (
+                          <option key={c.projectId} value={c.projectId}>
+                            {c.projectName}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                      Label
+                    </label>
+                    <input
+                      type="text"
+                      value={newAliasLabel}
+                      onChange={e => setNewAliasLabel(e.target.value)}
+                      placeholder="e.g. github-actions-deploy"
+                      className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-900 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                      Workload Type
+                    </label>
+                    <select
+                      value={newAliasWorkload}
+                      onChange={e =>
+                        setNewAliasWorkload(e.target.value as AliasWorkload)
+                      }
+                      className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-sm text-neutral-900 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white"
+                    >
+                      {(
+                        [
+                          'ci',
+                          'agent',
+                          'plugin',
+                          'browser',
+                          'server',
+                          'custom',
+                        ] as AliasWorkload[]
+                      ).map(w => (
+                        <option key={w} value={w}>
+                          {w.toUpperCase()}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="mt-4 flex justify-end gap-3">
+                  <button
+                    onClick={() => {
+                      setShowCreateAlias(false);
+                      setAliasError(null);
+                    }}
+                    className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCreateAlias}
+                    disabled={
+                      !newAliasProjectId ||
+                      !newAliasLabel.trim() ||
+                      creatingAlias
+                    }
+                    className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {creatingAlias ? 'Creating…' : 'Create Alias'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {aliasLoading ? (
+              <div className="py-12 text-center text-neutral-500 dark:text-neutral-400">
+                Loading aliases…
+              </div>
+            ) : aliases.length === 0 ? (
+              <div className="rounded-2xl border-2 border-dashed border-neutral-300 bg-white p-12 text-center dark:border-neutral-700 dark:bg-neutral-900">
+                <div className="mb-4 text-5xl" aria-hidden="true">
+                  🎭
+                </div>
+                <h2 className="mb-2 text-xl font-semibold text-neutral-900 dark:text-white">
+                  No Aliases Yet
+                </h2>
+                <p className="mx-auto mb-6 max-w-md text-neutral-500 dark:text-neutral-400">
+                  Create your first alias token to issue short-lived,
+                  workload-scoped credentials without exposing your primary API
+                  key.
+                </p>
+                {credentials.length === 0 && (
+                  <p className="text-sm text-amber-600 dark:text-amber-400">
+                    ⚠️ Create an SDK project first before issuing aliases.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-neutral-100 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-800/50">
+                      <th className="px-4 py-3 text-left font-medium text-neutral-700 dark:text-neutral-300">
+                        Label
+                      </th>
+                      <th className="px-4 py-3 text-left font-medium text-neutral-700 dark:text-neutral-300">
+                        Project
+                      </th>
+                      <th className="px-4 py-3 text-left font-medium text-neutral-700 dark:text-neutral-300">
+                        Workload
+                      </th>
+                      <th className="px-4 py-3 text-left font-medium text-neutral-700 dark:text-neutral-300">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 text-left font-medium text-neutral-700 dark:text-neutral-300">
+                        Rotations
+                      </th>
+                      <th className="px-4 py-3 text-left font-medium text-neutral-700 dark:text-neutral-300">
+                        Expires
+                      </th>
+                      <th className="px-4 py-3 text-right font-medium text-neutral-700 dark:text-neutral-300">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                    {aliases.map(alias => (
+                      <tr
+                        key={alias.id}
+                        className="hover:bg-neutral-50 dark:hover:bg-neutral-800/40"
+                      >
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-neutral-900 dark:text-white">
+                            {alias.label}
+                          </div>
+                          <div className="font-mono text-xs text-neutral-500">
+                            {alias.aliasToken?.slice(0, 16)}…
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400">
+                          {alias.projectName}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium uppercase text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
+                            {alias.workload}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                              alias.status === 'active'
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                : alias.status === 'rotated'
+                                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                            }`}
+                          >
+                            {alias.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400">
+                          {alias.rotationCount ?? 0}×
+                        </td>
+                        <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400">
+                          {alias.expiresAt
+                            ? new Date(alias.expiresAt).toLocaleDateString()
+                            : '∞ Never'}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {alias.status === 'active' && (
+                              <>
+                                <button
+                                  onClick={() =>
+                                    handleRotateAlias(alias.projectId, alias.id)
+                                  }
+                                  className="rounded px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
+                                >
+                                  🔄 Rotate
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    setRevokeModal({
+                                      projectId: alias.projectId,
+                                      aliasId: alias.id,
+                                      label: alias.label,
+                                    })
+                                  }
+                                  className="rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
+                                >
+                                  🚫 Revoke
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="mt-8 flex flex-wrap gap-4">
+              <Link
+                href="/dashboard/projects"
+                className="inline-flex items-center text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+              >
+                📁 Manage projects →
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* ── VIEW-ONCE ALIAS KEY MODAL ── */}
+      {viewOnceKey && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-amber-400 bg-neutral-900 p-6 shadow-2xl">
+            <div className="mb-4 flex items-center gap-3">
+              <span className="text-3xl">🔐</span>
+              <div>
+                <h2 className="text-lg font-bold text-white">
+                  Alias Key — View Once
+                </h2>
+                <p className="text-sm text-amber-400 font-medium">
+                  {viewOnceKey.label}
+                </p>
+              </div>
+            </div>
+            <div className="mb-4 rounded-lg border border-red-500/50 bg-red-950/30 p-3 text-sm text-red-300">
+              ⚠️ <strong>This key will never be shown again.</strong> Copy it
+              now and store it securely. DevFortress only stores a hash — not
+              the raw key.
+            </div>
+            <div className="mb-4 flex items-center gap-2">
+              <code className="flex-1 overflow-x-auto rounded-lg bg-neutral-800 px-3 py-2 font-mono text-sm text-green-400 select-all whitespace-nowrap">
+                {viewOnceKey.aliasKey}
+              </code>
+              <button
+                onClick={async () => {
+                  await navigator.clipboard.writeText(viewOnceKey.aliasKey);
+                  setViewOnceCopied(true);
+                }}
+                className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${viewOnceCopied ? 'bg-green-600 text-white' : 'bg-amber-500 text-black hover:bg-amber-400'}`}
+              >
+                {viewOnceCopied ? '✅ Copied!' : '📋 Copy'}
+              </button>
+            </div>
+            <p className="mb-4 text-xs text-neutral-500">
+              Alias ID:{' '}
+              <code className="text-neutral-400">{viewOnceKey.aliasId}</code>
+            </p>
+            <button
+              onClick={() => {
+                setViewOnceKey(null);
+                setViewOnceCopied(false);
+              }}
+              disabled={!viewOnceCopied}
+              className="w-full rounded-lg bg-neutral-700 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-600 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {viewOnceCopied
+                ? 'I have saved my key — Close'
+                : 'Copy the key first to continue'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── REVOKE CONFIRMATION MODAL ── */}
+      {revokeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-red-500/30 bg-white p-6 shadow-2xl dark:bg-neutral-900">
+            <h2 className="mb-2 text-lg font-bold text-neutral-900 dark:text-white">
+              Revoke Credential Alias?
+            </h2>
+            <p className="mb-4 text-sm text-neutral-500 dark:text-neutral-400">
+              Are you sure you want to revoke{' '}
+              <strong>{revokeModal.label}</strong>? This action is immediate and
+              permanent.
+            </p>
+
+            <div className="mb-6 rounded-lg border border-neutral-100 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-950">
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={isRevokingFamily}
+                  onChange={e => setIsRevokingFamily(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
+                />
+                <div>
+                  <span className="text-sm font-semibold text-neutral-900 dark:text-white">
+                    Revoke all aliases in this family
+                  </span>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                    Emergency revocation for all{' '}
+                    {
+                      aliases.filter(a => a.projectId === revokeModal.projectId)
+                        .length
+                    }{' '}
+                    aliases tied to this project&apos;s real API key.
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setRevokeModal(null);
+                  setIsRevokingFamily(false);
+                }}
+                className="flex-1 rounded-lg border border-neutral-300 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() =>
+                  handleRevokeAlias(
+                    revokeModal.projectId,
+                    revokeModal.aliasId,
+                    isRevokingFamily
+                  )
+                }
+                className="flex-1 rounded-lg bg-red-600 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
+              >
+                Confirm Revocation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

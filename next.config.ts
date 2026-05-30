@@ -52,6 +52,13 @@ const nextConfig: NextConfig = {
     ],
   },
 
+  // Explicitly include content/ files used by fs.readFile() at runtime —
+  // the static tracer does not follow dynamic reads.
+  outputFileTracingIncludes: {
+    '/validation/evidence': ['./content/**/*'],
+    '/validation': ['./content/**/*'],
+  },
+
   // Enable experimental features for better performance
   experimental: {
     // Enable Turbopack in production (when stable)
@@ -66,7 +73,7 @@ const nextConfig: NextConfig = {
   // 1. @opentelemetry/instrumentation uses dynamic require() → "Critical dependency"
   // 2. @supabase/realtime-js uses process.versions (Node.js API) in Edge Runtime
   //    This is safe — Supabase SSR handles Edge Runtime gracefully at runtime.
-  webpack: (config, { isServer }) => {
+  webpack: (config) => {
     config.ignoreWarnings = [
       ...(config.ignoreWarnings || []),
       {
@@ -82,25 +89,6 @@ const nextConfig: NextConfig = {
         message: /A Node\.js API is used/,
       },
     ];
-
-    if (isServer) {
-      // Suppress "Module not found" for optional SDK peer deps not bundled in open-core
-      config.externals = [
-        ...(Array.isArray(config.externals) ? config.externals : []),
-        'fastify',
-        'hono',
-        'express',
-        (
-          { request }: { request?: string },
-          callback: (err?: Error | null, result?: string) => void
-        ) => {
-          if (request && /\.node$/.test(request)) {
-            return callback(null, `commonjs ${request}`);
-          }
-          callback();
-        },
-      ];
-    }
 
     return config;
   },
@@ -120,6 +108,7 @@ const nextConfig: NextConfig = {
       "'unsafe-eval'",
       "'unsafe-inline'",
       'https://vercel.live',
+      ...(process.env.NODE_ENV === 'development' ? ['http://127.0.0.1:54321', 'ws://127.0.0.1:54321'] : []),
       'https://js.hcaptcha.com',
       'https://hcaptcha.com',
       'https://challenges.cloudflare.com',
@@ -129,11 +118,13 @@ const nextConfig: NextConfig = {
       'https://www.google-analytics.com',
       'https://cdn.paddle.com',
       'https://sandbox-cdn.paddle.com',
+      'https://public.profitwell.com',
     ].join(' ');
 
     const connectSrc = [
       "'self'",
       'https://vercel.live',
+      ...(process.env.NODE_ENV === 'development' ? ['http://127.0.0.1:54321', 'ws://127.0.0.1:54321'] : []),
       'https://*.supabase.co',
       'wss://*.supabase.co',
       'https://github.githubassets.com',
