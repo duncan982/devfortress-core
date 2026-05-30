@@ -26,6 +26,7 @@ This is intentional and permanent for the foreseeable future. The reasons are:
 ## Post-MVP: Contributions Will Open
 
 After MVP launch we intend to:
+
 1. Introduce a **CLA (Contributor License Agreement)** — all contributors will assign IP rights to Duncan Ndungu Ndegwa before any PR is merged
 2. Open a defined set of modules (non-core UI, documentation, SDK examples) for community contribution
 3. Document the cherry-pick process by which accepted open-core fixes are backported to the private repo

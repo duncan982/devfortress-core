@@ -7,6 +7,7 @@
 
 import { useState, FormEvent } from 'react';
 import Link from 'next/link';
+import { EnterpriseIntakeModal } from '@/app/components/pricing/EnterpriseIntakeModal';
 
 /* ─── Feature data ─── */
 const FEATURES = [
@@ -83,6 +84,7 @@ const TRUST_STATS = [
 ];
 
 export default function EnterprisePageClient() {
+  const [isBookModalOpen, setIsBookModalOpen] = useState(false);
   const [formState, setFormState] = useState({
     companyName: '',
     contactName: '',
@@ -98,6 +100,7 @@ export default function EnterprisePageClient() {
     requiresSLA: true,
     requiresCustomIntegration: false,
     additionalNotes: '',
+    agreementAccepted: false,
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -121,10 +124,31 @@ export default function EnterprisePageClient() {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch('/api/enterprise/interest', {
+      const payload = {
+        companyName: formState.companyName,
+        legalEntityName: formState.companyName,
+        contactName: formState.contactName,
+        contactEmail: formState.contactEmail,
+        jobTitle: 'Not specified',
+        estimatedEndpoints: formState.expectedAPIs,
+        deploymentType: formState.deploymentModel as
+          | 'cloud'
+          | 'on_prem'
+          | 'hybrid',
+        complianceFrameworks: formState.complianceNeeds,
+        aiAgentCount: undefined as number | undefined,
+        billingCycle: 'annual' as const,
+        preferredPayment: 'wire' as const,
+        estimatedAnnualUsd: 24997,
+        invoiceType: 'book_tier3' as const,
+        agreementAccepted: true as const,
+        agreementAcceptedAt: new Date().toISOString(),
+        message: formState.additionalNotes || undefined,
+      };
+      const res = await fetch('/api/enterprise/intake', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formState),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Submission failed');
@@ -317,11 +341,76 @@ export default function EnterprisePageClient() {
         </div>
       </section>
 
+      {/* ─── Textbook Purchase ─── */}
+      <section id="book-tier3" className="py-16">
+        <div className="mx-auto max-w-[1100px] px-6">
+          <div className="mx-auto max-w-3xl rounded-2xl border border-amber-200 bg-amber-50/40 px-8 py-10 dark:border-amber-800/40 dark:bg-amber-900/10">
+            <div className="flex items-start gap-4">
+              <span className="text-3xl">📖</span>
+              <div className="flex-1">
+                <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-amber-600 dark:text-amber-400">
+                  Textbook — Tier 3
+                </p>
+                <h3 className="mb-2 text-xl font-bold text-neutral-900 dark:text-white">
+                  Token-Aliased Closed-Loop Security
+                </h3>
+                <p className="mb-4 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
+                  The definitive reference on TAS and CLAR architecture. 12
+                  chapters, 5 volumes — covering session aliasing, behavioral
+                  detection, credential protection, payload security, and
+                  platform intelligence. Includes integration examples,
+                  patent-aligned architecture diagrams, and SDK implementation
+                  guides.
+                </p>
+                <div className="mb-6 flex items-center gap-3">
+                  <span className="text-2xl font-bold text-neutral-900 dark:text-white">
+                    $24,997
+                  </span>
+                  <span className="text-sm text-neutral-500">
+                    · one-time · invoice / wire transfer
+                  </span>
+                </div>
+
+                {/* 5-step purchase flow */}
+                <div className="mb-6 space-y-2.5">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-neutral-500">
+                    How to purchase
+                  </p>
+                  {[
+                    'Click "Get Invoice" below and complete the short intake form.',
+                    'Receive a formal invoice with bank wire instructions within 24 hours.',
+                    'Submit payment and your delivery email to support@devfortress.net.',
+                    'Receive all materials (PDF, epub, integration guide) within 24 hours of payment confirmation.',
+                    'Receive your integration onboarding kickoff link.',
+                  ].map((step, i) => (
+                    <div key={i} className="flex items-start gap-3">
+                      <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                        {i + 1}
+                      </span>
+                      <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                        {step}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setIsBookModalOpen(true)}
+                  className="rounded-xl bg-amber-500 px-8 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-amber-600"
+                >
+                  Get Invoice →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ─── Interest Form ─── */}
       <section id="interest-form" className="py-20">
         <div className="mx-auto max-w-[680px] px-6">
           <h2 className="mb-2 text-center text-[28px] font-bold">
-            Register Your Interest
+            Register Your Interest — Enterprise Subscription
           </h2>
           <p className="mb-10 text-center text-[15px] text-[#6B7194]">
             We&apos;ll scope your requirements and deliver a custom proposal
@@ -331,31 +420,51 @@ export default function EnterprisePageClient() {
           {submitted ? (
             <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-10 text-center">
               <div className="mb-4 text-5xl">✅</div>
-              <h3 className="mb-2 text-xl font-bold">
-                Thank you for your interest!
-              </h3>
-              <p className="mb-4 text-[15px] text-[#6B7194]">
-                Our enterprise team will review your requirements and reach out
-                within 48 hours to schedule a scoping call.
+              <h3 className="mb-2 text-xl font-bold">Inquiry Received</h3>
+              <p className="mb-6 text-[15px] text-[#6B7194]">
+                We&apos;ve received your Tier 3 Enterprise Blueprint inquiry.
               </p>
-              {quoteBreakdown && (
-                <div className="mt-6 rounded-xl border border-[#1E2845] bg-[#0E1428] p-5">
-                  <p className="mb-2 font-mono text-[11px] uppercase tracking-wider text-emerald-500">
-                    Indicative Monthly Estimate
-                  </p>
-                  <p className="text-3xl font-bold">
-                    ${quoteBreakdown.total?.toLocaleString() || '—'}
-                    <span className="text-sm font-light text-[#6B7194]">
-                      /month
-                    </span>
-                  </p>
-                  <p className="mt-1 text-xs text-[#6B7194]">
-                    + one-time implementation fee · final pricing confirmed
-                    after scoping call
-                  </p>
-                </div>
-              )}
-              <div className="mt-8 flex flex-wrap justify-center gap-3">
+
+              <div className="mb-8 rounded-xl border border-[#1E2845] bg-[#0E1428] p-6 text-left">
+                <p className="mb-4 font-mono text-[11px] uppercase tracking-wider text-emerald-500">
+                  What Happens Next
+                </p>
+                <ol className="space-y-3">
+                  {[
+                    {
+                      n: '1',
+                      text: 'You will receive an invoice by email within 24–48 hours.',
+                    },
+                    {
+                      n: '2',
+                      text: 'Pay by bank wire transfer, including your invoice reference number in the payment details.',
+                    },
+                    {
+                      n: '3',
+                      text: 'Email your payment confirmation / transfer receipt to support@devfortress.net.',
+                    },
+                    {
+                      n: '4',
+                      text: 'We confirm receipt and provision your access within 24 hours of cleared funds.',
+                    },
+                    {
+                      n: '5',
+                      text: 'You receive a sign-in link with download access to all Tier 3 files.',
+                    },
+                  ].map(step => (
+                    <li key={step.n} className="flex items-start gap-3">
+                      <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/20 font-mono text-[11px] font-bold text-emerald-500">
+                        {step.n}
+                      </span>
+                      <span className="text-[13px] text-[#9CA3AF]">
+                        {step.text}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              <div className="flex flex-wrap justify-center gap-3">
                 <a
                   href="mailto:support@devfortress.net"
                   className="rounded-lg bg-emerald-500 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-600"
@@ -574,12 +683,45 @@ export default function EnterprisePageClient() {
                 />
               </div>
 
+              <div className="flex items-start gap-3 rounded-xl border border-[#1E2845] bg-[#0E1428] p-4">
+                <input
+                  type="checkbox"
+                  id="esa-agree"
+                  checked={formState.agreementAccepted}
+                  onChange={e =>
+                    setFormState(prev => ({
+                      ...prev,
+                      agreementAccepted: e.target.checked,
+                    }))
+                  }
+                  className="mt-0.5 h-4 w-4 rounded border-[#1E2845] accent-emerald-500"
+                />
+                <label
+                  htmlFor="esa-agree"
+                  className="text-[13px] text-[#9CA3AF]"
+                >
+                  I have read and agree to the{' '}
+                  <a
+                    href="/legal/enterprise-services-agreement"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-400 underline"
+                  >
+                    Enterprise Services Agreement
+                  </a>
+                  . I understand that all sales are final after provisioning and
+                  that 100% of the fee is due before access is granted.
+                </label>
+              </div>
+
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || !formState.agreementAccepted}
                 className="w-full rounded-xl bg-emerald-500 py-3.5 text-[15px] font-semibold text-white transition-colors hover:bg-emerald-600 disabled:opacity-50"
               >
-                {submitting ? 'Submitting...' : 'Submit Interest →'}
+                {submitting
+                  ? 'Submitting...'
+                  : 'Submit Subscription Interest →'}
               </button>
 
               <p className="mt-4 text-center text-[11px] text-[#3A4060]">
@@ -591,6 +733,13 @@ export default function EnterprisePageClient() {
         </div>
       </section>
 
+      <EnterpriseIntakeModal
+        isOpen={isBookModalOpen}
+        onClose={() => setIsBookModalOpen(false)}
+        invoiceType="book_tier3"
+        fixedEstimate={24997}
+      />
+
       {/* ─── Pricing Link ─── */}
       <section className="border-t border-[#1E2845] py-16">
         <div className="mx-auto max-w-[900px] px-6 text-center">
@@ -598,7 +747,7 @@ export default function EnterprisePageClient() {
             Looking for Starter or Pro?
           </h2>
           <p className="mb-6 text-[15px] text-[#6B7194]">
-            Not every team needs Enterprise. Starter ($99/mo) and Pro ($199/mo)
+            Not every team needs Enterprise. Starter ($99/mo) and Pro ($149/mo)
             cover most development teams with full threat detection and
             automated response.
           </p>

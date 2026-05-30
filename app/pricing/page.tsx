@@ -18,44 +18,9 @@ import {
 } from 'react';
 import Link from 'next/link';
 import { initializePaddle, Paddle } from '@paddle/paddle-js';
-// ── Inline replacements for private-repo path-alias imports (open-core compatibility) ────────
+import { EnterpriseIntakeModal } from '@/app/components/pricing/EnterpriseIntakeModal';
 
-/** Enterprise intake modal stub — full calculator lives in the private platform repository. */
-function EnterpriseIntakeModal({
-  isOpen,
-  onClose,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  invoiceType?: string;
-}) {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-8 dark:bg-neutral-900">
-        <h2 className="mb-4 text-xl font-bold text-neutral-900 dark:text-white">
-          Get an Enterprise Quote
-        </h2>
-        <p className="mb-6 text-neutral-600 dark:text-neutral-400">
-          Email{' '}
-          <a
-            href="mailto:support@devfortress.net"
-            className="font-medium text-primary-600 underline"
-          >
-            support@devfortress.net
-          </a>{' '}
-          with your requirements and we will respond within one business day.
-        </p>
-        <button
-          onClick={onClose}
-          className="rounded-xl border border-neutral-300 px-6 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-200"
-        >
-          Close
-        </button>
-      </div>
-    </div>
-  );
-}
+// ── Inline replacements for private-repo path-alias imports (open-core compatibility) ────────
 
 /** Render a JSON-LD script tag for structured data. */
 function renderJsonLd(data: unknown) {

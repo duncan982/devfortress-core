@@ -2,21 +2,38 @@ import Link from 'next/link';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Features - DevFortress',
+  title: 'Features — DevFortress',
   description:
-    'Explore DevFortress features: Build production-ready APIs, Defend with threat intelligence, and Learn from continuous security insights.',
+    'Explore DevFortress security features: automated threat detection, closed-loop response, credential isolation, and AI agent protection across your entire application stack.',
   keywords: [
-    'API features',
-    'API security',
-    'API generation',
-    'threat intelligence',
-    'live threat detection',
+    'API security features',
+    'automated threat response',
+    'credential isolation',
+    'AI agent security',
+    'session revocation',
+    'pre-auth attack detection',
   ],
   openGraph: {
-    title: 'Features - DevFortress',
+    title: 'Features — DevFortress',
     description:
-      'Build, secure, and learn from your APIs with AI-powered generation and threat intelligence.',
+      'Automated threat detection, closed-loop response, and AI agent protection across your entire application stack.',
     type: 'website',
+    url: 'https://devfortress.net/features',
+    images: [
+      {
+        url: 'https://devfortress.net/opengraph-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'DevFortress Features',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Features — DevFortress',
+    description:
+      'Automated threat detection, closed-loop response, and AI agent protection across your entire application stack.',
+    images: ['https://devfortress.net/opengraph-image.png'],
   },
 };
 
@@ -29,71 +46,15 @@ export default function FeaturesPage() {
       <div className="mx-auto w-full max-w-6xl">
         <div className="mb-12 text-center">
           <h1 className="mb-4 text-5xl font-bold leading-tight">
-            DevFortress Features
+            DevFortress Security Platform
           </h1>
           <p className="mt-4 text-xl text-neutral-600 dark:text-neutral-400">
-            Complete API security lifecycle: Build, Defend, Collect, and Learn
+            Real-time security monitoring for APIs, applications, and AI agents.
           </p>
         </div>
 
         {/* Core Phases */}
-        <div className="mb-16 grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-          {/* Build Phase */}
-          <Link
-            href="/features/build"
-            className="group rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm transition-all hover:shadow-lg dark:border-neutral-800 dark:bg-neutral-900"
-          >
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900">
-              <svg
-                className="h-6 w-6 text-blue-600 dark:text-blue-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-                />
-              </svg>
-            </div>
-            <h2 className="text-xl font-semibold group-hover:text-blue-600 dark:group-hover:text-blue-400">
-              BUILD
-            </h2>
-            <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-              AI-powered API generation from natural language
-            </p>
-          </Link>
-
-          {/* Defend Phase */}
-          <Link
-            href="/features/defend"
-            className="group rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm transition-all hover:shadow-lg dark:border-neutral-800 dark:bg-neutral-900"
-          >
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900">
-              <svg
-                className="h-6 w-6 text-green-600 dark:text-green-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                />
-              </svg>
-            </div>
-            <h2 className="text-xl font-semibold group-hover:text-green-600 dark:group-hover:text-green-400">
-              DEFEND
-            </h2>
-            <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-              Real-time threat detection and automated response
-            </p>
-          </Link>
-
+        <div className="mb-16 grid gap-8 md:grid-cols-2">
           {/* Collect Phase */}
           <Link
             href="/features/collect"
@@ -118,7 +79,8 @@ export default function FeaturesPage() {
               COLLECT
             </h2>
             <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-              Aggregate threat intelligence data
+              Real-time threat collection across your APIs, applications, and AI
+              agents
             </p>
           </Link>
 
@@ -146,7 +108,8 @@ export default function FeaturesPage() {
               LEARN
             </h2>
             <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-              AI-powered insights and predictive analytics
+              AI-powered security insights and pattern analysis from your event
+              data
             </p>
           </Link>
         </div>
@@ -179,6 +142,17 @@ export default function FeaturesPage() {
               <p className="text-sm text-neutral-600 dark:text-neutral-400">
                 Role-based access control with team workspaces, permissions, and
                 activity audit trails
+              </p>
+            </div>
+
+            {/* Honeypot Premium Services */}
+            <div className="rounded-xl border border-neutral-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-900">
+              <h3 className="mb-2 text-lg font-semibold">
+                HPS (Honeypot Premium)
+              </h3>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                Advanced honeypot features with quota tracking, webhook
+                integration, and cost estimation
               </p>
             </div>
 
