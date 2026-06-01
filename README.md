@@ -38,8 +38,6 @@ export async function middleware(request: NextRequest) {
 }
 ```
 
-Full documentation: [devfortress.net/docs](https://devfortress.net/docs)
-
 ## Getting Started
 
 ### Prerequisites
