@@ -157,15 +157,9 @@ The architecture behind this platform — Token-Aliased Closed-Loop Security,
 the Platform Intelligence layer, and the agentic detection models — is
 documented in depth in:
 
-**[Book title and link — TO BE FILLED BY HUMAN before merge]**
-A technical deep-dive into the threat models, design decisions, and
-implementation patterns that underpin DevFortress. Written for engineers
-who want to understand not just how to use the platform, but why it is
-built the way it is.
+**[Token-Aliased Closed-Loop Security](https://devfortress.gumroad.com/l/master-edition)** — A technical deep-dive into the threat models, design decisions, and implementation patterns that underpin DevFortress. Written for engineers who want to understand not just how to use the platform, but why it is built the way it is.
 
-**[Substack newsletter — TO BE FILLED BY HUMAN before merge]**
-Engineering notes, security research, and DevFortress development updates.
-Subscribe for architecture breakdowns and early access announcements.
+Follow updates, architecture deep-dives, and security research from the core team: **[DevFortress Security Journal](https://devfortress.substack.com/)**
 
 These are shared here as context for the open-core — not as a requirement
 to use the platform. The README and docs contain everything needed to run
