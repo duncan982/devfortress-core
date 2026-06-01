@@ -34,6 +34,9 @@ node_modules/.prisma/
 # Private agent configs — not for public release
 .agents/
 
+# Launch comms — internal, not for public release
+docs/launch-comms.md
+
 # Misc
 .DS_Store
 *.log
