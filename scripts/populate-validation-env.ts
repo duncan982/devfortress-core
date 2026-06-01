@@ -14,7 +14,6 @@ if (!DEV_EMAIL) {
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 
-// Extracted from /home/duncan/Documents/developements/devfortress/validations/validation.env
 const HC_TEST_EMAIL = 'vendor@demo.nexuscommerce.io';
 const HC_TEST_PASSWORD = 'Demo@2024!';
 
