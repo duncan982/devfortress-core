@@ -209,8 +209,6 @@ export default function CollectSurveillancePage() {
     useState<SurveillanceMode>('all');
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [, startTransition] = useTransition();
-  const [isGeneratingTest, setIsGeneratingTest] = useState(false);
-  const [testGenMessage, setTestGenMessage] = useState<string | null>(null);
   const [diagnostics, setDiagnostics] = useState<ConnectionDiagnostics>({
     hasProjects: false,
     selectedProjectName: '',
@@ -474,31 +472,6 @@ export default function CollectSurveillancePage() {
     };
   }, [autoRefresh, selectedProject, fetchData, refreshRate]);
 
-  const generateTestEvents = useCallback(async () => {
-    if (!selectedProject) return;
-    setIsGeneratingTest(true);
-    setTestGenMessage(null);
-    try {
-      const response = await fetch('/api/events/test-generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId: selectedProject }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setTestGenMessage(`✅ ${data.message}`);
-        fetchData();
-      } else {
-        setTestGenMessage(`❌ ${data.error || 'Failed to generate events'}`);
-      }
-    } catch {
-      setTestGenMessage('❌ Failed to generate test events');
-    } finally {
-      setIsGeneratingTest(false);
-      setTimeout(() => setTestGenMessage(null), 5000);
-    }
-  }, [selectedProject, fetchData]);
-
   const verifyConnection = useCallback(async () => {
     if (!selectedProject) return;
     setConnectionCheck({ loading: true, result: null, error: null });
@@ -631,14 +604,6 @@ export default function CollectSurveillancePage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={generateTestEvents}
-              disabled={isGeneratingTest || !selectedProject}
-              className="rounded-lg border border-green-300 bg-green-50 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-green-700 dark:bg-green-900/20 dark:text-green-300 dark:hover:bg-green-900/40"
-              title="Generate sample security events to test your dashboard. Events are tagged as TEST data."
-            >
-              {isGeneratingTest ? 'Generating…' : '🧪 Generate Test Events'}
-            </button>
             <label className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400">
               <input
                 type="checkbox"
@@ -683,12 +648,6 @@ export default function CollectSurveillancePage() {
         {error && (
           <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
             {error}
-          </div>
-        )}
-
-        {testGenMessage && (
-          <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300">
-            {testGenMessage}
           </div>
         )}
 
@@ -1041,10 +1000,6 @@ export default function CollectSurveillancePage() {
                   <code className="bg-blue-100 px-1 rounded dark:bg-blue-900/50">
                     https://www.devfortress.net/api/events/ingest
                   </code>
-                </li>
-                <li>
-                  Use the &quot;Generate Test Events&quot; button above to
-                  verify the dashboard works
                 </li>
                 <li>Check your application logs for DevFortress SDK errors</li>
               </ol>
@@ -1704,13 +1659,6 @@ export default function CollectSurveillancePage() {
                 : 'Create an API project first, then install the DevFortress SDK in your production API to start collecting threat data.'}
             </p>
             <div className="mt-4 flex justify-center gap-4">
-              <button
-                onClick={generateTestEvents}
-                disabled={isGeneratingTest || !selectedProject}
-                className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
-              >
-                {isGeneratingTest ? 'Generating…' : '🧪 Generate Test Events'}
-              </button>
               <button
                 onClick={() => setShowDiagnostics(true)}
                 className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300"
