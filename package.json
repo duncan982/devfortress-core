@@ -86,7 +86,8 @@
     "env:update": "tsx --env-file=.env.local scripts/deploy-vercel.ts --env-update",
     "env:delete": "tsx --env-file=.env.local scripts/deploy-vercel.ts --env-delete",
     "verify:supabase-env": "node scripts/verify-supabase-env.js",
-    "setup:vercel-env": "bash scripts/setup-vercel-env.sh"
+    "setup:vercel-env": "bash scripts/setup-vercel-env.sh",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@marsidev/react-turnstile": "^1.4.1",
@@ -98,6 +99,7 @@
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.80.0",
     "@tailwindcss/typography": "^0.5.19",
+    "@vercel/analytics": "^2.0.1",
     "amqplib": "^0.10.9",
     "devfortress-sdk": "^4.9.0",
     "dotenv": "^17.2.3",
