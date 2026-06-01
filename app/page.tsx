@@ -1,8 +1,6 @@
 // Open-core home page — @core/* imports replaced with inline equivalents
 import Link from 'next/link';
 import { Metadata } from 'next';
-import { readFileSync } from 'fs';
-import { join } from 'path';
 
 // ── Inline structured data (replaces @core/lib/seo/structured-data) ──────────
 
@@ -84,17 +82,19 @@ function AuthAwareGetStartedButton() {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Read SDK version from the devfortress-sdk package.json at build time. */
-function getSdkVersion(): string {
+/** Fetch the latest devfortress-sdk version from npm registry at request time. */
+async function getSdkVersion(): Promise<string> {
   try {
-    const pkgPath = join(
-      process.cwd(),
-      'packages',
-      'devfortress-sdk',
-      'package.json'
+    const res = await fetch(
+      'https://registry.npmjs.org/devfortress-sdk/latest',
+      {
+        next: { revalidate: 3600 },
+        headers: { Accept: 'application/json' },
+      }
     );
-    const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
-    return pkg.version || '4.0.0';
+    if (!res.ok) return '4.0.0';
+    const data = await res.json() as { version?: string };
+    return data.version ?? '4.0.0';
   } catch {
     return '4.0.0';
   }
@@ -127,7 +127,7 @@ export const dynamic = 'force-dynamic';
 
 /** Home page component for the DevFortress platform. @returns {JSX.Element} The home page JSX. */
 export default async function Home() {
-  const sdkVersion = getSdkVersion();
+  const sdkVersion = await getSdkVersion();
   return (
     <>
       {renderJsonLd(organizationSchema)}
