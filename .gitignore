@@ -20,6 +20,10 @@ validation.env
 validation.env.local
 *.validation.env
 
+# Private scripts — reference book-purchaser tooling and internal test credentials
+scripts/populate-validation-env.ts
+scripts/run-validations-open-core.sh
+
 # Supabase local config (contains local credentials)
 supabase/.branches
 supabase/.temp
@@ -29,6 +33,9 @@ node_modules/.prisma/
 
 # Private agent configs — not for public release
 .agents/
+
+# Launch comms — internal, not for public release
+docs/launch-comms.md
 
 # Misc
 .DS_Store

@@ -153,6 +153,8 @@ This policy will be revisited as the project matures.
 DevFortress is designed and built by **Duncan Ndungu Ndegwa**, a software
 engineer and security researcher based in Nairobi, Kenya.
 
+Connect: [LinkedIn](https://www.linkedin.com/in/duncan-ndegwa-564591306/) · [X / Twitter](https://x.com/DevFortressNet)
+
 The architecture behind this platform — Token-Aliased Closed-Loop Security,
 the Platform Intelligence layer, and the agentic detection models — is
 documented in depth in:
@@ -174,12 +176,5 @@ SDK and platform intelligence layer: Proprietary — All rights reserved
 
 Token Alias Security, Closed-Loop Automated Response, and Platform
 Intelligence are Patent Pending — KIPI KE/P/2026/005970–005973.
-
-Prior art defensively published:
-
-- [Zenodo — Filing 1](https://doi.org/10.5281/zenodo.19683825)
-- [Zenodo — Filing 2](https://doi.org/10.5281/zenodo.19691251)
-- [Zenodo — Filing 3](https://doi.org/10.5281/zenodo.19691374)
-- [Zenodo — Filing 4](https://doi.org/10.5281/zenodo.19691449)
 
 © 2026 Duncan Ndungu Ndegwa. All rights reserved.
