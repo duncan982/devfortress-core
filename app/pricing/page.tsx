@@ -763,6 +763,12 @@ function renderCompareCell(cell: CompareCell) {
 export default function PricingPage() {
   const [paddle, setPaddle] = useState<Paddle>();
   const checkoutTypeRef = useRef<'subscription' | 'addon'>('subscription');
+  const [loading, setLoading] = useState<string | null>(null);
+  const [billing, setBilling] = useState<BillingCycle>('monthly');
+  const [addonQty, setAddonQty] = useState<Record<string, number>>({});
+  const [addonLoading, setAddonLoading] = useState<string | null>(null);
+  const [addonSuccess, setAddonSuccess] = useState<string | null>(null);
+  const [isIntakeModalOpen, setIsIntakeModalOpen] = useState(false);
 
   useEffect(() => {
     const paddleToken = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN;
@@ -827,13 +833,6 @@ export default function PricingPage() {
       window.location.href = '/dashboard?subscription=success';
     }
   }, []);
-
-  const [loading, setLoading] = useState<string | null>(null);
-  const [billing, setBilling] = useState<BillingCycle>('monthly');
-  const [addonQty, setAddonQty] = useState<Record<string, number>>({});
-  const [addonLoading, setAddonLoading] = useState<string | null>(null);
-  const [addonSuccess, setAddonSuccess] = useState<string | null>(null);
-  const [isIntakeModalOpen, setIsIntakeModalOpen] = useState(false);
 
   /* ─── Subscription handler (Paddle) ─── */
   const handleSubscribe = useCallback(

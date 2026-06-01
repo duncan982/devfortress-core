@@ -16,7 +16,10 @@ import Link from 'next/link';
 
 // ── Types ───────────────────────────────────────────────────
 
-const BREADCRUMB_PATHS = { dashboard: { label: 'Dashboard', href: '/dashboard' } } as const;
+const BREADCRUMB_PATHS = {
+  dashboard: { label: 'Dashboard', href: '/dashboard' },
+  collect: { label: 'Collect', href: '/dashboard/collect' },
+} as const;
 function BreadcrumbNav(_props: { items: { label: string; href: string }[]; currentPage: string }) { return null; }
 
 type ActiveTab = 'tokens' | 'blocked-ips' | 'event-logs';
@@ -174,6 +177,7 @@ export default function CollectOverviewPage() {
   }, [selectedProject, timeRange, sourceFilter, severityFilter]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData();
   }, [fetchData]);
 

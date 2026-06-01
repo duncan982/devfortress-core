@@ -21,7 +21,13 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Paths
 OPEN_CORE_ENV="${REPO_ROOT}/validations/validation.env"
-PRIVATE_VALIDATIONS_DIR="/home/duncan/Documents/developements/devfortress/validations"
+# Set PRIVATE_VALIDATIONS_DIR to the path of your private devfortress/validations directory
+PRIVATE_VALIDATIONS_DIR="${PRIVATE_VALIDATIONS_DIR:-}"
+if [ -z "$PRIVATE_VALIDATIONS_DIR" ]; then
+  echo "ERROR: PRIVATE_VALIDATIONS_DIR env var must be set to the path of your private validations directory."
+  echo "  export PRIVATE_VALIDATIONS_DIR=/path/to/devfortress/validations"
+  exit 1
+fi
 SDK_SCRIPT="${PRIVATE_VALIDATIONS_DIR}/sdk-validation-v3.sh"
 CLIENT_SCRIPT="${PRIVATE_VALIDATIONS_DIR}/client-application-validation-v3.sh"
 
