@@ -122,8 +122,7 @@ export default function FeaturesPage() {
             <div className="rounded-xl border border-neutral-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-900">
               <h3 className="mb-2 text-lg font-semibold">Anomaly Detection</h3>
               <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                ML-powered anomaly detection with isolation forest algorithm for
-                real-time threat identification
+                ML-powered anomaly detection for real-time threat identification
               </p>
             </div>
 

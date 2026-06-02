@@ -4,7 +4,7 @@
 ![License](https://img.shields.io/badge/License-BUSL--1.1-green)
 ![npm](https://img.shields.io/npm/v/devfortress-sdk)
 
-**DevFortress** is a developer-first security platform for APIs, applications,
+**DevFortress** is an open-core security platform for APIs, applications,
 and AI agents. It implements the **Token-Aliased Closed-Loop Security**
 architecture — real-time threat classification and automated response via
 HMAC-signed webhook callbacks, with real credentials never leaving your
@@ -28,7 +28,7 @@ const df = new DevFortress({
   mode: 'hybrid',
   specialization: {
     app_security: true,
-    api_key_aliasing_service: true,
+    credential_isolation: true,
   },
 });
 
@@ -37,6 +37,8 @@ export async function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 ```
+
+Full documentation: [devfortress.net/docs](https://devfortress.net/docs)
 
 ## Getting Started
 
@@ -117,7 +119,7 @@ via [devfortress.net](https://devfortress.net).
 | Mode                       | Description                             | Availability |
 | -------------------------- | --------------------------------------- | ------------ |
 | `app_security`             | Baseline API and application protection | All tiers    |
-| `api_key_aliasing_service` | A19 — credential aliasing and rotation  | Pro+         |
+| `credential_isolation`     | A19 — credential aliasing and rotation  | Pro+         |
 | `account_takeover_defense` | A5, A6, A11–A15 bundle                  | Pro+         |
 | `commerce_abuse_defense`   | A14 + anti-fraud controls               | Pro+         |
 | `ai_agent_security`        | A7, A10, A16, A17 — agentic detection   | Pro+         |
@@ -151,15 +153,19 @@ This policy will be revisited as the project matures.
 DevFortress is designed and built by **Duncan Ndungu Ndegwa**, a software
 engineer and security researcher based in Nairobi, Kenya.
 
-Connect: [LinkedIn](https://www.linkedin.com/in/duncan-ndegwa-564591306/) · [X / Twitter](https://x.com/DevFortressNet)
-
 The architecture behind this platform — Token-Aliased Closed-Loop Security,
 the Platform Intelligence layer, and the agentic detection models — is
 documented in depth in:
 
-**[Token-Aliased Closed-Loop Security](https://devfortress.gumroad.com/l/master-edition)** — A technical deep-dive into the threat models, design decisions, and implementation patterns that underpin DevFortress. Written for engineers who want to understand not just how to use the platform, but why it is built the way it is.
+**[Book title and link — TO BE FILLED BY HUMAN before merge]**
+A technical deep-dive into the threat models, design decisions, and
+implementation patterns that underpin DevFortress. Written for engineers
+who want to understand not just how to use the platform, but why it is
+built the way it is.
 
-Follow updates, architecture deep-dives, and security research from the core team: **[DevFortress Security Journal](https://devfortress.substack.com/)**
+**[Substack newsletter — TO BE FILLED BY HUMAN before merge]**
+Engineering notes, security research, and DevFortress development updates.
+Subscribe for architecture breakdowns and early access announcements.
 
 These are shared here as context for the open-core — not as a requirement
 to use the platform. The README and docs contain everything needed to run
@@ -167,17 +173,19 @@ DevFortress independently.
 
 ## License
 
-| Component | License | Notes |
-|---|---|---|
-| Open-Core Platform Layer (this repo) | [BUSL-1.1](https://mariadb.com/bsl11/) | Free for non-production use. Production use requires a commercial subscription. Converts to Apache 2.0 four years from each version's release date. |
-| DevFortress SDK (`devfortress-sdk` on npm) | Proprietary — All rights reserved | Closed-source. Distributed via npm only. |
-| Platform Intelligence & Security Modules | Proprietary — All rights reserved | Not distributed. Hosted on devfortress.net infrastructure. |
-
-Security disclosures: security@devfortress.net — do not open public issues for vulnerabilities.
+Open platform layer: [BUSL-1.1](https://mariadb.com/bsl11/)
+SDK and platform intelligence layer: Proprietary — All rights reserved
 
 ## Patent Notice
 
 Token Alias Security, Closed-Loop Automated Response, and Platform
 Intelligence are Patent Pending — KIPI KE/P/2026/005970–005973.
+
+Prior art defensively published:
+
+- [Zenodo — Filing 1](https://doi.org/10.5281/zenodo.19683825)
+- [Zenodo — Filing 2](https://doi.org/10.5281/zenodo.19691251)
+- [Zenodo — Filing 3](https://doi.org/10.5281/zenodo.19691374)
+- [Zenodo — Filing 4](https://doi.org/10.5281/zenodo.19691449)
 
 © 2026 Duncan Ndungu Ndegwa. All rights reserved.
