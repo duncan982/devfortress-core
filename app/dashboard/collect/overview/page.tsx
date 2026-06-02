@@ -16,10 +16,7 @@ import Link from 'next/link';
 
 // ── Types ───────────────────────────────────────────────────
 
-const BREADCRUMB_PATHS = {
-  dashboard: { label: 'Dashboard', href: '/dashboard' },
-  collect: { label: 'Collect', href: '/dashboard/collect' },
-} as const;
+const BREADCRUMB_PATHS = { dashboard: { label: 'Dashboard', href: '/dashboard' } } as const;
 function BreadcrumbNav(_props: { items: { label: string; href: string }[]; currentPage: string }) { return null; }
 
 type ActiveTab = 'tokens' | 'blocked-ips' | 'event-logs';
@@ -27,7 +24,6 @@ type ActiveTab = 'tokens' | 'blocked-ips' | 'event-logs';
 interface TokenAlias {
   aliasId: string;
   originalTokenPreview: string; // "sk-****1234"
-  algorithm: string;
   createdAt: string;
   expiresAt: string | null;
   status: 'active' | 'revoked' | 'expired';
@@ -51,7 +47,7 @@ interface AuditLogEntry {
   eventId: string;
   timestamp: string;
   source: 'internal' | 'external' | 'hybrid';
-  tier: 0 | 1 | 2 | 3;
+  tier: string;
   decision: string;
   score: number;
   severity: 'critical' | 'high' | 'medium' | 'low';
@@ -177,7 +173,6 @@ export default function CollectOverviewPage() {
   }, [selectedProject, timeRange, sourceFilter, severityFilter]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData();
   }, [fetchData]);
 
@@ -434,7 +429,7 @@ export default function CollectOverviewPage() {
                               </span>
                             </td>
                             <td className="py-2 px-3 text-gray-400 text-xs font-mono">
-                              T{log.tier}
+                              {log.tier}
                             </td>
                             <td className="py-2 px-3">
                               <span
@@ -574,7 +569,6 @@ export default function CollectOverviewPage() {
                         <tr className="text-gray-400 border-b border-gray-800 bg-gray-900/50">
                           <th className="text-left py-3 px-3">Alias ID</th>
                           <th className="text-left py-3 px-3">Original</th>
-                          <th className="text-left py-3 px-3">Algorithm</th>
                           <th className="text-left py-3 px-3">Status</th>
                           <th className="text-left py-3 px-3">Created</th>
                           <th className="text-left py-3 px-3">Expires</th>
@@ -593,9 +587,6 @@ export default function CollectOverviewPage() {
                             </td>
                             <td className="py-2 px-3 text-gray-300 font-mono text-xs">
                               {token.originalTokenPreview}
-                            </td>
-                            <td className="py-2 px-3 text-gray-400 text-xs">
-                              {token.algorithm}
                             </td>
                             <td className="py-2 px-3">
                               <span
