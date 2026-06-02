@@ -167,8 +167,13 @@ DevFortress independently.
 
 ## License
 
-Open platform layer: [BUSL-1.1](https://mariadb.com/bsl11/)
-SDK and platform intelligence layer: Proprietary — All rights reserved
+| Component | License | Notes |
+|---|---|---|
+| Open-Core Platform Layer (this repo) | [BUSL-1.1](https://mariadb.com/bsl11/) | Free for non-production use. Production use requires a commercial subscription. Converts to Apache 2.0 four years from each version's release date. |
+| DevFortress SDK (`devfortress-sdk` on npm) | Proprietary — All rights reserved | Closed-source. Distributed via npm only. |
+| Platform Intelligence & Security Modules | Proprietary — All rights reserved | Not distributed. Hosted on devfortress.net infrastructure. |
+
+Security disclosures: security@devfortress.net — do not open public issues for vulnerabilities.
 
 ## Patent Notice
 
