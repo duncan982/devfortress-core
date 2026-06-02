@@ -157,15 +157,9 @@ The architecture behind this platform — Token-Aliased Closed-Loop Security,
 the Platform Intelligence layer, and the agentic detection models — is
 documented in depth in:
 
-**[Book title and link — TO BE FILLED BY HUMAN before merge]**
-A technical deep-dive into the threat models, design decisions, and
-implementation patterns that underpin DevFortress. Written for engineers
-who want to understand not just how to use the platform, but why it is
-built the way it is.
+**[Token-Aliased Closed-Loop Security](https://devfortress.gumroad.com/l/master-edition)** — A technical deep-dive into the threat models, design decisions, and implementation patterns that underpin DevFortress. Written for engineers who want to understand not just how to use the platform, but why it is built the way it is.
 
-**[Substack newsletter — TO BE FILLED BY HUMAN before merge]**
-Engineering notes, security research, and DevFortress development updates.
-Subscribe for architecture breakdowns and early access announcements.
+Follow updates, architecture deep-dives, and security research from the core team: **[DevFortress Security Journal](https://devfortress.substack.com/)**
 
 These are shared here as context for the open-core — not as a requirement
 to use the platform. The README and docs contain everything needed to run
@@ -180,12 +174,5 @@ SDK and platform intelligence layer: Proprietary — All rights reserved
 
 Token Alias Security, Closed-Loop Automated Response, and Platform
 Intelligence are Patent Pending — KIPI KE/P/2026/005970–005973.
-
-Prior art defensively published:
-
-- [Zenodo — Filing 1](https://doi.org/10.5281/zenodo.19683825)
-- [Zenodo — Filing 2](https://doi.org/10.5281/zenodo.19691251)
-- [Zenodo — Filing 3](https://doi.org/10.5281/zenodo.19691374)
-- [Zenodo — Filing 4](https://doi.org/10.5281/zenodo.19691449)
 
 © 2026 Duncan Ndungu Ndegwa. All rights reserved.
