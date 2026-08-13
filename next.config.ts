@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { withSentryConfig } from '@sentry/nextjs';
 
 const nextConfig: NextConfig = {
   env: {
@@ -95,6 +96,8 @@ const nextConfig: NextConfig = {
 
   // Configure headers for caching and security
   async headers() {
+    const isDev = process.env.NODE_ENV === 'development';
+
     // Allow Vercel Live preview toolbar in Vercel preview deployments
     const isVercelPreview =
       process.env.VERCEL === '1' && process.env.VERCEL_ENV !== 'production';
@@ -116,6 +119,7 @@ const nextConfig: NextConfig = {
       'https://static.cloudflareinsights.com',
       'https://www.googletagmanager.com',
       'https://www.google-analytics.com',
+      'https://va.vercel-scripts.com',
       'https://cdn.paddle.com',
       'https://sandbox-cdn.paddle.com',
       'https://public.profitwell.com',
@@ -138,11 +142,16 @@ const nextConfig: NextConfig = {
       'https://cloudflareinsights.com',
       'https://www.googletagmanager.com',
       'https://www.google-analytics.com',
+      'https://region1.google-analytics.com',
+      'https://analytics.google.com',
       'https://sandbox-api.paddle.com',
       'https://sandbox-buy.paddle.com',
       'https://*.paddle.com',
       'https://pay.paddle.com',
       'https://checkout.paddle.com',
+      'https://o4511773596975104.ingest.de.sentry.io',
+      'https://*.ingest.de.sentry.io',
+      ...(isDev ? ['ws://127.0.0.1:54321', 'ws://localhost:54321'] : []),
     ].join(' ');
 
     return [
@@ -171,7 +180,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Referrer-Policy',
-            value: 'origin-when-cross-origin',
+            value: 'strict-origin-when-cross-origin',
           },
           {
             key: 'Permissions-Policy',
@@ -180,8 +189,71 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: `${cspFrameAncestors}; script-src ${scriptSrc}; script-src-elem ${scriptSrc}; connect-src ${connectSrc}; style-src 'self' 'unsafe-inline' https://hcaptcha.com https://challenges.cloudflare.com https://sandbox-cdn.paddle.com https://cdn.paddle.com; frame-src 'self' https://vercel.live https://hcaptcha.com https://challenges.cloudflare.com https://newassets.hcaptcha.com https://*.paddle.com https://sandbox-buy.paddle.com`,
+            value: `${cspFrameAncestors}; script-src ${scriptSrc}; script-src-elem ${scriptSrc}; connect-src ${connectSrc}; style-src 'self' 'unsafe-inline' https://hcaptcha.com https://challenges.cloudflare.com https://sandbox-cdn.paddle.com https://cdn.paddle.com; frame-src 'self' https://vercel.live https://hcaptcha.com https://challenges.cloudflare.com https://newassets.hcaptcha.com https://*.paddle.com https://sandbox-buy.paddle.com https://www.youtube-nocookie.com`,
           },
+        ],
+      },
+      // CORS is only needed for SDK/customer-facing endpoints that legitimate
+      // external origins call directly (customer apps, webhook senders, status
+      // checks). Authenticated app/dashboard routes and marketing pages have no
+      // cross-origin use case and must not carry wildcard CORS headers.
+      {
+        source: '/api/sdk/:path*',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, PUT, DELETE, OPTIONS',
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value:
+              'Content-Type, Authorization, X-API-Key, X-DevFortress-Key, X-DevFortress-Signature, X-DevFortress-Timestamp',
+          },
+        ],
+      },
+      {
+        source: '/api/events/:path*',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, PUT, DELETE, OPTIONS',
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value:
+              'Content-Type, Authorization, X-API-Key, X-DevFortress-Key, X-DevFortress-Signature, X-DevFortress-Timestamp',
+          },
+        ],
+      },
+      {
+        source: '/api/webhooks/:path*',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, PUT, DELETE, OPTIONS',
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value:
+              'Content-Type, Authorization, X-API-Key, X-DevFortress-Key, X-DevFortress-Signature, X-DevFortress-Timestamp',
+          },
+        ],
+      },
+      {
+        source: '/api/status',
+        headers: [
           {
             key: 'Access-Control-Allow-Origin',
             value: '*',
@@ -244,14 +316,16 @@ const nextConfig: NextConfig = {
   // MVP focuses on COLLECT phase — other phases redirect to preserve SEO link equity
   async redirects() {
     return [
+      // NOTE: /features, /features/build, and /features/defend are real pages
+      // (app/features/page.tsx, app/features/build/page.tsx, app/features/defend/page.tsx)
+      // — do not redirect them, that shadows the page and is what caused the GSC
+      // "page with redirect" error. They are unlinked from public nav/content and
+      // marked noindex, but must still resolve directly.
+      // /register was never a real route, but is referenced by CTA links on several
+      // marketing pages — redirect it to the same place /signup already goes.
       {
-        source: '/features',
-        destination: '/',
-        permanent: true,
-      },
-      {
-        source: '/features/build',
-        destination: '/',
+        source: '/register',
+        destination: '/auth/signin',
         permanent: true,
       },
       // Inactive phase routes — 301 redirect to preserve link equity
@@ -301,4 +375,19 @@ const nextConfig: NextConfig = {
 };
 
 /** Next.js configuration object with custom settings for the application. */
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  // No SENTRY_AUTH_TOKEN configured yet locally — the Sentry build plugin
+  // skips source map upload (with a log line, not a build failure) when
+  // authToken is unset, so this degrades gracefully until one is added.
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: true,
+  widenClientFileUpload: true,
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+    automaticVercelMonitors: false,
+  },
+});

@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     url: 'https://devfortress.net/features',
     images: [
       {
-        url: 'https://devfortress.net/opengraph-image.png',
+        url: 'https://devfortress.net/opengraph-image',
         width: 1200,
         height: 630,
         alt: 'DevFortress Features',
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     title: 'Features — DevFortress',
     description:
       'Automated threat detection, closed-loop response, and AI agent protection across your entire application stack.',
-    images: ['https://devfortress.net/opengraph-image.png'],
+    images: ['https://devfortress.net/opengraph-image'],
   },
 };
 
@@ -122,7 +122,8 @@ export default function FeaturesPage() {
             <div className="rounded-xl border border-neutral-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-900">
               <h3 className="mb-2 text-lg font-semibold">Anomaly Detection</h3>
               <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                ML-powered anomaly detection for real-time threat identification
+                ML-powered anomaly detection with isolation forest algorithm for
+                real-time threat identification
               </p>
             </div>
 
@@ -144,7 +145,7 @@ export default function FeaturesPage() {
               </p>
             </div>
 
-            {/* Honeypot Premium Services */}
+            {/* POST-MVP: Honeypot Premium Services card — re-enable when honeypot service is active
             <div className="rounded-xl border border-neutral-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-900">
               <h3 className="mb-2 text-lg font-semibold">
                 HPS (Honeypot Premium)
@@ -154,6 +155,7 @@ export default function FeaturesPage() {
                 integration, and cost estimation
               </p>
             </div>
+            */}
 
             {/* Incident Management */}
             <div className="rounded-xl border border-neutral-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-900">

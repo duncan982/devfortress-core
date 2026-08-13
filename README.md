@@ -5,7 +5,7 @@
 ![npm](https://img.shields.io/npm/v/devfortress-sdk)
 
 **DevFortress** is an open-core security platform for APIs, applications,
-and AI agents. It implements the **Token-Aliased Closed-Loop Security**
+and AI agents. It implements the **Credential Isolation Closed-Loop Security**
 architecture — real-time threat classification and automated response via
 HMAC-signed webhook callbacks, with real credentials never leaving your
 infrastructure.
@@ -119,7 +119,6 @@ via [devfortress.net](https://devfortress.net).
 | Mode                       | Description                             | Availability |
 | -------------------------- | --------------------------------------- | ------------ |
 | `app_security`             | Baseline API and application protection | All tiers    |
-| `credential_isolation`     | A19 — credential aliasing and rotation  | Pro+         |
 | `account_takeover_defense` | A5, A6, A11–A15 bundle                  | Pro+         |
 | `commerce_abuse_defense`   | A14 + anti-fraud controls               | Pro+         |
 | `ai_agent_security`        | A7, A10, A16, A17 — agentic detection   | Pro+         |
@@ -153,11 +152,11 @@ This policy will be revisited as the project matures.
 DevFortress is designed and built by **Duncan Ndungu Ndegwa**, a software
 engineer and security researcher based in Nairobi, Kenya.
 
-The architecture behind this platform — Token-Aliased Closed-Loop Security,
+The architecture behind this platform — Credential Isolation Closed-Loop Security,
 the Platform Intelligence layer, and the agentic detection models — is
 documented in depth in:
 
-**[Token-Aliased Closed-Loop Security](https://devfortress.gumroad.com/l/master-edition)** — A technical deep-dive into the threat models, design decisions, and implementation patterns that underpin DevFortress. Written for engineers who want to understand not just how to use the platform, but why it is built the way it is.
+**[Credential Isolation Closed-Loop Security](https://devfortress.gumroad.com/l/master-edition)** — A technical deep-dive into the threat models, design decisions, and implementation patterns that underpin DevFortress. Written for engineers who want to understand not just how to use the platform, but why it is built the way it is.
 
 Follow updates, architecture deep-dives, and security research from the core team: **[DevFortress Security Journal](https://devfortress.substack.com/)**
 
@@ -172,7 +171,7 @@ SDK and platform intelligence layer: Proprietary — All rights reserved
 
 ## Patent Notice
 
-Token Alias Security, Closed-Loop Automated Response, and Platform
+Credential Isolation Security, Closed-Loop Automated Response, and Platform
 Intelligence are Patent Pending — KIPI KE/P/2026/005970–005973.
 
 © 2026 Duncan Ndungu Ndegwa. All rights reserved.
