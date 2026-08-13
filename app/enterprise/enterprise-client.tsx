@@ -245,7 +245,7 @@ export default function EnterprisePageClient() {
             {
               icon: '🔌',
               title: 'API Security',
-              desc: 'Token Alias Security, payload validation, and rate-limit enforcement for REST and GraphQL APIs.',
+              desc: 'Credential Isolation, payload validation, and rate-limit enforcement for REST and GraphQL APIs.',
             },
             {
               icon: '🤖',
@@ -352,15 +352,15 @@ export default function EnterprisePageClient() {
                   Textbook — Tier 3
                 </p>
                 <h3 className="mb-2 text-xl font-bold text-neutral-900 dark:text-white">
-                  Token-Aliased Closed-Loop Security
+                  Credential Isolation Closed-Loop Security
                 </h3>
                 <p className="mb-4 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
-                  The definitive reference on TAS and CLAR architecture. 12
-                  chapters, 5 volumes — covering session aliasing, behavioral
-                  detection, credential protection, payload security, and
-                  platform intelligence. Includes integration examples,
-                  patent-aligned architecture diagrams, and SDK implementation
-                  guides.
+                  The definitive reference on credential isolation and
+                  closed-loop response architecture. 12 chapters, 5 volumes —
+                  covering session aliasing, behavioral detection, credential
+                  protection, payload security, and platform intelligence.
+                  Includes integration examples, patent-aligned architecture
+                  diagrams, and SDK implementation guides.
                 </p>
                 <div className="mb-6 flex items-center gap-3">
                   <span className="text-2xl font-bold text-neutral-900 dark:text-white">

@@ -46,6 +46,7 @@
     "scripts/**",
     "__tests__/**",
     "e2e/**",
-    "tests/**"
+    "tests/**",
+    "archives/**"
   ]
 }

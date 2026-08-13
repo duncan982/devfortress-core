@@ -203,6 +203,14 @@ model ApiProject {
   teamAccess         TeamProjectAccess[]
 }
 
+
+model OperatorKey {
+  id           String   @id @default(cuid())
+  operatorId   String   @unique
+  publicKeyPem String
+  registeredAt DateTime @default(now())
+}
+
 model Repository {
   id             String             @id @default(cuid())
   provider       RepositoryProvider @default(GITHUB)
@@ -427,7 +435,7 @@ model CreditBalance {
 
 model CreditTransaction {
   id             String                @id @default(cuid())
-  userId         String
+  userId         String?
   apiProjectId   String?
   balanceId      String?
   amount         Int
@@ -442,7 +450,13 @@ model CreditTransaction {
   apiProject     ApiProject?           @relation(fields: [apiProjectId], references: [id])
   balance        CreditBalance?        @relation(fields: [balanceId], references: [id])
   organization   Organization?         @relation(fields: [organizationId], references: [id])
-  user           User                  @relation(fields: [userId], references: [id])
+  user           User?                 @relation(fields: [userId], references: [id])
+
+  // Exactly one of userId/organizationId must be set — enforced at the DB
+  // level via a check constraint added in a raw-SQL migration (Prisma
+  // doesn't support CHECK constraints declaratively).
+  @@index([userId])
+  @@index([organizationId])
 }
 
 model Subscription {
@@ -1538,6 +1552,38 @@ model CredentialAlias {
   @@index([rotatedFromId])
 }
 
+// Postgres-backed store for the multi-hop trust chain mechanism,
+// replacing its previous in-memory-only Map so chains survive process restarts.
+model TrustChainRecord {
+  chainId         String          @id
+  originServiceId String
+  valid           Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  hops            TrustChainHop[]
+
+  @@index([originServiceId])
+}
+
+model TrustChainHop {
+  id            String           @id @default(cuid())
+  chainId       String
+  chain         TrustChainRecord @relation(fields: [chainId], references: [chainId], onDelete: Cascade)
+  hopIndex      Int
+  serviceId     String
+  aliasId       String
+  hopTimestamp  BigInt
+  signature     String
+  parentAliasId String?
+  trust         Float
+  scope         String[]
+  createdAt     DateTime         @default(now())
+
+  @@unique([chainId, hopIndex])
+  @@index([chainId])
+  @@index([aliasId])
+}
+
 model NewsletterSubscriber {
   id             String    @id @default(cuid())
   email          String    @unique
@@ -1644,6 +1690,7 @@ enum ThreatSeverity {
   MEDIUM
   HIGH
   CRITICAL
+  INFO
 }
 
 enum CreditTransactionType {
@@ -1683,7 +1730,6 @@ enum NotificationType {
   SECURITY
   BILLING
   UPDATE
-  BLOG_SCHEDULE
 }
 
 enum NotificationStatus {
@@ -2030,17 +2076,6 @@ model License {
   @@map("licenses")
 }
 
-model BlogSchedule {
-  id            String   @id @default(cuid())
-  postSlug      String   @unique
-  scheduledDate DateTime
-  revealed      Boolean  @default(false)
-  notified48h   Boolean  @default(false)
-  notifiedDay0  Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
-
 model TeamProjectAccess {
   id          String     @id @default(cuid())
   teamId      String
@@ -2086,5 +2121,18 @@ model EnterpriseIntake {
   provisionedUserId    String?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
+}
+
+// Postgres-backed rate limit buckets for auth + AI-invoking routes (TODO 115).
+// One row per (route, identity) key; count resets when windowStart rolls over.
+model RateLimitBucket {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  windowStart DateTime
+  count       Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([windowStart])
 }
 

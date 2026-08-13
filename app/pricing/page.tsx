@@ -2,7 +2,7 @@
  * Pricing page component — v13 - paddle debug build - force new hash
  * Self-Host banner replaces Free tier
  * Developer plans via Paddle · Enterprise via annual invoice
- * MVP focus: Application & API security (40% beta discount)
+ * MVP focus: Application & API security
  * Redesigned to match DevFortress design system (semantic tokens, dark mode, Geist font)
  */
 
@@ -71,9 +71,9 @@ const SUBSCRIPTION_PRICING: Record<
   SubscriptionTier,
   { monthlyPrice: number; annualPrice: number }
 > = {
-  [SubscriptionTier.STARTER]: { monthlyPrice: 99, annualPrice: 79 },
-  [SubscriptionTier.PRO]: { monthlyPrice: 149, annualPrice: 119 },
-  [SubscriptionTier.TEAM]: { monthlyPrice: 499, annualPrice: 399 },
+  [SubscriptionTier.STARTER]: { monthlyPrice: 49, annualPrice: 39 },
+  [SubscriptionTier.PRO]: { monthlyPrice: 99, annualPrice: 79 },
+  [SubscriptionTier.TEAM]: { monthlyPrice: 399, annualPrice: 319 },
   [SubscriptionTier.ENTERPRISE]: { monthlyPrice: 0, annualPrice: 0 },
 };
 
@@ -487,10 +487,10 @@ const comparisonData: CompareGroup[] = [
         feature: 'API Key & Payload Protection',
         note: 'Alias indirection, zero-downtime rotation, payload signing & field encryption. Teams+ only.',
         starter: { type: 'cross' },
-        pro: { type: 'partial', text: 'SDK-validated · Dashboard coming soon' },
+        pro: { type: 'partial', text: 'SDK-validated · Dashboard included' },
         teams: {
           type: 'partial',
-          text: 'SDK-validated · Dashboard coming soon',
+          text: 'SDK-validated · Dashboard included',
         },
         enterprise: { type: 'partial', text: 'SDK-validated · Contact sales' },
       },
@@ -599,8 +599,8 @@ const comparisonData: CompareGroup[] = [
         note: 'Anonymized cross-customer threat feed, IP reputation enrichment, attack campaign detection',
         starter: { type: 'cross' },
         pro: { type: 'cross' },
-        teams: { type: 'check-g', text: 'Anonymized feed' },
-        enterprise: { type: 'check-g', text: 'Full feed + SIEM export' },
+        teams: { type: 'partial', text: 'Coming Soon' },
+        enterprise: { type: 'partial', text: 'Coming Soon' },
       },
       {
         feature: 'Platform Intelligence — B2 ML Classifier',
@@ -615,8 +615,8 @@ const comparisonData: CompareGroup[] = [
         note: 'Consent-scoped alias TTL, automatic revocation on withdrawal, GDPR/CCPA audit trail',
         starter: { type: 'cross' },
         pro: { type: 'cross' },
-        teams: { type: 'check-g', text: 'GDPR/CCPA evidence' },
-        enterprise: { type: 'check-g', text: '+ compliance export' },
+        teams: { type: 'partial', text: 'Coming Soon' },
+        enterprise: { type: 'partial', text: 'Coming Soon' },
       },
       {
         feature: 'Platform Intelligence — B4 Multi-Hop Agent Trust',
@@ -941,15 +941,15 @@ export default function PricingPage() {
   /* ─── Pricing display ─── */
   const starterPrice =
     billing === 'annual'
-      ? (SUBSCRIPTION_PRICING[SubscriptionTier.STARTER].annualPrice ?? 79)
+      ? (SUBSCRIPTION_PRICING[SubscriptionTier.STARTER].annualPrice ?? 39)
       : SUBSCRIPTION_PRICING[SubscriptionTier.STARTER].monthlyPrice;
   const proPrice =
     billing === 'annual'
-      ? (SUBSCRIPTION_PRICING[SubscriptionTier.PRO].annualPrice ?? 119)
+      ? (SUBSCRIPTION_PRICING[SubscriptionTier.PRO].annualPrice ?? 79)
       : SUBSCRIPTION_PRICING[SubscriptionTier.PRO].monthlyPrice;
   const teamsPrice =
     billing === 'annual'
-      ? (SUBSCRIPTION_PRICING[SubscriptionTier.TEAM].annualPrice ?? 399)
+      ? (SUBSCRIPTION_PRICING[SubscriptionTier.TEAM].annualPrice ?? 319)
       : SUBSCRIPTION_PRICING[SubscriptionTier.TEAM].monthlyPrice;
 
   const faqSchema = generateFAQSchema(faqs);
@@ -999,15 +999,6 @@ export default function PricingPage() {
             <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-primary-500">
               Pricing
             </p>
-            {/* ── M15: Beta Launch Badge ── */}
-            <div className="mx-auto mb-4 flex flex-col items-center justify-center gap-2">
-              <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
-                40% beta discount active ·{' '}
-                <span className="text-yellow-600 dark:text-yellow-400">
-                  Beta ends Saturday 22 August 2026
-                </span>
-              </span>
-            </div>
             {/* Book CTA — top of pricing hero */}
             <div className="mx-auto mb-6 flex flex-col items-center gap-1">
               <p className="text-xs text-neutral-500 dark:text-neutral-400">
@@ -1017,7 +1008,7 @@ export default function PricingPage() {
                 href="https://devfortress.gumroad.com/l/master-edition"
                 className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 underline underline-offset-2 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
               >
-                Read the Textbook: Token-Aliased Closed-Loop Security →
+                Read the Textbook: Credential Isolation Closed-Loop Security →
               </a>
             </div>
             <h1 className="mx-auto mb-5 max-w-2xl text-4xl font-bold tracking-tight sm:text-5xl lg:text-[52px] lg:leading-[1.1]">
@@ -1079,18 +1070,23 @@ export default function PricingPage() {
             <div>
               <p className="text-sm font-semibold text-neutral-900 dark:text-white flex items-center gap-2">
                 🏠 Want to self-host?
+                <span className="rounded-full bg-success-500/15 px-2.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-success-600 dark:text-success-400">
+                  Free Forever
+                </span>
               </p>
               <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
                 Run DevFortress on your own infrastructure with our open-core
-                edition. Free forever, community-supported.
+                edition. Free forever, MIT-licensed, community-supported.
               </p>
             </div>
-            <Link
-              href="/blog/devfortress-open-core"
-              className="flex-shrink-0 rounded-xl border border-primary-500 px-6 py-3 text-sm font-semibold text-primary-600 transition-colors hover:bg-primary-500 hover:text-white dark:border-primary-400 dark:text-primary-400 dark:hover:bg-primary-500 dark:hover:text-white"
+            <a
+              href="https://github.com/duncan982/devfortress-core"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-shrink-0 rounded-xl border border-neutral-300 bg-white px-5 py-2.5 text-sm font-semibold text-neutral-800 shadow-sm transition-all hover:border-neutral-400 hover:shadow-md dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:border-neutral-500"
             >
-              Learn More →
-            </Link>
+              View on GitHub →
+            </a>
           </div>
 
           {/* ─── Tier Cards ─── */}
@@ -1113,7 +1109,7 @@ export default function PricingPage() {
                 </div>
                 {billing === 'annual' && (
                   <p className="mb-4 font-mono text-xs text-neutral-500 dark:text-neutral-400">
-                    Billed $948/yr — saves $240
+                    Billed $468/yr — saves $120
                   </p>
                 )}
                 <p className="mb-5 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
@@ -1291,7 +1287,7 @@ export default function PricingPage() {
                 </div>
                 {billing === 'annual' && (
                   <p className="mb-4 font-mono text-xs text-neutral-500 dark:text-neutral-400">
-                    Billed $1,428/yr — saves $360
+                    Billed $948/yr — saves $240
                   </p>
                 )}
                 <p className="mb-5 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
@@ -1483,7 +1479,7 @@ export default function PricingPage() {
                 </div>
                 {billing === 'annual' && (
                   <p className="mb-4 font-mono text-xs text-neutral-500 dark:text-neutral-400">
-                    Billed $4,788/yr — saves $1,200
+                    Billed $3,828/yr — saves $960
                   </p>
                 )}
                 <p className="mb-5 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
@@ -1491,10 +1487,6 @@ export default function PricingPage() {
                   seats — scale with add-ons up to 20 each. Hybrid closed-loop
                   mode by default. Unlocks Platform Intelligence and API Key
                   &amp; Payload Protection.
-                  <span className="text-neutral-400 dark:text-neutral-500 text-sm font-normal">
-                    {' '}
-                    (Coming Soon)
-                  </span>
                 </p>
                 <button
                   onClick={() => handleSubscribe(SubscriptionTier.TEAM)}
@@ -1587,12 +1579,16 @@ export default function PricingPage() {
                       bold: false,
                     },
                     {
-                      text: 'API Key & Payload Protection (Coming Soon)',
+                      text: 'API Key & Payload Protection',
                       bold: false,
                     },
                     {
-                      text: 'Platform Intelligence — B1/B2/B3/B12',
+                      text: 'Platform Intelligence — B2 SDK-Embedded ML',
                       bold: true,
+                    },
+                    {
+                      text: 'Platform Intelligence — B1/B3/B12 (Coming Soon)',
+                      bold: false,
                     },
                   ].map(f => (
                     <li
@@ -1677,7 +1673,7 @@ export default function PricingPage() {
                     'Dedicated CSM + structured onboarding',
                     // 'AI Agent CL — usage-based pricing',
                     'AI Agent CL — unlimited, usage-based pricing',
-                    '🔜 API Key & Payload Protection (Coming Soon)',
+                    'API Key & Payload Protection',
                     '🔜 Air-gap mode (Coming Soon)',
                     '🔜 mTLS certificate authentication (Coming Soon)',
                     '🔜 SIEM — Splunk, Datadog, Sentinel (Coming Soon)',
@@ -1771,7 +1767,7 @@ export default function PricingPage() {
                 href="https://devfortress.gumroad.com/l/master-edition"
                 className="text-blue-400 underline text-sm"
               >
-                Read the Textbook: Token-Aliased Closed-Loop Security →
+                Read the Textbook: Credential Isolation Closed-Loop Security →
               </a>
             </div>
 
@@ -1861,20 +1857,20 @@ export default function PricingPage() {
                   <th className="w-[14%] border-b border-neutral-200 px-4 py-3.5 text-center text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
                     Starter
                     <br />
-                    <span className="text-[10px] font-light">$99/mo</span>
+                    <span className="text-[10px] font-light">$49/mo</span>
                   </th>
                   <th className="w-[14%] border-b border-neutral-200 px-4 py-3.5 text-center text-[11px] font-bold uppercase tracking-wider text-primary-500 dark:border-neutral-800">
                     Pro
                     <br />
                     <span className="text-[10px] font-light text-neutral-500 dark:text-neutral-400">
-                      $149/mo
+                      $99/mo
                     </span>
                   </th>
                   <th className="w-[14%] border-b border-neutral-200 px-4 py-3.5 text-center text-[11px] font-bold uppercase tracking-wider text-violet-500 dark:border-neutral-800">
                     Teams
                     <br />
                     <span className="text-[10px] font-light text-neutral-500 dark:text-neutral-400">
-                      $499/mo
+                      $399/mo
                     </span>
                   </th>
                   <th className="w-[20%] border-b border-neutral-200 px-4 py-3.5 text-center text-[11px] font-bold uppercase tracking-wider text-success-500 dark:border-neutral-800">
@@ -1930,9 +1926,8 @@ export default function PricingPage() {
             </table>
           </div>
           <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2 text-center">
-            * A19 Token Alias Security and A19B Payload Protection are active in
-            SDK v4.8+. The self-service management dashboard is under
-            development.
+            * Credential Isolation and Payload Protection are active in SDK
+            v4.8+. The self-service management dashboard is active.
           </p>
         </section>
 
@@ -2092,7 +2087,7 @@ export default function PricingPage() {
               {
                 emoji: '🏗️',
                 title: 'SaaS & Multi-Tenant Platforms',
-                desc: 'Per-tenant isolation, cross-tenant abuse detection, and API rate enforcement. Token aliasing and closed-loop session revocation protect shared infrastructure without exposing tenant boundaries.',
+                desc: 'Per-tenant isolation, cross-tenant abuse detection, and API rate enforcement. Credential isolation and closed-loop session revocation protect shared infrastructure without exposing tenant boundaries.',
               },
             ].map(card => (
               <div
