@@ -92,7 +92,6 @@
   "dependencies": {
     "@marsidev/react-turnstile": "^1.4.1",
     "@octokit/rest": "^22.0.1",
-    "@paddle/paddle-js": "^1.6.4",
     "@prisma/client": "^6.19.2",
     "@prisma/engines": "^7.1.0",
     "@sentry/nextjs": "^10.30.0",

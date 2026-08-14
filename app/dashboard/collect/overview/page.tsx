@@ -16,7 +16,7 @@ import Link from 'next/link';
 
 // ── Types ───────────────────────────────────────────────────
 
-const BREADCRUMB_PATHS = { dashboard: { label: 'Dashboard', href: '/dashboard' } } as const;
+const BREADCRUMB_PATHS = { dashboard: { label: 'Dashboard', href: '/dashboard' }, collect: { label: 'COLLECT Phase', href: '/dashboard/collect/surveillance' } } as const;
 function BreadcrumbNav(_props: { items: { label: string; href: string }[]; currentPage: string }) { return null; }
 
 type ActiveTab = 'tokens' | 'blocked-ips' | 'event-logs';

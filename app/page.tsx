@@ -1,6 +1,8 @@
 // Open-core home page — @core/* imports replaced with inline equivalents
 import Link from 'next/link';
 import { Metadata } from 'next';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 // ── Inline structured data (replaces @core/lib/seo/structured-data) ──────────
 
@@ -82,19 +84,17 @@ function AuthAwareGetStartedButton() {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Fetch the latest devfortress-sdk version from npm registry at request time. */
-async function getSdkVersion(): Promise<string> {
+/** Read SDK version from the devfortress-sdk package.json at build time. */
+function getSdkVersion(): string {
   try {
-    const res = await fetch(
-      'https://registry.npmjs.org/devfortress-sdk/latest',
-      {
-        next: { revalidate: 3600 },
-        headers: { Accept: 'application/json' },
-      }
+    const pkgPath = join(
+      process.cwd(),
+      'packages',
+      'devfortress-sdk',
+      'package.json'
     );
-    if (!res.ok) return '4.0.0';
-    const data = await res.json() as { version?: string };
-    return data.version ?? '4.0.0';
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+    return pkg.version || '4.0.0';
   } catch {
     return '4.0.0';
   }
@@ -127,7 +127,7 @@ export const dynamic = 'force-dynamic';
 
 /** Home page component for the DevFortress platform. @returns {JSX.Element} The home page JSX. */
 export default async function Home() {
-  const sdkVersion = await getSdkVersion();
+  const sdkVersion = getSdkVersion();
   return (
     <>
       {renderJsonLd(organizationSchema)}
@@ -167,7 +167,7 @@ export default async function Home() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 rounded-md border border-blue-400/30 bg-blue-500/10 px-4 py-2 text-sm text-blue-300 hover:bg-blue-500/20 transition-colors"
                 >
-                  📖 Read the Book: Token-Aliased Closed-Loop Security
+                  📖 Read the Book: Credential Isolation Closed-Loop Security
                   <span className="text-blue-400/60">→</span>
                 </a>
                 <AuthAwareHomeContent />
