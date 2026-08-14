@@ -1,7 +1,7 @@
 /**
- * Pricing page component — v13 - paddle debug build - force new hash
+ * Pricing page component
  * Self-Host banner replaces Free tier
- * Developer plans via Paddle · Enterprise via annual invoice
+ * Developer plans via hosted checkout · Enterprise via annual invoice
  * MVP focus: Application & API security
  * Redesigned to match DevFortress design system (semantic tokens, dark mode, Geist font)
  */
@@ -17,8 +17,6 @@ import {
   useRef,
 } from 'react';
 import Link from 'next/link';
-import { initializePaddle, Paddle } from '@paddle/paddle-js';
-import { EnterpriseIntakeModal } from '@/app/components/pricing/EnterpriseIntakeModal';
 
 // ── Inline replacements for private-repo path-alias imports (open-core compatibility) ────────
 
@@ -171,7 +169,7 @@ const ADDON_CATALOGUE: AddonItem[] = [
     maxUnits: 4,
     proOnly: true,
   },
-  // POST_MVP: extra_honeypot — uncomment when honeypot feature is live and Paddle price configured
+  // POST_MVP: extra_honeypot — uncomment when honeypot feature is live and pricing is configured
   // {
   //   id: 'extra_honeypot',
   //   name: 'Extra Honeypot',
@@ -181,7 +179,7 @@ const ADDON_CATALOGUE: AddonItem[] = [
   //   maxUnits: 20,
   //   proOnly: true,
   // },
-  // POST_MVP: sso_saml — uncomment when SSO feature is live and Paddle price configured
+  // POST_MVP: sso_saml — uncomment when SSO feature is live and pricing is configured
   // {
   //   id: 'sso_saml',
   //   name: 'SSO / SAML',
@@ -243,9 +241,9 @@ const faqs = [
       "HMAC-SHA256 is secure and sufficient for most teams — it signs every webhook so forged requests are impossible. mTLS adds mutual X.509 certificate authentication at the transport layer itself. It's required for PCI-DSS Level 1 and recommended for any regulated industry. It's an optional add-on in Enterprise, not forced on everyone.",
   },
   {
-    question: 'Is Paddle involved in Enterprise billing?',
+    question: 'Does self-hosted devfortress-core include billing?',
     answer:
-      'No. Starter and Pro are billed via Paddle (card, monthly or annual). Enterprise is billed via annual invoice or Purchase Order directly with DevFortress. We support multi-currency invoicing and multi-year contracts with volume discounts.',
+      'No. Self-hosted devfortress-core has no billing or checkout built in — it is free and unlicensed to run. For the hosted, paid version with managed billing, see devfortress.net/pricing.',
   },
   {
     question:
@@ -288,13 +286,6 @@ const comparisonData: CompareGroup[] = [
   {
     group: 'Billing',
     rows: [
-      {
-        feature: 'Payment',
-        starter: 'Paddle',
-        pro: 'Paddle',
-        teams: 'Paddle',
-        enterprise: 'Invoice / PO',
-      },
       {
         feature: 'Contract',
         starter: 'Monthly',
@@ -761,182 +752,8 @@ function renderCompareCell(cell: CompareCell) {
    MAIN COMPONENT
 ═══════════════════════════════════════════ */
 export default function PricingPage() {
-  const [paddle, setPaddle] = useState<Paddle>();
-  const checkoutTypeRef = useRef<'subscription' | 'addon'>('subscription');
 
-  useEffect(() => {
-    const paddleToken = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN;
-    const paddleEnv = process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT;
-
-    // These logs confirm what was baked into the bundle at build time
-    console.warn('[DF-PADDLE-DEBUG] token present:', !!paddleToken);
-    console.warn(
-      '[DF-PADDLE-DEBUG] token prefix:',
-      paddleToken?.slice(0, 8) ?? 'NONE'
-    );
-    console.warn('[DF-PADDLE-DEBUG] environment:', paddleEnv ?? 'NONE');
-    console.warn(
-      '[DF-PADDLE-DEBUG] build-time token was set:',
-      process.env.BUILD_TIME_PADDLE_TOKEN_SET
-    );
-
-    if (!paddleToken || paddleToken.trim() === '') {
-      console.error('[DF-PADDLE-DEBUG] Token missing — Paddle NOT initialized');
-      return;
-    }
-
-    initializePaddle({
-      environment: (paddleEnv === 'production' ? 'production' : 'sandbox') as
-        | 'sandbox'
-        | 'production',
-      token: paddleToken,
-      eventCallback(event) {
-        if (event.name === 'checkout.completed') {
-          if (checkoutTypeRef.current === 'addon') {
-            setAddonSuccess(
-              'Add-on purchased successfully! Your quota will update within a few minutes.'
-            );
-            setTimeout(() => setAddonSuccess(null), 8000);
-            setAddonLoading(null);
-            checkoutTypeRef.current = 'subscription';
-          } else {
-            window.location.href = '/dashboard?subscription=success';
-          }
-        }
-        if (event.name === 'checkout.closed') {
-          setLoading(null);
-          setAddonLoading(null);
-          checkoutTypeRef.current = 'subscription';
-        }
-      },
-    })
-      .then(paddleInstance => {
-        if (paddleInstance) {
-          setPaddle(paddleInstance);
-          console.warn('[DF-PADDLE-DEBUG] Paddle initialized successfully');
-        }
-      })
-      .catch(err => {
-        console.error('[DF-PADDLE-DEBUG] initializePaddle threw:', err);
-      });
-  }, []);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('paid') === 'true') {
-      window.location.href = '/dashboard?subscription=success';
-    }
-  }, []);
-
-  const [loading, setLoading] = useState<string | null>(null);
   const [billing, setBilling] = useState<BillingCycle>('monthly');
-  const [addonQty, setAddonQty] = useState<Record<string, number>>({});
-  const [addonLoading, setAddonLoading] = useState<string | null>(null);
-  const [addonSuccess, setAddonSuccess] = useState<string | null>(null);
-  const [isIntakeModalOpen, setIsIntakeModalOpen] = useState(false);
-
-  /* ─── Subscription handler (Paddle) ─── */
-  const handleSubscribe = useCallback(
-    async (tier: SubscriptionTier) => {
-      setLoading(tier);
-      try {
-        const response = await fetch('/api/subscription/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tier, billingCycle: billing }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            if (data.error === 'SESSION_EXPIRED') {
-              window.location.href = `/login?next=/pricing`;
-              return;
-            }
-            window.location.href = `/login?next=/pricing&callbackUrl=/pricing`;
-            return;
-          }
-          throw new Error(data.error || 'Failed to create subscription');
-        }
-
-        if (!paddle) {
-          alert(
-            'Checkout is still loading. Please wait a moment and try again.'
-          );
-          return;
-        }
-        if (data.transactionId) {
-          checkoutTypeRef.current = 'subscription';
-          paddle.Checkout.open({
-            transactionId: data.transactionId,
-          });
-        } else {
-          throw new Error('No transaction ID returned from server.');
-        }
-      } catch (error) {
-        logError('Subscription creation failed', { error, tier });
-        alert(
-          error instanceof Error
-            ? error.message
-            : 'Failed to start subscription. Please try again.'
-        );
-      } finally {
-        setLoading(null);
-      }
-    },
-    [paddle, billing]
-  );
-
-  const handleAddonPurchase = useCallback(
-    async (addonId: string) => {
-      const qty = addonQty[addonId] ?? 1;
-      if (qty < 1) return;
-
-      setAddonLoading(addonId);
-      try {
-        const response = await fetch('/api/subscription/addons', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ addonId, quantity: qty }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            window.location.href = `/auth/signin?next=/pricing#addons`;
-            return;
-          }
-          throw new Error(data.error || 'Failed to initiate add-on purchase');
-        }
-
-        if (data.requiresCheckout && data.transactionId) {
-          if (!paddle) {
-            alert(
-              'Checkout is still loading. Please wait a moment and try again.'
-            );
-            return;
-          }
-          checkoutTypeRef.current = 'addon';
-          paddle.Checkout.open({ transactionId: data.transactionId });
-        } else if (data.success) {
-          setAddonSuccess(data.message ?? 'Add-on updated successfully.');
-          setTimeout(() => setAddonSuccess(null), 6000);
-        }
-      } catch (error) {
-        logError('Add-on purchase failed', { error, addonId });
-        alert(
-          error instanceof Error
-            ? error.message
-            : 'Failed to start add-on purchase. Please try again.'
-        );
-      } finally {
-        setAddonLoading(null);
-      }
-    },
-    [addonQty, paddle]
-  );
 
   /* ─── Pricing display ─── */
   const starterPrice =
@@ -958,28 +775,6 @@ export default function PricingPage() {
     <>
       {renderJsonLd(faqSchema)}
 
-      {addonSuccess && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 flex items-center gap-3 rounded-xl border border-emerald-300 bg-emerald-50 px-5 py-3 shadow-lg dark:border-emerald-700 dark:bg-emerald-900/30">
-          <span className="text-emerald-600 dark:text-emerald-400">✓</span>
-          <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
-            {addonSuccess}
-          </p>
-          <button
-            onClick={() => setAddonSuccess(null)}
-            className="ml-2 text-xs text-emerald-500 hover:text-emerald-700 dark:text-emerald-400"
-            aria-label="Dismiss"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
-      {!process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN && (
-        <div className="w-full bg-red-600 py-2 text-center text-xs font-semibold text-white">
-          ⚠️ Paddle not configured — NEXT_PUBLIC_PADDLE_CLIENT_TOKEN is missing
-          from this deployment.
-        </div>
-      )}
 
       {/* ─── Trust Bar ─── */}
       <div className="border-b border-primary-200 bg-primary-50 py-2.5 text-center text-xs tracking-wide text-primary-700 dark:border-primary-900/40 dark:bg-primary-950/60 dark:text-primary-400">
@@ -1117,18 +912,14 @@ export default function PricingPage() {
                   visibility, alert-only mode, and full session privacy for one
                   application.
                 </p>
-                <button
-                  onClick={() => handleSubscribe(SubscriptionTier.STARTER)}
-                  disabled={loading === SubscriptionTier.STARTER}
+                <a
+                  href="https://devfortress.net/pricing"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="block w-full rounded-xl border border-neutral-300 bg-transparent py-3.5 text-center text-sm font-semibold text-neutral-700 transition-all hover:border-primary-500 hover:text-primary-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-primary-500 dark:hover:text-primary-400"
                 >
-                  {loading === SubscriptionTier.STARTER
-                    ? 'Processing...'
-                    : 'Subscribe via Paddle'}
-                </button>
-                <p className="mt-2 text-center text-[10px] text-neutral-500">
-                  Secure payment via Paddle
-                </p>
+                  View hosted plans &amp; pricing →
+                </a>
               </div>
 
               {/* Body */}
@@ -1296,18 +1087,14 @@ export default function PricingPage() {
                   closed-loop security, automated session revocation, and IP
                   blocking.
                 </p>
-                <button
-                  onClick={() => handleSubscribe(SubscriptionTier.PRO)}
-                  disabled={loading === SubscriptionTier.PRO}
+                <a
+                  href="https://devfortress.net/pricing"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="block w-full rounded-xl bg-primary-500 py-3.5 text-center text-sm font-semibold text-white shadow-md transition-all hover:bg-primary-600 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {loading === SubscriptionTier.PRO
-                    ? 'Processing...'
-                    : 'Subscribe via Paddle'}
-                </button>
-                <p className="mt-2 text-center text-[10px] text-neutral-500">
-                  Secure payment via Paddle
-                </p>
+                  View hosted plans &amp; pricing →
+                </a>
               </div>
 
               {/* Body */}
@@ -1488,18 +1275,14 @@ export default function PricingPage() {
                   mode by default. Unlocks Platform Intelligence and API Key
                   &amp; Payload Protection.
                 </p>
-                <button
-                  onClick={() => handleSubscribe(SubscriptionTier.TEAM)}
-                  disabled={loading === SubscriptionTier.TEAM}
+                <a
+                  href="https://devfortress.net/pricing"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="block w-full rounded-xl border border-violet-300 bg-transparent py-3.5 text-center text-sm font-semibold text-violet-700 transition-all hover:border-violet-500 hover:bg-violet-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-violet-700 dark:text-violet-300 dark:hover:border-violet-500 dark:hover:text-white"
                 >
-                  {loading === SubscriptionTier.TEAM
-                    ? 'Processing...'
-                    : 'Subscribe via Paddle'}
-                </button>
-                <p className="mt-2 text-center text-[10px] text-neutral-500">
-                  Secure payment via Paddle
-                </p>
+                  View hosted plans &amp; pricing →
+                </a>
               </div>
 
               {/* Body */}
@@ -1644,12 +1427,12 @@ export default function PricingPage() {
                   mode, mTLS, custom playbooks, compliance evidence, dedicated
                   SLA, and full onboarding.
                 </p>
-                <button
-                  onClick={() => setIsIntakeModalOpen(true)}
+                <a
+                  href="mailto:support@devfortress.net?subject=Enterprise%20inquiry"
                   className="mb-2 block w-full rounded-xl bg-success-500 py-3.5 text-center text-sm font-semibold text-white shadow-md transition-all hover:bg-success-600 hover:shadow-lg"
                 >
                   Get a Quote →
-                </button>
+                </a>
                 <a
                   href="mailto:support@devfortress.net"
                   className="block w-full rounded-xl border border-neutral-300 bg-transparent py-3.5 text-center text-sm font-semibold text-neutral-700 transition-all hover:border-success-500 hover:text-success-600 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-success-500 dark:hover:text-success-400"
@@ -1698,7 +1481,7 @@ export default function PricingPage() {
 
           {/* Overage note */}
           <p className="mb-16 text-center text-sm text-neutral-500 dark:text-neutral-400">
-            All paid plans billed monthly via Paddle. Annual billing saves 20%.
+            All paid plans billed monthly. Annual billing saves 20%.
             Enterprise via annual invoice.
           </p>
         </section>
@@ -1813,12 +1596,12 @@ export default function PricingPage() {
                 fixed-price proposal within 48 hours.
               </p>
               <div className="flex flex-wrap justify-center gap-3">
-                <button
-                  onClick={() => setIsIntakeModalOpen(true)}
+                <a
+                  href="mailto:support@devfortress.net?subject=Enterprise%20inquiry"
                   className="rounded-xl bg-success-500 px-8 py-3.5 text-sm font-semibold text-white shadow-md transition-colors hover:bg-success-600 hover:shadow-lg"
                 >
                   Get a Quote →
-                </button>
+                </a>
                 <Link
                   href="/enterprise"
                   className="rounded-xl border border-neutral-300 px-8 py-3.5 text-sm font-medium text-neutral-700 transition-all hover:border-success-500 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-success-500"
@@ -1947,10 +1730,7 @@ export default function PricingPage() {
           </p>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {ADDON_CATALOGUE.map(addon => {
-              const qty = addonQty[addon.id] ?? 1;
               const isFlat = addon.maxUnits === 1;
-              const total = qty * addon.pricePerUnit;
-              const isProcessing = addonLoading === addon.id;
               const isPostMvp = false; // POST_MVP: set to addon.id === 'sso_saml' || addon.id === 'extra_honeypot' when re-enabled
               return (
                 <div
@@ -1973,74 +1753,25 @@ export default function PricingPage() {
                       ? `$${addon.pricePerUnit}/mo`
                       : `$${addon.pricePerUnit}/${addon.unit}/mo`}
                   </p>
-                  {!isFlat && (
-                    <div className="mb-4 flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setAddonQty(prev => ({
-                            ...prev,
-                            [addon.id]: Math.max(1, (prev[addon.id] ?? 1) - 1),
-                          }))
-                        }
-                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-300 text-sm font-semibold text-neutral-700 transition-colors hover:border-primary-400 hover:text-primary-600 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-primary-500 dark:hover:text-primary-400"
-                        aria-label={`Decrease ${addon.name} quantity`}
-                      >
-                        −
-                      </button>
-                      <span className="w-6 text-center text-sm font-semibold text-neutral-900 dark:text-white">
-                        {qty}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setAddonQty(prev => ({
-                            ...prev,
-                            [addon.id]: Math.min(
-                              addon.maxUnits,
-                              (prev[addon.id] ?? 1) + 1
-                            ),
-                          }))
-                        }
-                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-300 text-sm font-semibold text-neutral-700 transition-colors hover:border-primary-400 hover:text-primary-600 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-primary-500 dark:hover:text-primary-400"
-                        aria-label={`Increase ${addon.name} quantity`}
-                      >
-                        +
-                      </button>
-                      <span className="ml-auto font-mono text-sm font-semibold text-neutral-700 dark:text-neutral-300">
-                        ${total}/mo
-                      </span>
-                    </div>
-                  )}
-                  {isFlat && (
+                  {isPostMvp ? (
                     <p className="mb-4 font-mono text-sm text-neutral-500 dark:text-neutral-400">
-                      Flat rate · one-time activation
+                      Coming soon
+                    </p>
+                  ) : (
+                    <a
+                      href="https://devfortress.net/pricing"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block w-full rounded-xl border border-primary-300 bg-transparent py-2.5 text-center text-sm font-semibold text-primary-700 transition-all hover:border-primary-500 hover:bg-primary-500 hover:text-white dark:border-primary-700 dark:text-primary-300 dark:hover:border-primary-500 dark:hover:text-white"
+                    >
+                      View hosted plans &amp; pricing →
+                    </a>
+                  )}
+                  {addon.proOnly && (
+                    <p className="mt-1.5 text-center font-mono text-[10px] text-neutral-400 dark:text-neutral-600">
+                      Requires Pro or higher
                     </p>
                   )}
-                  <div className="mt-auto">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        !isPostMvp && handleAddonPurchase(addon.id)
-                      }
-                      disabled={isProcessing || isPostMvp}
-                      title={
-                        isPostMvp ? 'This add-on is coming soon' : undefined
-                      }
-                      className="block w-full rounded-xl border border-primary-300 bg-transparent py-2.5 text-center text-sm font-semibold text-primary-700 transition-all hover:border-primary-500 hover:bg-primary-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-primary-700 dark:text-primary-300 dark:hover:border-primary-500 dark:hover:text-white"
-                    >
-                      {isPostMvp
-                        ? 'Coming Soon'
-                        : isProcessing
-                          ? 'Processing…'
-                          : 'Add to Plan'}
-                    </button>
-                    {addon.proOnly && (
-                      <p className="mt-1.5 text-center font-mono text-[10px] text-neutral-400 dark:text-neutral-600">
-                        Requires Pro or higher
-                      </p>
-                    )}
-                  </div>
                 </div>
               );
             })}
@@ -2142,15 +1873,14 @@ export default function PricingPage() {
               real-time threat detection.
             </p>
             <div className="flex items-center justify-center gap-4">
-              <button
-                onClick={() => handleSubscribe(SubscriptionTier.PRO)}
-                disabled={loading === SubscriptionTier.PRO}
-                className="rounded-xl bg-primary-500 px-8 py-3 font-semibold text-white shadow-md transition-all hover:bg-primary-600 hover:shadow-lg disabled:opacity-50"
+              <a
+                href="https://devfortress.net/pricing"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-xl bg-primary-500 px-8 py-3 font-semibold text-white shadow-md transition-all hover:bg-primary-600 hover:shadow-lg"
               >
-                {loading === SubscriptionTier.PRO
-                  ? 'Processing...'
-                  : 'Start with Pro'}
-              </button>
+                View hosted plans &amp; pricing →
+              </a>
               <a
                 href="mailto:support@devfortress.net"
                 className="rounded-xl border border-neutral-300 px-8 py-3 font-semibold text-neutral-700 transition-colors hover:border-success-500 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-success-500"
@@ -2159,18 +1889,13 @@ export default function PricingPage() {
               </a>
             </div>
             <p className="mt-4 text-xs text-neutral-400 dark:text-neutral-600">
-              Starter, Pro &amp; Teams via Paddle · Enterprise via annual
-              invoice
+              Starter, Pro &amp; Teams via hosted checkout · Enterprise via
+              annual invoice
             </p>
           </div>
         </section>
       </main>
 
-      <EnterpriseIntakeModal
-        isOpen={isIntakeModalOpen}
-        onClose={() => setIsIntakeModalOpen(false)}
-        invoiceType="platform_annual"
-      />
     </>
   );
 }
