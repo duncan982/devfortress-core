@@ -10,18 +10,6 @@ These are suggestions, not commitments — open an issue first if you'd like to 
   clearer, copy-pasteable Quick Start section so a new integrator can get a
   working call wired up without reading the full API reference first.
 
-- **Remove the now-dead `app/auth/signin/page.tsx`.** Unreachable since a
-  compat redirect went live (Next.js redirects match before filesystem
-  routes) — confirm it's still unreachable, then delete the file and its
-  directory if left empty. Pure cleanup, zero behavior change.
-
-## Self-hosting docs
-
-- **Document the production Supabase requirement.** Production builds
-  without valid Supabase configuration fail closed (deny protected pages
-  and APIs), but the README doesn't call this out anywhere. Add a line to
-  the README stating that production requires Supabase configuration.
-  Docs only, no runtime change.
 
 ## Feature-parity audit across SDK ports
 
