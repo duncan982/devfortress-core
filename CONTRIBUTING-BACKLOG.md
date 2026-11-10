@@ -10,7 +10,6 @@ These are suggestions, not commitments — open an issue first if you'd like to 
   clearer, copy-pasteable Quick Start section so a new integrator can get a
   working call wired up without reading the full API reference first.
 
-
 ## Feature-parity audit across SDK ports
 
 DevFortress ships SDK ports for Python, PHP, Ruby, Java, Go, and .NET alongside the original Node.js SDK. The Node.js SDK itself is equally open to contribution — bug fixes, docs, and parity fixes all welcome — it's just the reference implementation the other six get audited against here. A contributor-friendly task that doesn't require deep context: pick one non-Node port and audit it against the Node.js SDK's public surface (method names, parameter shapes, test coverage) and file an issue for anything missing or inconsistent. This is useful even as a partial pass — a gap list for one language is a complete, mergeable contribution on its own.

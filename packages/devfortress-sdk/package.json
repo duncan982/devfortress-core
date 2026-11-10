@@ -131,5 +131,11 @@
   },
   "optionalDependencies": {
     "onnxruntime-node": "^1.24.3"
+  },
+  "overrides": {
+    "follow-redirects": "1.16.2",
+    "adm-zip": "0.6.1",
+    "minimatch": "11.0.1",
+    "brace-expansion": "2.1.7"
   }
 }
