@@ -10,61 +10,64 @@ datasource db {
 }
 
 model User {
-  id                   String                  @id @default(cuid())
-  email                String                  @unique
-  name                 String?
-  image                String?
-  emailVerified        DateTime?
-  role                 UserRole                @default(VIEWER)
-  preferredFramework   String?
-  threatsRetentionDays Int?                    @default(90)
-  alertsRetentionDays  Int?                    @default(60)
-  logsRetentionDays    Int?                    @default(30)
-  exportBeforeDelete   Boolean                 @default(false)
-  createdAt            DateTime                @default(now())
-  updatedAt            DateTime                @updatedAt
-  lastLoginAt          DateTime?
-  textbookPurchaser    Boolean                 @default(false)
-  hasAcceptedTerms     Boolean                 @default(false)
-  hasAcceptedWarranties Boolean                @default(false)
-  hasAcceptedOversight Boolean                 @default(false)
-  acceptedTermsAt      DateTime?
-  apiMonitors          APIMonitor[]            @relation("UserAPIMonitors")
-  accounts             Account[]
-  apiProjects          ApiProject[]            @relation("ApiProjectOwner")
-  auditLogs            AuditLog[]
-  auditReports         AuditReport[]
-  betaUsers            BetaUser[]              @relation("BetaUsers")
-  chatbotConversations ChatbotConversation[]
-  consultingClients    ConsultingClient[]
-  consultingJobs       ConsultingJob[]
-  creditBalance        CreditBalance?
-  creditTransactions   CreditTransaction[]
-  dataExports          DataExport[]
-  deploymentApprovals  DeploymentApproval[]    @relation("DeploymentApprover")
-  deploymentRequests   DeploymentApproval[]    @relation("DeploymentRequester")
-  quotes               EnterpriseQuote[]       @relation("UserQuotes")
-  flywheelInsights     FlywheelInsight[]       @relation("UserInsights")
-  honeypots            Honeypot[]              @relation("HoneypotOwner")
-  testResults          HoneypotTestResult[]
-  userNotifications    Notification[]
-  notifications        NotificationPreference?
-  organizationsOwned   Organization[]          @relation("OrganizationOwner")
-  organizations        OrganizationMember[]
-  repositories         Repository[]            @relation("RepositoryOwner")
-  scanSchedules        ScanSchedule[]
-  secrets              Secret[]                @relation("UserSecrets")
-  sessions             Session[]
-  subscriptions        Subscription[]
-  assignedTickets      SupportTicket[]         @relation("AssignedTickets")
-  supportTickets       SupportTicket[]
-  teamsCreated              Team[]                  @relation("TeamCreatedBy")
-  sentInvitations           TeamInvitation[]
-  teams                     TeamMember[]
-  ticketMessages            TicketMessage[]
-  apiKeys                   UserApiKey[]
-  feedbacks                 UserFeedback[]
-  grantedProjectAccess      TeamProjectAccess[]     @relation("GrantedProjectAccess")
+  id                    String                  @id @default(cuid())
+  email                 String                  @unique
+  name                  String?
+  image                 String?
+  emailVerified         DateTime?
+  role                  UserRole                @default(VIEWER)
+  preferredFramework    String?
+  threatsRetentionDays  Int?                    @default(90)
+  alertsRetentionDays   Int?                    @default(60)
+  logsRetentionDays     Int?                    @default(30)
+  exportBeforeDelete    Boolean                 @default(false)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  lastLoginAt           DateTime?
+  textbookPurchaser     Boolean                 @default(false)
+  hasAcceptedTerms      Boolean                 @default(false)
+  hasAcceptedWarranties Boolean                 @default(false)
+  hasAcceptedOversight  Boolean                 @default(false)
+  totpSecret            String?
+  mfaEnabled            Boolean                 @default(false)
+  webauthnCredentials   Json?
+  acceptedTermsAt       DateTime?
+  apiMonitors           APIMonitor[]            @relation("UserAPIMonitors")
+  accounts              Account[]
+  apiProjects           ApiProject[]            @relation("ApiProjectOwner")
+  auditLogs             AuditLog[]
+  auditReports          AuditReport[]
+  betaUsers             BetaUser[]              @relation("BetaUsers")
+  chatbotConversations  ChatbotConversation[]
+  consultingClients     ConsultingClient[]
+  consultingJobs        ConsultingJob[]
+  creditBalance         CreditBalance?
+  creditTransactions    CreditTransaction[]
+  dataExports           DataExport[]
+  deploymentApprovals   DeploymentApproval[]    @relation("DeploymentApprover")
+  deploymentRequests    DeploymentApproval[]    @relation("DeploymentRequester")
+  quotes                EnterpriseQuote[]       @relation("UserQuotes")
+  flywheelInsights      FlywheelInsight[]       @relation("UserInsights")
+  honeypots             Honeypot[]              @relation("HoneypotOwner")
+  testResults           HoneypotTestResult[]
+  userNotifications     Notification[]
+  notifications         NotificationPreference?
+  organizationsOwned    Organization[]          @relation("OrganizationOwner")
+  organizations         OrganizationMember[]
+  repositories          Repository[]            @relation("RepositoryOwner")
+  scanSchedules         ScanSchedule[]
+  secrets               Secret[]                @relation("UserSecrets")
+  sessions              Session[]
+  subscriptions         Subscription[]
+  assignedTickets       SupportTicket[]         @relation("AssignedTickets")
+  supportTickets        SupportTicket[]
+  teamsCreated          Team[]                  @relation("TeamCreatedBy")
+  sentInvitations       TeamInvitation[]
+  teams                 TeamMember[]
+  ticketMessages        TicketMessage[]
+  apiKeys               UserApiKey[]
+  feedbacks             UserFeedback[]
+  grantedProjectAccess  TeamProjectAccess[]     @relation("GrantedProjectAccess")
 }
 
 model UserApiKey {
@@ -184,6 +187,7 @@ model ApiProject {
   organizationId     String?
   repositoryId       String?             @unique
   surveillanceApiKey String?             @unique
+  surveillanceKeyId  String?             @unique
   webhookSecret      String?
   createdBy          User                @relation("ApiProjectOwner", fields: [createdById], references: [id])
   organization       Organization?       @relation(fields: [organizationId], references: [id])
@@ -365,6 +369,8 @@ model LiveThreatEvent {
   sessionActiveAfterAction Boolean?
   sessionId                String?
   userId                   String?
+  signature                String?
+  previousSignature        String?
   project                  ApiProject     @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
@@ -1443,6 +1449,36 @@ model EnterpriseAccountLockHistory {
   @@index([timestamp])
 }
 
+// Option B (anomaly-gated metering, 2026-08-27): lightweight, APPROXIMATE
+// aggregate telemetry for CLEAN/unflagged traffic — request counts, unique
+// endpoint counts, error rate, and avg latency per alias-or-IP per time
+// bucket. Intentionally NOT a billing-relevant table: it exists so B1/B10's
+// population-level baseline needs (see DF-Session-task-report-27-08-26.md,
+// Section 1) can still be fed without every clean request generating a full,
+// billed LiveThreatEvent row. Rows are upsert-merged across batched SDK
+// flushes (see TelemetryRollupBuffer), so counts are approximate under
+// concurrent writes — acceptable here since this table is never read for
+// billing/quota purposes.
+model AliasTelemetryRollup {
+  id              String   @id @default(cuid())
+  projectId       String
+  aliasOrIpKey    String
+  periodKey       String
+  requestCount    Int      @default(0)
+  uniqueEndpoints Int      @default(0)
+  errorRate       Float    @default(0)
+  avgLatencyMs    Float    @default(0)
+  windowStart     DateTime
+  windowEnd       DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([projectId, aliasOrIpKey, periodKey])
+  @@index([projectId])
+  @@index([periodKey])
+  @@index([windowStart])
+}
+
 model EnterpriseUsagePeriod {
   id               String   @id @default(cuid())
   orgId            String
@@ -1516,35 +1552,72 @@ model EnterpriseInvoice {
 }
 
 model CredentialAlias {
-  id               String     @id @default(cuid())
-  projectId        String
-  workload         String     @default("custom")
-  label            String
-  aliasKeyHash     String
-  state            String     @default("active")
-  familyId         String?
-  scope            String?
-  tags             String?
-  maxUses          Int?
-  expiresAt        DateTime?
-  usageCount       Int        @default(0)
-  lastUsedAt       DateTime?
-  rotatedFromId    String?
-  rotatedToId      String?
-  revokedAt        DateTime?
-  revocationReason String?
-  bindingIpCidr    String?
-  bindingRegions   String[]
-  bindingTimeZone  String?
-  bindingTimeStart String?
-  bindingTimeEnd   String?
+  id                String     @id @default(cuid())
+  projectId         String
+  workload          String     @default("custom")
+  label             String
+  aliasKeyHash      String
+  state             String     @default("active")
+  familyId          String?
+  scope             String?
+  tags              String?
+  maxUses           Int?
+  expiresAt         DateTime?
+  usageCount        Int        @default(0)
+  lastUsedAt        DateTime?
+  rotatedFromId     String?
+  rotatedToId       String?
+  revokedAt         DateTime?
+  revocationReason  String?
+  bindingIpCidr     String?
+  bindingRegions    String[]
+  bindingTimeZone   String?
+  bindingTimeStart  String?
+  bindingTimeEnd    String?
   bindingWorkloadId String?
-  bindingDeviceId  String?
-  bindingAppBundle String?
+  bindingDeviceId   String?
+  bindingAppBundle  String?
   bindingAgentTools String[]
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
-  project          ApiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  // CTXFP-P1-03 — agent execution-context baseline (workload='agent' aliases).
+  // Written by the Postgres-backed create route, not by the SDK's disconnected
+  // in-memory AgentCredentialManager — two distinct alias mechanisms by design.
+  bindingContainerId              String?
+  bindingExpectedEgressPath       String?
+  bindingExpectedProcessSignature String?
+  // Task-scope fencing — a per-alias declared task narrows bindingAgentTools
+  // (the agent's overall static allow-list) to the subset actually needed
+  // for that task. Additive, nullable/empty-default: an alias created
+  // without a declared task is unaffected — see hasBindingBaseline() and
+  // the task_scope_violation check in lib/alias-binding-validator.ts.
+  declaredTask              String?
+  declaredTaskAllowedTools  String[]
+  // Operation-class verification — the class(es) of operation (read,
+  // download, list, write, publish, message) this alias was issued for,
+  // independent of what the target system's own authorization allows.
+  // Additive, empty-default: an alias created without any recorded classes
+  // is unaffected — see hasBindingBaseline() and the
+  // operation_class_violation check in lib/alias-binding-validator.ts.
+  permittedOperationClasses String[]
+  // Model/build identity — one more component of the CTXFP-P1-03 execution-
+  // context fingerprint, alongside bindingExpectedProcessSignature.
+  // Captured at issuance for workload:'agent' aliases only (accepted
+  // regardless, same permissive pattern as the other binding fields).
+  // Opaque string — no model registry. Design note: the observed value
+  // compared against this at verify time must be reported by the
+  // orchestrating harness, outside the agent's own execution context — an
+  // agent reporting this about itself defeats the check, the same
+  // trust-boundary reasoning as bindingExpectedProcessSignature.
+  bindingExpectedModelIdentifier String?
+  // Named human owner — an optional, free-form identifier (user id or
+  // email; not validated against the User table, so it also works for an
+  // owner who isn't a DevFortress platform user) captured at creation.
+  // Additive, nullable: an alias created without one is unaffected —
+  // existing API clients keep working unchanged. No project-level
+  // "require owner" enforcement — that's explicitly out of scope here.
+  ownerIdentifier   String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  project           ApiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
   @@index([state])
@@ -1578,6 +1651,15 @@ model TrustChainHop {
   trust         Float
   scope         String[]
   createdAt     DateTime         @default(now())
+  // Invocation-context fingerprint (additive, nullable) — mirrors
+  // CredentialAlias's bindingIpCidr/bindingWorkloadId/bindingDeviceId/
+  // bindingContainerId dimensions at the per-hop level for the multi-hop
+  // trust chain. Null when a hop carries no fingerprint.
+  fingerprintRequestIp         String?
+  fingerprintGeoCountry        String?
+  fingerprintWorkloadId        String?
+  fingerprintDeviceFingerprint String?
+  fingerprintContainerId       String?
 
   @@unique([chainId, hopIndex])
   @@index([chainId])
@@ -2136,3 +2218,38 @@ model RateLimitBucket {
   @@index([windowStart])
 }
 
+model RedisFallback {
+  key        String   @id
+  value      String
+  expires_at DateTime
+  created_at DateTime @default(now())
+
+  @@index([expires_at], name: "idx_redis_fallback_expires_at")
+}
+
+model KraReport {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  period    String   @unique
+  liability Json
+  csv       String
+  createdAt DateTime @default(now())
+
+  @@index([period], name: "idx_kra_report_period")
+}
+
+model CustomRule {
+  id             String   @id @default(uuid())
+  userId         String
+  name           String
+  description    String?
+  priority       Int      @default(500)
+  conditions     Json
+  conditionLogic String   @default("AND")
+  action         Json
+  enabled        Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@index([priority])
+}

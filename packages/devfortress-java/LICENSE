@@ -1,0 +1,63 @@
+Business Source License 1.1
+
+Licensor:             Duncan Ndegwa / DevFortress
+                      devfortress.net
+                      Nairobi, Kenya
+
+Licensed Work:        DevFortress SDK for Java
+                      The Licensed Work is (c) 2026 Duncan Ndegwa
+
+Change Date:          Four years from the date each version of the
+                      Licensed Work is first publicly distributed.
+                      For net.devfortress:devfortress-sdk@0.1.0, the
+                      Change Date is 2030-01-01.
+
+Change License:       Apache License, Version 2.0
+
+Additional Use Grant: You may use the Licensed Work to monitor,
+                      observe, and protect your own applications,
+                      APIs, and AI agents for security threats,
+                      provided that you do not use the Licensed Work
+                      to provide a competing commercial security
+                      monitoring service or platform to third parties.
+
+For commercial licensing, enterprise use, or questions:
+support@devfortress.net
+
+-----------------------------------------------------------------------------
+
+Business Source License 1.1
+
+Terms
+
+The Licensor hereby grants you the right to copy, modify, create
+derivative works, redistribute, and make non-production use of the
+Licensed Work. The Licensor may make an Additional Use Grant, above,
+permitting limited production use.
+
+Effective on the Change Date, or the fourth anniversary of the first
+publicly available distribution of a specific version of the Licensed
+Work under this License, whichever comes first, the Licensor hereby
+grants you rights under the terms of the Change License, and the
+rights granted in the paragraph above terminate.
+
+If your use of the Licensed Work does not comply with the requirements
+currently in effect as described in this License, you must purchase a
+commercial license from the Licensor, refrain from using the Licensed
+Work, or make arrangements with the Licensor for a separate license.
+
+For avoidance of doubt, a "Competing Service" means any commercial
+product or service that provides API security monitoring, application
+security monitoring, AI agent security monitoring, session threat
+detection, automated threat response, or credential isolation
+functionality to third parties.
+
+Notice
+
+The Business Source License (this document, or the "License") is not
+an Open Source license. However, the Licensed Work will eventually be
+made available under an Open Source License, as stated in this License.
+
+License text copyright (c) 2017 MariaDB Corporation Ab, All Rights
+Reserved. "Business Source License" is a trademark of MariaDB
+Corporation Ab.

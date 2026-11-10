@@ -1,0 +1,23 @@
+# Exclude source files (already handled by 'files' field but for safety)
+src/**/*.ts
+!src/middleware/*.py
+
+# Exclude internal engine details
+dist/internal-closed-loop-engine.d.ts
+
+# Exclude tests
+**/__tests__
+**/*.test.ts
+**/*.test.js
+
+# Exclude internal docs
+*.md
+!README.md
+!CHANGELOG.md
+
+# Exclude validations
+validations/
+
+# Exclude local config
+.env*
+tsconfig.tsbuildinfo

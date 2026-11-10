@@ -220,47 +220,56 @@ export default function FeaturesPage() {
               </div>
             </div>
             <div className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-              <span className="text-2xl">✅</span>
+              <span className="text-2xl">🔜</span>
               <div>
                 <p className="font-semibold">Python/FastAPI</p>
                 <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                  Pydantic, SQLAlchemy, pytest
+                  Coming Soon
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-              <span className="text-2xl">✅</span>
+              <span className="text-2xl">🔜</span>
               <div>
                 <p className="font-semibold">Go/Gin</p>
                 <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                  Go modules, GORM, testify
+                  Coming Soon
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-              <span className="text-2xl">✅</span>
+              <span className="text-2xl">🔜</span>
               <div>
                 <p className="font-semibold">Java/Spring Boot</p>
                 <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                  Available
+                  Coming Soon
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-              <span className="text-2xl">✅</span>
+              <span className="text-2xl">🔜</span>
               <div>
                 <p className="font-semibold">Ruby/Rails</p>
                 <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                  Available
+                  Coming Soon
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-              <span className="text-2xl">✅</span>
+              <span className="text-2xl">🔜</span>
               <div>
                 <p className="font-semibold">C#/ASP.NET Core</p>
                 <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                  Available
+                  Coming Soon
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+              <span className="text-2xl">🔜</span>
+              <div>
+                <p className="font-semibold">PHP/Laravel</p>
+                <p className="text-xs text-neutral-600 dark:text-neutral-400">
+                  Coming Soon
                 </p>
               </div>
             </div>
@@ -316,7 +325,7 @@ export default function FeaturesPage() {
           </p>
           <div className="mt-6 flex justify-center gap-4">
             <Link
-              href="/auth/signin"
+              href="/login"
               className="inline-flex items-center rounded-lg bg-primary-600 px-8 py-3 text-sm font-semibold text-white hover:bg-primary-700"
             >
               Sign Up Free →

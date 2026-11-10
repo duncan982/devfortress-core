@@ -10,8 +10,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { PrismaClient } from '@prisma/client';
-import { randomBytes } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import { z } from 'zod';
+
+/**
+ * Non-secret key ID for signed requests: first 32 hex characters of
+ * SHA-256(UTF-8 key). Kept in step with the platform's derivation; the shared
+ * vector file pins both. Stored in ApiProject.surveillanceKeyId wherever
+ * surveillanceApiKey is set, rotated or cleared.
+ */
+function deriveKeyId(apiKey: string): string {
+  return createHash('sha256').update(apiKey, 'utf8').digest('hex').slice(0, 32);
+}
 
 // Prisma singleton — prevents multiple instances in dev hot-reload
 declare global {
@@ -98,6 +108,7 @@ export async function POST(request: NextRequest) {
         },
         createdById: user.id,
         surveillanceApiKey: apiKey,
+        surveillanceKeyId: deriveKeyId(apiKey),
         webhookSecret,
       },
       select: {
@@ -279,6 +290,7 @@ export async function DELETE(request: NextRequest) {
       where: { id: projectId },
       data: {
         surveillanceApiKey: null,
+        surveillanceKeyId: null,
         webhookSecret: null,
       },
     });

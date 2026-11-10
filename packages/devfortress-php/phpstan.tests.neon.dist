@@ -1,0 +1,5 @@
+# Tests read JSON vector files, so their data is `mixed` by nature: level 8 there, max on src.
+parameters:
+    level: 8
+    paths:
+        - tests

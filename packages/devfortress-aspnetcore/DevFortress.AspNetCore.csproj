@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Version>0.1.0</Version>
+    <Description>ASP.NET Core middleware for the DevFortress .NET SDK: observes each request and reports a security event for it after the response has been sent.</Description>
+    <Authors>Duncan Ndungu Ndegwa</Authors>
+    <PackageId>DevFortress.AspNetCore</PackageId>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <RepositoryUrl>https://github.com/duncan982/devfortress-core</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\devfortress-dotnet\DevFortress.Sdk.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The tests/ subfolder is its own project; exclude it from this project's default **/*.cs glob. -->
+    <Compile Remove="tests/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="LICENSE" Pack="true" PackagePath="" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,29 @@
+# Tier2Gated/ (A19C agent-identity protection, plus B3 ConsentAliasLifecycle
+# and B4 MultiHopTrustChain as of TODO 420, 2026-11-03) and Internal.php
+# (its only entry point) are PATENT-GATE'd — excluded from the distributed
+# package (a tagged GitHub release archive / `composer create-project`
+# dist zipball), mirroring the Node SDK package.json's
+# `!dist/consent-alias-lifecycle.*`/`!dist/multi-hop-trust-chain.*`/
+# `!dist/agent-identity/**`/`!dist/internal.js` exclusions and the Ruby
+# SDK gemspec's `files` rejection of the same surface. See
+# src/Internal.php's own comment for why this is the ONLY real boundary
+# layer in PHP — there is no private_constant/internal-visibility
+# equivalent here.
+#
+# TODO 420 reversed TODO 367's 2026-10-16 decision to ship B3/B4 public:
+# that decision assumed Node already shipped them public, but commit
+# 4a3e71e3 (2026-10-06) had already excluded them from Node's npm tarball
+# ten days earlier. Duncan's resolution: match Node's actual excluded
+# state.
+src/Tier2Gated export-ignore
+src/Internal.php export-ignore
+
+# Development-only files never belong in a distributed package (this also
+# covers tests/Tier2Gated/ and tests/InternalTest.php, so no gated test
+# ever ships either).
+/tests export-ignore
+/.gitignore export-ignore
+/.gitattributes export-ignore
+/phpstan.neon.dist export-ignore
+/phpstan.tests.neon.dist export-ignore
+/phpunit.xml.dist export-ignore

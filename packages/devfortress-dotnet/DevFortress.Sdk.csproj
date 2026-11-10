@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Version>0.1.0</Version>
+    <Description>DevFortress event client (external mode): request signing, classifier, webhook verification. No runtime dependencies beyond the BCL.</Description>
+    <Authors>Duncan Ndungu Ndegwa</Authors>
+    <PackageId>DevFortress.Sdk</PackageId>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <RepositoryUrl>https://github.com/duncan982/devfortress-core</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The tests/ subfolder is its own project; exclude it from this project's default **/*.cs glob. -->
+    <Compile Remove="tests/**/*.cs" />
+    <!-- TODO 418 — Tier2Gated is its own project (Tier2Gated/DevFortress.Sdk.Tier2Gated.csproj),
+         never referenced from here, so it can never ship in this project's published NuGet
+         package. The nested .csproj already excludes its own directory from this project's
+         default glob; this is explicit for clarity and parity with the tests/ exclusion above. -->
+    <Compile Remove="Tier2Gated/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="LICENSE" Pack="true" PackagePath="" />
+  </ItemGroup>
+
+</Project>
