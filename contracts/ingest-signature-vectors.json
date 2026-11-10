@@ -1,0 +1,1215 @@
+{
+  "contract": "DevFortress SDK request signature, contract v2 (every SDK-to-platform call)",
+  "signature_version": "2",
+  "algorithm": "HMAC-SHA256 (lowercase hex) keyed with the project API key (UTF-8), over the UTF-8 canonical string; payload_hash is the lowercase hex SHA-256 of the exact request body bytes (empty body hashes the empty string)",
+  "canonical_string": "{METHOD}.{request_target}.{timestamp}.{nonce}.{payload_hash}",
+  "method": "uppercase HTTP method",
+  "request_target": "URL path plus '?' plus query string exactly as sent: no host, no re-encoding, no normalisation",
+  "headers": {
+    "key_id": "X-DevFortress-Key-Id",
+    "version": "X-DevFortress-Signature-Version",
+    "nonce": "X-DevFortress-Nonce",
+    "timestamp": "X-DevFortress-Timestamp",
+    "payload_hash": "X-DevFortress-Payload-Hash",
+    "signature": "X-DevFortress-Signature"
+  },
+  "timestamp_format": "Unix epoch milliseconds as a decimal string",
+  "nonce_format": "dashed UUID v4, at most 128 characters, unique per request attempt",
+  "tolerance_seconds": 300,
+  "expected_values": {
+    "valid": "signature and payload hash match",
+    "invalid": "headers present but signature or payload hash does not match",
+    "expired": "headers present and correct but timestamp outside tolerance",
+    "missing": "one or more of nonce, timestamp, payload hash, signature absent",
+    "unsupported_version": "version header absent or not 2"
+  },
+  "generated_by": "independent Python hmac/hashlib script (contracts/generate-ingest-signature-vectors.py), not by either SDK",
+  "vectors": [
+    {
+      "name": "valid_post_ingest",
+      "description": "POST ingest, fresh timestamp, correct signature",
+      "verify_key": "vx_live_test_vector_key_do_not_use",
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0001",
+        "timestamp": "1768478370000",
+        "payload_hash": "8f72b272dec0d5c577cc4aea1fb0d9e360bc78f6917804d84cac9f5fd4b591bd",
+        "signature": "99f3920a67a2c4f4c1b14d59998039696a706f7f1ad37870628087fa77c79e24",
+        "version": "2"
+      },
+      "now_ms": 1768478400000,
+      "expected": "valid",
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "POST",
+        "request_target": "/api/events/ingest",
+        "timestamp": "1768478370000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0001",
+        "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}"
+      }
+    },
+    {
+      "name": "valid_batch",
+      "description": "POST ingest with a batch body",
+      "verify_key": "vx_live_test_vector_key_do_not_use",
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"events\":[{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"},{\"eventType\":\"custom\",\"ip\":\"203.0.113.8\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}]}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0002",
+        "timestamp": "1768478370000",
+        "payload_hash": "6f5b8ca1a0413329d4e95be5a7a0aa4ab54d673a46f6c98366c38302c9a01785",
+        "signature": "39767c3bf9429745771a8d7dfeb99e68fda0713448f1f418c838a7f8c45ffd28",
+        "version": "2"
+      },
+      "now_ms": 1768478400000,
+      "expected": "valid",
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "POST",
+        "request_target": "/api/events/ingest",
+        "timestamp": "1768478370000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0002",
+        "body": "{\"events\":[{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"},{\"eventType\":\"custom\",\"ip\":\"203.0.113.8\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}]}"
+      }
+    },
+    {
+      "name": "valid_unicode_body",
+      "description": "Non-ASCII body: hash covers the UTF-8 bytes",
+      "verify_key": "vx_live_test_vector_key_do_not_use",
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"path\":\"/api/café/日本\",\"note\":\"üñï\"}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0003",
+        "timestamp": "1768478370000",
+        "payload_hash": "569ec4eafed7f442a435cf5aa40cee32e1e512adf97166e6ca593a675b0a33fa",
+        "signature": "7ec9be6a9b8412548c1fd37086c91dcb05832c12f629a04f05a6bbf1ea55a51c",
+        "version": "2"
+      },
+      "now_ms": 1768478400000,
+      "expected": "valid",
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "POST",
+        "request_target": "/api/events/ingest",
+        "timestamp": "1768478370000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0003",
+        "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"path\":\"/api/café/日本\",\"note\":\"üñï\"}"
+      }
+    },
+    {
+      "name": "valid_get_empty_body",
+      "description": "GET with an empty body: the hash is SHA-256 of the empty string",
+      "verify_key": "vx_live_test_vector_key_do_not_use",
+      "method": "GET",
+      "request_target": "/api/events/verify-connection",
+      "body": "",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0004",
+        "timestamp": "1768478370000",
+        "payload_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "signature": "b6004f5af6188933c8a0a08a9ff0b178b29474fc773f423bd40d870ede4a2513",
+        "version": "2"
+      },
+      "now_ms": 1768478400000,
+      "expected": "valid",
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "GET",
+        "request_target": "/api/events/verify-connection",
+        "timestamp": "1768478370000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0004",
+        "body": ""
+      }
+    },
+    {
+      "name": "valid_get_query",
+      "description": "GET with a query string: the target is signed exactly as sent",
+      "verify_key": "vx_live_test_vector_key_do_not_use",
+      "method": "GET",
+      "request_target": "/api/events/blocked?ip=203.0.113.7&userId=u_1",
+      "body": "",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0005",
+        "timestamp": "1768478370000",
+        "payload_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "signature": "9acd5316a9ad93429aa0813cb92f27fb9eab30c45cf969eb5b72901b6ab2739c",
+        "version": "2"
+      },
+      "now_ms": 1768478400000,
+      "expected": "valid",
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "GET",
+        "request_target": "/api/events/blocked?ip=203.0.113.7&userId=u_1",
+        "timestamp": "1768478370000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0005",
+        "body": ""
+      }
+    },
+    {
+      "name": "valid_post_prefixed_path",
+      "description": "POST under a path prefix: the prefix is part of the signed target",
+      "verify_key": "vx_live_test_vector_key_do_not_use",
+      "method": "POST",
+      "request_target": "/gateway/api/sdk/heartbeat",
+      "body": "{\"timestamp\":1768478370000}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0006",
+        "timestamp": "1768478370000",
+        "payload_hash": "bf220a7d2b108bcb7a070b5cc0715614d8886f526d7020e310998e683835fe18",
+        "signature": "028c4aecf11334425efc36a0e64bd6be9350e8e3d9b8e22e5672c8743616d76e",
+        "version": "2"
+      },
+      "now_ms": 1768478400000,
+      "expected": "valid",
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "POST",
+        "request_target": "/gateway/api/sdk/heartbeat",
+        "timestamp": "1768478370000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0006",
+        "body": "{\"timestamp\":1768478370000}"
+      }
+    },
+    {
+      "name": "valid_post_query_on_post",
+      "description": "POST with a query string",
+      "verify_key": "vx_live_test_vector_key_do_not_use",
+      "method": "POST",
+      "request_target": "/api/sdk/license-check?v=1",
+      "body": "{\"sdkVersion\":\"4.11.0\"}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0007",
+        "timestamp": "1768478370000",
+        "payload_hash": "8d973e5560c454b4d0afe4fb18145de7864e3f909eefdd2cb226db0eb4709259",
+        "signature": "cc06bc59d608faf363e34cc7306770e59089e58d02e9109e531356d681e3547f",
+        "version": "2"
+      },
+      "now_ms": 1768478400000,
+      "expected": "valid",
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "POST",
+        "request_target": "/api/sdk/license-check?v=1",
+        "timestamp": "1768478370000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0007",
+        "body": "{\"sdkVersion\":\"4.11.0\"}"
+      }
+    },
+    {
+      "name": "uppercase_hex_accepted",
+      "description": "Hex is compared case-insensitively",
+      "verify_key": "vx_live_test_vector_key_do_not_use",
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d005a",
+        "timestamp": "1768478370000",
+        "payload_hash": "8F72B272DEC0D5C577CC4AEA1FB0D9E360BC78F6917804D84CAC9F5FD4B591BD",
+        "signature": "5CF7D4717CCD462A00AE290844CBE119B6192AA8B855C47C86D2D0BFEF4A6576",
+        "version": "2"
+      },
+      "now_ms": 1768478400000,
+      "expected": "valid",
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "POST",
+        "request_target": "/api/events/ingest",
+        "timestamp": "1768478370000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d005a",
+        "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}"
+      }
+    },
+    {
+      "name": "different_path",
+      "description": "Signature made for /api/events/blocked?... presented on another path",
+      "verify_key": "vx_live_test_vector_key_do_not_use",
+      "method": "GET",
+      "request_target": "/api/events/test-ips?ip=203.0.113.7&userId=u_1",
+      "body": "",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0009",
+        "timestamp": "1768478370000",
+        "payload_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "signature": "6f0ed10f16821d17280e42f6a3aad85e2b9610fff108831e1eb4a36e4744fa60",
+        "version": "2"
+      },
+      "now_ms": 1768478400000,
+      "expected": "invalid",
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "GET",
+        "request_target": "/api/events/blocked?ip=203.0.113.7&userId=u_1",
+        "timestamp": "1768478370000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0009",
+        "body": ""
+      }
+    },
+    {
+      "name": "different_path_same_query",
+      "description": "Signature for one empty-body endpoint replayed on another",
+      "verify_key": "vx_live_test_vector_key_do_not_use",
+      "method": "GET",
+      "request_target": "/api/events/verify-connection?ip=203.0.113.7&userId=u_1",
+      "body": "",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d000a",
+        "timestamp": "1768478370000",
+        "payload_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "signature": "da9106acedcdbb42769f84e3ceefd3593b6ced0fce2a0b2b31ae625792adb6aa",
+        "version": "2"
+      },
+      "now_ms": 1768478400000,
+      "expected": "invalid",
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "GET",
+        "request_target": "/api/events/blocked?ip=203.0.113.7&userId=u_1",
+        "timestamp": "1768478370000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d000a",
+        "body": ""
+      }
+    },
+    {
+      "name": "different_method",
+      "description": "Signature made for GET presented on POST",
+      "verify_key": "vx_live_test_vector_key_do_not_use",
+      "method": "POST",
+      "request_target": "/api/events/blocked?ip=203.0.113.7&userId=u_1",
+      "body": "",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d000b",
+        "timestamp": "1768478370000",
+        "payload_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "signature": "82584bfa60d5e24bfec84d1797c61a63b8fcfb85e772f70a6222a9177fb1b8fa",
+        "version": "2"
+      },
+      "now_ms": 1768478400000,
+      "expected": "invalid",
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "GET",
+        "request_target": "/api/events/blocked?ip=203.0.113.7&userId=u_1",
+        "timestamp": "1768478370000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d000b",
+        "body": ""
+      }
+    },
+    {
+      "name": "changed_query",
+      "description": "Query string altered after signing",
+      "verify_key": "vx_live_test_vector_key_do_not_use",
+      "method": "GET",
+      "request_target": "/api/events/blocked?ip=203.0.113.99&userId=u_1",
+      "body": "",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d000c",
+        "timestamp": "1768478370000",
+        "payload_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "signature": "cdb7bd073d048f2dc39c360141efac777bfb16bd8d4ea94d91462be0dd0710df",
+        "version": "2"
+      },
+      "now_ms": 1768478400000,
+      "expected": "invalid",
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "GET",
+        "request_target": "/api/events/blocked?ip=203.0.113.7&userId=u_1",
+        "timestamp": "1768478370000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d000c",
+        "body": ""
+      }
+    },
+    {
+      "name": "query_added",
+      "description": "Query string appended to a request signed without one",
+      "verify_key": "vx_live_test_vector_key_do_not_use",
+      "method": "GET",
+      "request_target": "/api/events/verify-connection?x=1",
+      "body": "",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d000d",
+        "timestamp": "1768478370000",
+        "payload_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "signature": "7b0e9a4a69227381fbc774f1717bb06fe58310b89194c0a64427d59c7a705f0c",
+        "version": "2"
+      },
+      "now_ms": 1768478400000,
+      "expected": "invalid",
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "GET",
+        "request_target": "/api/events/verify-connection",
+        "timestamp": "1768478370000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d000d",
+        "body": ""
+      }
+    },
+    {
+      "name": "prefix_stripped",
+      "description": "Signed under a prefix, received without it",
+      "verify_key": "vx_live_test_vector_key_do_not_use",
+      "method": "POST",
+      "request_target": "/api/sdk/heartbeat",
+      "body": "{\"timestamp\":1768478370000}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d000e",
+        "timestamp": "1768478370000",
+        "payload_hash": "bf220a7d2b108bcb7a070b5cc0715614d8886f526d7020e310998e683835fe18",
+        "signature": "b2fee72fbf76a7181f8f74c58301afde183fd5403c62ae5a24108933e8ff2628",
+        "version": "2"
+      },
+      "now_ms": 1768478400000,
+      "expected": "invalid",
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "POST",
+        "request_target": "/gateway/api/sdk/heartbeat",
+        "timestamp": "1768478370000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d000e",
+        "body": "{\"timestamp\":1768478370000}"
+      }
+    },
+    {
+      "name": "tampered_body",
+      "description": "Body changed after signing",
+      "verify_key": "vx_live_test_vector_key_do_not_use",
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"HIGH\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d000f",
+        "timestamp": "1768478370000",
+        "payload_hash": "8f72b272dec0d5c577cc4aea1fb0d9e360bc78f6917804d84cac9f5fd4b591bd",
+        "signature": "707d25575a7bb19b084898fe4f9d218ac3c2be6395cfdfb29b073d55044eb76e",
+        "version": "2"
+      },
+      "now_ms": 1768478400000,
+      "expected": "invalid",
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "POST",
+        "request_target": "/api/events/ingest",
+        "timestamp": "1768478370000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d000f",
+        "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}"
+      }
+    },
+    {
+      "name": "tampered_nonce",
+      "description": "Nonce changed after signing",
+      "verify_key": "vx_live_test_vector_key_do_not_use",
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d003d",
+        "timestamp": "1768478370000",
+        "payload_hash": "8f72b272dec0d5c577cc4aea1fb0d9e360bc78f6917804d84cac9f5fd4b591bd",
+        "signature": "1689a85e3752f70baba2c6c3615b3d50be98b3901cc710158225151ef78abb7e",
+        "version": "2"
+      },
+      "now_ms": 1768478400000,
+      "expected": "invalid",
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "POST",
+        "request_target": "/api/events/ingest",
+        "timestamp": "1768478370000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d003c",
+        "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}"
+      }
+    },
+    {
+      "name": "tampered_timestamp",
+      "description": "Timestamp changed after signing",
+      "verify_key": "vx_live_test_vector_key_do_not_use",
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d003e",
+        "timestamp": "1768478371000",
+        "payload_hash": "8f72b272dec0d5c577cc4aea1fb0d9e360bc78f6917804d84cac9f5fd4b591bd",
+        "signature": "0f0bc45def7527500448548f42618c2889a08f0b7861a0d45d40ae1a497cb88a",
+        "version": "2"
+      },
+      "now_ms": 1768478400000,
+      "expected": "invalid",
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "POST",
+        "request_target": "/api/events/ingest",
+        "timestamp": "1768478370000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d003e",
+        "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}"
+      }
+    },
+    {
+      "name": "wrong_key",
+      "description": "Signed with a different key than the verifier holds",
+      "verify_key": "vx_live_test_vector_key_do_not_use",
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0012",
+        "timestamp": "1768478370000",
+        "payload_hash": "8f72b272dec0d5c577cc4aea1fb0d9e360bc78f6917804d84cac9f5fd4b591bd",
+        "signature": "410d4463ddf34cfb29370a05a9ad10170dea77dc4a7620ec8db13b4ea8630726",
+        "version": "2"
+      },
+      "now_ms": 1768478400000,
+      "expected": "invalid",
+      "sign_input": {
+        "api_key": "vx_live_other_project_vector_key_do_not_use",
+        "method": "POST",
+        "request_target": "/api/events/ingest",
+        "timestamp": "1768478370000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0012",
+        "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}"
+      }
+    },
+    {
+      "name": "payload_hash_mismatch",
+      "description": "Hash header does not match the body",
+      "verify_key": "vx_live_test_vector_key_do_not_use",
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0013",
+        "timestamp": "1768478370000",
+        "payload_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "signature": "57bf70861d543eba6dbde3ff67316ee5572fa439f8b6fc05ef3fbca03cd20e81",
+        "version": "2"
+      },
+      "now_ms": 1768478400000,
+      "expected": "invalid"
+    },
+    {
+      "name": "stale_timestamp",
+      "description": "Correct signature, timestamp 10 minutes old",
+      "verify_key": "vx_live_test_vector_key_do_not_use",
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0014",
+        "timestamp": "1768477800000",
+        "payload_hash": "8f72b272dec0d5c577cc4aea1fb0d9e360bc78f6917804d84cac9f5fd4b591bd",
+        "signature": "71b7d03da6fd064399264e4432dfbce91e3e936fd23d07920b9c71ee97823b31",
+        "version": "2"
+      },
+      "now_ms": 1768478400000,
+      "expected": "expired",
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "POST",
+        "request_target": "/api/events/ingest",
+        "timestamp": "1768477800000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0014",
+        "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}"
+      }
+    },
+    {
+      "name": "future_timestamp",
+      "description": "Correct signature, timestamp 10 minutes ahead",
+      "verify_key": "vx_live_test_vector_key_do_not_use",
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0015",
+        "timestamp": "1768479000000",
+        "payload_hash": "8f72b272dec0d5c577cc4aea1fb0d9e360bc78f6917804d84cac9f5fd4b591bd",
+        "signature": "0f072d16ee2350a4ae59bc6f3f76cee0a8335e1a0689923959456fead287b26f",
+        "version": "2"
+      },
+      "now_ms": 1768478400000,
+      "expected": "expired",
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "POST",
+        "request_target": "/api/events/ingest",
+        "timestamp": "1768479000000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0015",
+        "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}"
+      }
+    },
+    {
+      "name": "missing_signature",
+      "description": "Signature header absent",
+      "verify_key": "vx_live_test_vector_key_do_not_use",
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0016",
+        "timestamp": "1768478370000",
+        "payload_hash": "8f72b272dec0d5c577cc4aea1fb0d9e360bc78f6917804d84cac9f5fd4b591bd",
+        "signature": null,
+        "version": "2"
+      },
+      "now_ms": 1768478400000,
+      "expected": "missing"
+    },
+    {
+      "name": "missing_nonce",
+      "description": "Nonce header absent",
+      "verify_key": "vx_live_test_vector_key_do_not_use",
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "nonce": null,
+        "timestamp": "1768478370000",
+        "payload_hash": "8f72b272dec0d5c577cc4aea1fb0d9e360bc78f6917804d84cac9f5fd4b591bd",
+        "signature": "38beac8e12bcd9fba245241608d92326748f59cf7ddaec34d0a69e46f03ed8e7",
+        "version": "2"
+      },
+      "now_ms": 1768478400000,
+      "expected": "missing",
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "POST",
+        "request_target": "/api/events/ingest",
+        "timestamp": "1768478370000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0017",
+        "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}"
+      }
+    },
+    {
+      "name": "missing_version",
+      "description": "Signature version header absent",
+      "verify_key": "vx_live_test_vector_key_do_not_use",
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0018",
+        "timestamp": "1768478370000",
+        "payload_hash": "8f72b272dec0d5c577cc4aea1fb0d9e360bc78f6917804d84cac9f5fd4b591bd",
+        "signature": "7034612b6d1acda16c19d404a48fdd7e12fe6cf319be4f042c765d6f342b2895",
+        "version": null
+      },
+      "now_ms": 1768478400000,
+      "expected": "unsupported_version",
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "POST",
+        "request_target": "/api/events/ingest",
+        "timestamp": "1768478370000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0018",
+        "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}"
+      }
+    },
+    {
+      "name": "version_1",
+      "description": "Version 1 is not accepted",
+      "verify_key": "vx_live_test_vector_key_do_not_use",
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0019",
+        "timestamp": "1768478370000",
+        "payload_hash": "8f72b272dec0d5c577cc4aea1fb0d9e360bc78f6917804d84cac9f5fd4b591bd",
+        "signature": "7acec4f81691ebc5f8af06c0b96235472e707dcd23259c6d2ab98c096a1a8021",
+        "version": "1"
+      },
+      "now_ms": 1768478400000,
+      "expected": "unsupported_version",
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "POST",
+        "request_target": "/api/events/ingest",
+        "timestamp": "1768478370000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0019",
+        "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}"
+      }
+    },
+    {
+      "name": "version_3",
+      "description": "Unknown future version",
+      "verify_key": "vx_live_test_vector_key_do_not_use",
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d001a",
+        "timestamp": "1768478370000",
+        "payload_hash": "8f72b272dec0d5c577cc4aea1fb0d9e360bc78f6917804d84cac9f5fd4b591bd",
+        "signature": "2f03d12807dfaeff291a87a15897e8436413eaa6c1d7a5268535e80ee2bf12d3",
+        "version": "3"
+      },
+      "now_ms": 1768478400000,
+      "expected": "unsupported_version",
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "POST",
+        "request_target": "/api/events/ingest",
+        "timestamp": "1768478370000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d001a",
+        "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}"
+      }
+    }
+  ],
+  "key_id_derivation": {
+    "algorithm": "first 32 lowercase hex characters of SHA-256 over the UTF-8 API key",
+    "vectors": [
+      {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "key_id": "02e30a76bb5341bd8940347f5d5c4a28"
+      },
+      {
+        "api_key": "vx_live_other_project_vector_key_do_not_use",
+        "key_id": "9f15ee50f595c89d7d9c0967731b38a5"
+      },
+      {
+        "api_key": "vx_live_test_vector_third_key_do_not_use",
+        "key_id": "696b08e3d14edb31724e93fadb753a36"
+      }
+    ]
+  },
+  "signed_path_vectors": [
+    {
+      "name": "signed_valid",
+      "description": "POST ingest, key ID only, correct signature",
+      "known_keys": [
+        "vx_live_test_vector_key_do_not_use",
+        "vx_live_other_project_vector_key_do_not_use"
+      ],
+      "api_key_header": null,
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0100",
+        "timestamp": "1768478370000",
+        "payload_hash": "8f72b272dec0d5c577cc4aea1fb0d9e360bc78f6917804d84cac9f5fd4b591bd",
+        "signature": "f85865f88948ab3dd4142ee7b9c76812534bd8bb944aa96bfb4881e0bffb71e3",
+        "version": "2",
+        "key_id": "02e30a76bb5341bd8940347f5d5c4a28"
+      },
+      "now_ms": 1768478400000,
+      "expected": {
+        "accepted": true,
+        "status": 200,
+        "reason": null
+      },
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "POST",
+        "request_target": "/api/events/ingest",
+        "timestamp": "1768478370000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0100",
+        "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}"
+      }
+    },
+    {
+      "name": "signed_valid_get_empty",
+      "description": "Empty-body GET, key ID only",
+      "known_keys": [
+        "vx_live_test_vector_key_do_not_use",
+        "vx_live_other_project_vector_key_do_not_use"
+      ],
+      "api_key_header": null,
+      "method": "GET",
+      "request_target": "/api/events/verify-connection",
+      "body": "",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0101",
+        "timestamp": "1768478370000",
+        "payload_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "signature": "3864fa219e492eec65cc5213162a52345154e2a67ce61425d36eb23ce67e71fb",
+        "version": "2",
+        "key_id": "02e30a76bb5341bd8940347f5d5c4a28"
+      },
+      "now_ms": 1768478400000,
+      "expected": {
+        "accepted": true,
+        "status": 200,
+        "reason": null
+      },
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "GET",
+        "request_target": "/api/events/verify-connection",
+        "timestamp": "1768478370000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0101",
+        "body": ""
+      }
+    },
+    {
+      "name": "signed_valid_get_query",
+      "description": "GET with a query string",
+      "known_keys": [
+        "vx_live_test_vector_key_do_not_use",
+        "vx_live_other_project_vector_key_do_not_use"
+      ],
+      "api_key_header": null,
+      "method": "GET",
+      "request_target": "/api/events/blocked?ip=203.0.113.7&userId=u_1",
+      "body": "",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0102",
+        "timestamp": "1768478370000",
+        "payload_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "signature": "d4139831b4e1372a2ed52fcea38d39e17099b1c7c37177b6cdb5ab6410330408",
+        "version": "2",
+        "key_id": "02e30a76bb5341bd8940347f5d5c4a28"
+      },
+      "now_ms": 1768478400000,
+      "expected": {
+        "accepted": true,
+        "status": 200,
+        "reason": null
+      },
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "GET",
+        "request_target": "/api/events/blocked?ip=203.0.113.7&userId=u_1",
+        "timestamp": "1768478370000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0102",
+        "body": ""
+      }
+    },
+    {
+      "name": "signed_valid_prefixed",
+      "description": "POST under a path prefix",
+      "known_keys": [
+        "vx_live_test_vector_key_do_not_use",
+        "vx_live_other_project_vector_key_do_not_use"
+      ],
+      "api_key_header": null,
+      "method": "POST",
+      "request_target": "/gateway/api/sdk/heartbeat",
+      "body": "{\"timestamp\":1768478370000}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0103",
+        "timestamp": "1768478370000",
+        "payload_hash": "bf220a7d2b108bcb7a070b5cc0715614d8886f526d7020e310998e683835fe18",
+        "signature": "3cba0e91a0b247b8e1b4d6f6671b810378fe837102b1f2bca50718d21387f8b9",
+        "version": "2",
+        "key_id": "02e30a76bb5341bd8940347f5d5c4a28"
+      },
+      "now_ms": 1768478400000,
+      "expected": {
+        "accepted": true,
+        "status": 200,
+        "reason": null
+      },
+      "sign_input": {
+        "api_key": "vx_live_test_vector_key_do_not_use",
+        "method": "POST",
+        "request_target": "/gateway/api/sdk/heartbeat",
+        "timestamp": "1768478370000",
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0103",
+        "body": "{\"timestamp\":1768478370000}"
+      }
+    },
+    {
+      "name": "signed_different_path",
+      "description": "Signature for one endpoint presented on another",
+      "known_keys": [
+        "vx_live_test_vector_key_do_not_use",
+        "vx_live_other_project_vector_key_do_not_use"
+      ],
+      "api_key_header": null,
+      "method": "GET",
+      "request_target": "/api/events/test-ips?ip=203.0.113.7&userId=u_1",
+      "body": "",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0104",
+        "timestamp": "1768478370000",
+        "payload_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "signature": "a6ec67e643b7ec5d66d345dfee477d20d502c6725b34552d4b89941cbedf93d6",
+        "version": "2",
+        "key_id": "02e30a76bb5341bd8940347f5d5c4a28"
+      },
+      "now_ms": 1768478400000,
+      "expected": {
+        "accepted": false,
+        "status": 401,
+        "reason": "signature_invalid"
+      }
+    },
+    {
+      "name": "signed_different_method",
+      "description": "Signature made for GET presented on POST",
+      "known_keys": [
+        "vx_live_test_vector_key_do_not_use",
+        "vx_live_other_project_vector_key_do_not_use"
+      ],
+      "api_key_header": null,
+      "method": "POST",
+      "request_target": "/api/events/blocked?ip=203.0.113.7&userId=u_1",
+      "body": "",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0105",
+        "timestamp": "1768478370000",
+        "payload_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "signature": "a425fdff5c53944794b6d82807423b95adc680fb908ad4461e775731add1ee68",
+        "version": "2",
+        "key_id": "02e30a76bb5341bd8940347f5d5c4a28"
+      },
+      "now_ms": 1768478400000,
+      "expected": {
+        "accepted": false,
+        "status": 401,
+        "reason": "signature_invalid"
+      }
+    },
+    {
+      "name": "signed_changed_query",
+      "description": "Query string altered after signing",
+      "known_keys": [
+        "vx_live_test_vector_key_do_not_use",
+        "vx_live_other_project_vector_key_do_not_use"
+      ],
+      "api_key_header": null,
+      "method": "GET",
+      "request_target": "/api/events/blocked?ip=203.0.113.99&userId=u_1",
+      "body": "",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0106",
+        "timestamp": "1768478370000",
+        "payload_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "signature": "51c71ce1ba12ed7de41c88fa747dbc72657e9c9996a38c5431513a143c7e6764",
+        "version": "2",
+        "key_id": "02e30a76bb5341bd8940347f5d5c4a28"
+      },
+      "now_ms": 1768478400000,
+      "expected": {
+        "accepted": false,
+        "status": 401,
+        "reason": "signature_invalid"
+      }
+    },
+    {
+      "name": "signed_missing_version",
+      "description": "All signature headers but no version",
+      "known_keys": [
+        "vx_live_test_vector_key_do_not_use",
+        "vx_live_other_project_vector_key_do_not_use"
+      ],
+      "api_key_header": null,
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0107",
+        "timestamp": "1768478370000",
+        "payload_hash": "8f72b272dec0d5c577cc4aea1fb0d9e360bc78f6917804d84cac9f5fd4b591bd",
+        "signature": "845b140bd4073b9a79b351f350f33c8734645d4da4f87bc6473cae6b4ca2c128",
+        "version": null,
+        "key_id": "02e30a76bb5341bd8940347f5d5c4a28"
+      },
+      "now_ms": 1768478400000,
+      "expected": {
+        "accepted": false,
+        "status": 401,
+        "reason": "signature_version_unsupported"
+      }
+    },
+    {
+      "name": "signed_version_1",
+      "description": "Version 1 is not accepted",
+      "known_keys": [
+        "vx_live_test_vector_key_do_not_use",
+        "vx_live_other_project_vector_key_do_not_use"
+      ],
+      "api_key_header": null,
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0108",
+        "timestamp": "1768478370000",
+        "payload_hash": "8f72b272dec0d5c577cc4aea1fb0d9e360bc78f6917804d84cac9f5fd4b591bd",
+        "signature": "38fe5dc6f50c506dde95ae57a6dd0b4e37c9a228edaedc1f518da9ded44c1fe5",
+        "version": "1",
+        "key_id": "02e30a76bb5341bd8940347f5d5c4a28"
+      },
+      "now_ms": 1768478400000,
+      "expected": {
+        "accepted": false,
+        "status": 401,
+        "reason": "signature_version_unsupported"
+      }
+    },
+    {
+      "name": "signed_key_id_no_signature",
+      "description": "Key ID with no signature headers",
+      "known_keys": [
+        "vx_live_test_vector_key_do_not_use",
+        "vx_live_other_project_vector_key_do_not_use"
+      ],
+      "api_key_header": null,
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "nonce": null,
+        "timestamp": null,
+        "payload_hash": null,
+        "signature": null,
+        "version": null,
+        "key_id": "02e30a76bb5341bd8940347f5d5c4a28"
+      },
+      "now_ms": 1768478400000,
+      "expected": {
+        "accepted": false,
+        "status": 401,
+        "reason": "signature_missing"
+      }
+    },
+    {
+      "name": "signed_bad_signature",
+      "description": "Signature does not match",
+      "known_keys": [
+        "vx_live_test_vector_key_do_not_use",
+        "vx_live_other_project_vector_key_do_not_use"
+      ],
+      "api_key_header": null,
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d010a",
+        "timestamp": "1768478370000",
+        "payload_hash": "8f72b272dec0d5c577cc4aea1fb0d9e360bc78f6917804d84cac9f5fd4b591bd",
+        "signature": "0000000000000000000000000000000000000000000000000000000000000000",
+        "version": "2",
+        "key_id": "02e30a76bb5341bd8940347f5d5c4a28"
+      },
+      "now_ms": 1768478400000,
+      "expected": {
+        "accepted": false,
+        "status": 401,
+        "reason": "signature_invalid"
+      }
+    },
+    {
+      "name": "signed_tampered_body",
+      "description": "Body changed after signing",
+      "known_keys": [
+        "vx_live_test_vector_key_do_not_use",
+        "vx_live_other_project_vector_key_do_not_use"
+      ],
+      "api_key_header": null,
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"HIGH\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d010b",
+        "timestamp": "1768478370000",
+        "payload_hash": "8f72b272dec0d5c577cc4aea1fb0d9e360bc78f6917804d84cac9f5fd4b591bd",
+        "signature": "5f1b335cf94c87d358caa67fa8984c16e8dedad535a44f1671a4b564c4a37317",
+        "version": "2",
+        "key_id": "02e30a76bb5341bd8940347f5d5c4a28"
+      },
+      "now_ms": 1768478400000,
+      "expected": {
+        "accepted": false,
+        "status": 401,
+        "reason": "signature_invalid"
+      }
+    },
+    {
+      "name": "signed_tampered_nonce",
+      "description": "Nonce changed after signing",
+      "known_keys": [
+        "vx_live_test_vector_key_do_not_use",
+        "vx_live_other_project_vector_key_do_not_use"
+      ],
+      "api_key_header": null,
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0201",
+        "timestamp": "1768478370000",
+        "payload_hash": "8f72b272dec0d5c577cc4aea1fb0d9e360bc78f6917804d84cac9f5fd4b591bd",
+        "signature": "120766175de657fd1825b26b27545e6247ce3894c6f611d8ccd9ff656ed5b7fa",
+        "version": "2",
+        "key_id": "02e30a76bb5341bd8940347f5d5c4a28"
+      },
+      "now_ms": 1768478400000,
+      "expected": {
+        "accepted": false,
+        "status": 401,
+        "reason": "signature_invalid"
+      }
+    },
+    {
+      "name": "signed_wrong_key",
+      "description": "Key ID of one project, signature made with another key",
+      "known_keys": [
+        "vx_live_test_vector_key_do_not_use",
+        "vx_live_other_project_vector_key_do_not_use"
+      ],
+      "api_key_header": null,
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d010d",
+        "timestamp": "1768478370000",
+        "payload_hash": "8f72b272dec0d5c577cc4aea1fb0d9e360bc78f6917804d84cac9f5fd4b591bd",
+        "signature": "29169a2590bfb0f24d36306d243313402c6e0a790cf418d49b12124b9828c156",
+        "version": "2",
+        "key_id": "02e30a76bb5341bd8940347f5d5c4a28"
+      },
+      "now_ms": 1768478400000,
+      "expected": {
+        "accepted": false,
+        "status": 401,
+        "reason": "signature_invalid"
+      }
+    },
+    {
+      "name": "signed_unknown_key_id",
+      "description": "Key ID that no project has, well-formed signature",
+      "known_keys": [
+        "vx_live_test_vector_key_do_not_use",
+        "vx_live_other_project_vector_key_do_not_use"
+      ],
+      "api_key_header": null,
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d010e",
+        "timestamp": "1768478370000",
+        "payload_hash": "8f72b272dec0d5c577cc4aea1fb0d9e360bc78f6917804d84cac9f5fd4b591bd",
+        "signature": "7c1026551d614a3521f97c50f3f57c66d03a01ac38f7008008b35cbd72122946",
+        "version": "2",
+        "key_id": "7d6bf7c5d80039771bbecfe0d7174a44"
+      },
+      "now_ms": 1768478400000,
+      "expected": {
+        "accepted": false,
+        "status": 401,
+        "reason": "signature_invalid"
+      }
+    },
+    {
+      "name": "signed_unknown_key_id_no_signature",
+      "description": "Unknown key ID and no signature headers",
+      "known_keys": [
+        "vx_live_test_vector_key_do_not_use",
+        "vx_live_other_project_vector_key_do_not_use"
+      ],
+      "api_key_header": null,
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "nonce": null,
+        "timestamp": null,
+        "payload_hash": null,
+        "signature": null,
+        "version": null,
+        "key_id": "7d6bf7c5d80039771bbecfe0d7174a44"
+      },
+      "now_ms": 1768478400000,
+      "expected": {
+        "accepted": false,
+        "status": 401,
+        "reason": "signature_missing"
+      }
+    },
+    {
+      "name": "signed_stale_timestamp",
+      "description": "Correct signature, timestamp 10 minutes old",
+      "known_keys": [
+        "vx_live_test_vector_key_do_not_use",
+        "vx_live_other_project_vector_key_do_not_use"
+      ],
+      "api_key_header": null,
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0110",
+        "timestamp": "1768477800000",
+        "payload_hash": "8f72b272dec0d5c577cc4aea1fb0d9e360bc78f6917804d84cac9f5fd4b591bd",
+        "signature": "0846530ec1ddbe363fbb57f3f385ad99e35cb1add074d211c6bd9736bf85351e",
+        "version": "2",
+        "key_id": "02e30a76bb5341bd8940347f5d5c4a28"
+      },
+      "now_ms": 1768478400000,
+      "expected": {
+        "accepted": false,
+        "status": 400,
+        "reason": "timestamp_expired"
+      }
+    },
+    {
+      "name": "ambiguous_credentials",
+      "description": "Key ID together with an API key header",
+      "known_keys": [
+        "vx_live_test_vector_key_do_not_use",
+        "vx_live_other_project_vector_key_do_not_use"
+      ],
+      "api_key_header": "vx_live_test_vector_key_do_not_use",
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "nonce": "7c1d5e20-4b3a-4f60-9e01-2a8b6c4d0111",
+        "timestamp": "1768478370000",
+        "payload_hash": "8f72b272dec0d5c577cc4aea1fb0d9e360bc78f6917804d84cac9f5fd4b591bd",
+        "signature": "44d4b1291d2c2920240723e1ed252f339ab6dbd6e2e7066646f64c972e7f2dfd",
+        "version": "2",
+        "key_id": "02e30a76bb5341bd8940347f5d5c4a28"
+      },
+      "now_ms": 1768478400000,
+      "expected": {
+        "accepted": false,
+        "status": 400,
+        "reason": "ambiguous_credentials"
+      }
+    }
+  ],
+  "legacy_path_vectors": [
+    {
+      "name": "legacy_unsigned",
+      "description": "API key header only, no signature",
+      "api_key_header": "vx_live_test_vector_key_do_not_use",
+      "known_keys": [
+        "vx_live_test_vector_key_do_not_use",
+        "vx_live_other_project_vector_key_do_not_use"
+      ],
+      "method": "POST",
+      "request_target": "/api/events/ingest",
+      "body": "{\"eventType\":\"custom\",\"ip\":\"203.0.113.7\",\"method\":\"GET\",\"path\":\"/api/items\",\"severity\":\"LOW\",\"clMode\":\"external\",\"authPhase\":\"pre_auth\",\"actionTaken\":\"monitored\",\"responseLatencyMs\":12,\"timestamp\":\"2026-01-15T11:59:58.000Z\"}",
+      "headers": {
+        "key_id": null,
+        "nonce": null,
+        "timestamp": null,
+        "payload_hash": null,
+        "signature": null,
+        "version": null
+      },
+      "now_ms": 1768478400000,
+      "expected_flag_off": {
+        "accepted": true,
+        "status": 200,
+        "reason": null
+      },
+      "expected_flag_on": {
+        "accepted": false,
+        "status": 401,
+        "reason": "signature_missing"
+      }
+    }
+  ]
+}

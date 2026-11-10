@@ -10,10 +10,28 @@ architecture — real-time threat classification and automated response via
 HMAC-signed webhook callbacks, with real credentials never leaving your
 infrastructure.
 
-## SDK — Install via npm
+## SDK — source and packages
 
-The DevFortress SDK is distributed exclusively via npm.
-There is no SDK source in this repository.
+As of 2026-11-06, SDK source for all supported languages lives in this
+repository under `packages/`, and contributions are welcome under our
+[CLA](./CLA.md) — see [CONTRIBUTING.md](./CONTRIBUTING.md). Each package's
+registry:
+
+| Language            | Package                                   | Registry        | Status      |
+| ------------------- | ----------------------------------------- | --------------- | ----------- |
+| Node.js             | `devfortress-sdk`                         | npm             | Live        |
+| Python              | `devfortress-sdk-python`                  | PyPI            | Coming soon |
+| Go                  | `devfortress-go`                          | Go module proxy | Coming soon |
+| Ruby                | `devfortress-sdk`                         | RubyGems        | Coming soon |
+| Ruby (Rails)        | `devfortress-sdk-rails`                   | RubyGems        | Coming soon |
+| PHP                 | `devfortress/sdk-php`                     | Packagist       | Coming soon |
+| PHP (Laravel)       | `devfortress/sdk-laravel`                 | Packagist       | Coming soon |
+| Java                | `net.devfortress:devfortress-sdk`         | Maven Central   | Coming soon |
+| Java (Spring Boot)  | `net.devfortress:devfortress-spring-boot` | Maven Central   | Coming soon |
+| .NET                | `DevFortress.Sdk`                         | NuGet           | Coming soon |
+| .NET (ASP.NET Core) | `DevFortress.AspNetCore`                  | NuGet           | Coming soon |
+
+### Node.js
 
 ```bash
 npm install devfortress-sdk
@@ -101,24 +119,29 @@ The `.env.example` contains Cloudflare Turnstile test keys that pass all checks 
 ## What's in this repository
 
 This repository contains the **open platform layer** — the interfaces,
-schemas, and UI that the npm-installed SDK communicates with.
+schemas, and UI the SDKs communicate with — plus the SDK source itself.
 
-| Path                       | Description                             |
-| -------------------------- | --------------------------------------- |
-| `app/api/events/ingest/`   | Event ingestion interface               |
-| `app/api/sdk/credentials/` | SDK credential management interface     |
-| `app/collect/`             | Collect phase UI                        |
-| `prisma/migrations/`       | Database schema — PostgreSQL migrations |
+| Path                       | Description                                                                |
+| -------------------------- | -------------------------------------------------------------------------- |
+| `app/api/events/ingest/`   | Event ingestion interface                                                  |
+| `app/api/sdk/credentials/` | SDK credential management interface                                        |
+| `app/collect/`             | Collect phase UI                                                           |
+| `prisma/migrations/`       | Database schema — PostgreSQL migrations                                    |
+| `packages/`                | SDK source for all 11 supported languages/frameworks — see the table above |
 
-The hosted platform — LEARN phase, Platform Intelligence (B1–B12), threat
+The hosted platform — the LEARN phase, the Platform Intelligence layer, threat
 classifiers, and the blocking decision engine — is proprietary and available
-via [devfortress.net](https://devfortress.net).
+via [devfortress.net](https://devfortress.net). Each SDK package's own
+gated/internal path (`tier2_gated/`, `Tier2Gated/`, `tier2gated/`,
+`internal/tier2/`, `agent_identity/`) is excluded from this repository for
+the same reason and never appears here.
 
 ## SDK Specialization Modes
 
 | Mode                       | Description                             | Availability |
 | -------------------------- | --------------------------------------- | ------------ |
 | `app_security`             | Baseline API and application protection | All tiers    |
+| `credential_isolation`     | REDACTED — credential aliasing and rotation  | Pro+         |
 | `account_takeover_defense` | A5, A6, A11–A15 bundle                  | Pro+         |
 | `commerce_abuse_defense`   | A14 + anti-fraud controls               | Pro+         |
 | `ai_agent_security`        | A7, A10, A16, A17 — agentic detection   | Pro+         |
@@ -132,20 +155,16 @@ via [devfortress.net](https://devfortress.net).
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
 
-**This repository does not accept pull requests or external code contributions.**
+As of 2026-11-06, this repository accepts pull requests under a
+[Contributor License Agreement (CLA)](./CLA.md), covering both the platform
+layer and the SDK packages under `packages/`.
 
-The platform layer shown here is maintained solely by the core team. The SDK
-is closed-source and distributed via npm — there is no source to contribute to
-in this repository.
-
-You are welcome to:
+You are also welcome to:
 
 - Open a **GitHub Issue** to report a bug or request a feature
 - Email security@devfortress.net for responsible vulnerability disclosure —
   do not open public issues for security vulnerabilities
 - Star and watch the repo for updates
-
-This policy will be revisited as the project matures.
 
 ## About the Author
 

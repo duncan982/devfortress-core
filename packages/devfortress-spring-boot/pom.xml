@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- Name proposed, not final — flagged for Duncan, same as the Ruby gem-name
+         flag in TODO 306: "spring-boot" is the framework this adapts to, but the
+         artifact could equally be net.devfortress:devfortress-spring-boot-starter
+         if it should follow Spring Boot's own "starter" naming convention. -->
+    <groupId>net.devfortress</groupId>
+    <artifactId>devfortress-spring-boot</artifactId>
+    <version>0.1.0</version>
+    <packaging>jar</packaging>
+
+    <name>DevFortress Spring Boot Adapter</name>
+    <description>Spring filter that observes each request and reports a security event for it via the DevFortress Java SDK.</description>
+    <url>https://github.com/duncan982/devfortress-core/tree/main/packages/devfortress-spring-boot</url>
+
+    <licenses>
+        <license>
+            <name>BUSL-1.1</name>
+            <url>https://github.com/duncan982/devfortress-core/blob/main/packages/devfortress-spring-boot/LICENSE</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Duncan Ndungu Ndegwa</name>
+        </developer>
+    </developers>
+
+    <scm>
+        <url>https://github.com/duncan982/devfortress-core</url>
+        <connection>scm:git:https://github.com/duncan982/devfortress-core.git</connection>
+        <developerConnection>scm:git:https://github.com/duncan982/devfortress-core.git</developerConnection>
+    </scm>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <spring-boot.version>4.1.1</spring-boot.version>
+        <junit.version>5.11.3</junit.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>net.devfortress</groupId>
+            <artifactId>devfortress-sdk</artifactId>
+            <version>0.1.0</version>
+        </dependency>
+
+        <!-- provided: the consuming Spring Boot application brings its own
+             spring-web/servlet-api versions; this adapter only compiles against
+             the API surface (OncePerRequestFilter, HttpServletRequest/Response). -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <!-- OncePerRequestFilter's superclass (GenericFilterBean) implements
+                 EnvironmentAware, from spring-context, not spring-web. -->
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>${project.basedir}</directory>
+                <targetPath>META-INF</targetPath>
+                <includes>
+                    <include>LICENSE</include>
+                </includes>
+            </resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.2</version>
+            </plugin>
+        </plugins>
+    </build>
+</project>

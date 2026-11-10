@@ -1,0 +1,162 @@
+{
+  "contract": "DevFortress outbound webhook signature (POST /api/webhooks/deliver)",
+  "algorithm": "HMAC-SHA256, lowercase or uppercase hex accepted, over UTF-8 bytes of `${timestamp}.${rawBody}`",
+  "headers": {
+    "signature": "X-DevFortress-Signature",
+    "timestamp": "X-DevFortress-Timestamp"
+  },
+  "tolerance_seconds": 300,
+  "generated_by": "independent Python hmac/hashlib script, not by either SDK",
+  "vectors": [
+    {
+      "name": "valid_basic",
+      "description": "Well-formed payload, fresh timestamp, correct signature",
+      "secret": "whsec_test_vector_secret_do_not_use",
+      "timestamp": "2026-01-15T11:59:30.000Z",
+      "body": "{\"event_id\":\"evt_v1\",\"threat_type\":\"brute_force\",\"severity\":\"low\",\"confidence\":0.5,\"composite_score\":10,\"ip\":\"203.0.113.7\",\"identity\":{\"user_id\":null,\"session_id\":null},\"geo\":{},\"endpoint\":\"/api/login\",\"method\":\"POST\",\"timestamp\":\"2026-01-15T12:00:00.000Z\",\"nonce\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\"}",
+      "signature": "957ad179af1e2bddbc65f33439792225e08d53127501366395a7c3646d51d27d",
+      "now": "2026-01-15T12:00:00.000Z",
+      "expected_valid": true
+    },
+    {
+      "name": "valid_no_nonce",
+      "description": "Signature is valid without a nonce field (nonce is a separate replay check)",
+      "secret": "whsec_test_vector_secret_do_not_use",
+      "timestamp": "2026-01-15T11:59:30.000Z",
+      "body": "{\"event_id\":\"evt_v2\",\"threat_type\":\"brute_force\",\"severity\":\"low\",\"confidence\":0.5,\"composite_score\":10,\"ip\":\"203.0.113.7\",\"identity\":{\"user_id\":null,\"session_id\":null},\"geo\":{},\"endpoint\":\"/api/login\",\"method\":\"POST\",\"timestamp\":\"2026-01-15T12:00:00.000Z\"}",
+      "signature": "42be62b7c095b4daf9981ab78a9b842771040a36d6a6b1f6496a8a6e3315298a",
+      "now": "2026-01-15T12:00:00.000Z",
+      "expected_valid": true
+    },
+    {
+      "name": "valid_unicode_body",
+      "description": "Signed string is the UTF-8 bytes of the raw body",
+      "secret": "whsec_test_vector_secret_do_not_use",
+      "timestamp": "2026-01-15T11:59:30.000Z",
+      "body": "{\"event_id\":\"evt_v3_é✓\",\"threat_type\":\"brute_force\",\"severity\":\"low\",\"confidence\":0.5,\"composite_score\":10,\"ip\":\"203.0.113.7\",\"identity\":{\"user_id\":null,\"session_id\":null},\"geo\":{},\"endpoint\":\"/api/login\",\"method\":\"POST\",\"timestamp\":\"2026-01-15T12:00:00.000Z\",\"note\":\"unicode: héllo ✓ 日本語\"}",
+      "signature": "7eab464dc8a3f9c9ebba4162cc5aa799e012d9f122567fc201377d5ee9b7a354",
+      "now": "2026-01-15T12:00:00.000Z",
+      "expected_valid": true
+    },
+    {
+      "name": "valid_uppercase_hex",
+      "description": "Signature hex is decoded case-insensitively",
+      "secret": "whsec_test_vector_secret_do_not_use",
+      "timestamp": "2026-01-15T11:59:30.000Z",
+      "body": "{\"event_id\":\"evt_v1\",\"threat_type\":\"brute_force\",\"severity\":\"low\",\"confidence\":0.5,\"composite_score\":10,\"ip\":\"203.0.113.7\",\"identity\":{\"user_id\":null,\"session_id\":null},\"geo\":{},\"endpoint\":\"/api/login\",\"method\":\"POST\",\"timestamp\":\"2026-01-15T12:00:00.000Z\",\"nonce\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\"}",
+      "signature": "957AD179AF1E2BDDBC65F33439792225E08D53127501366395A7C3646D51D27D",
+      "now": "2026-01-15T12:00:00.000Z",
+      "expected_valid": true
+    },
+    {
+      "name": "valid_at_tolerance_boundary",
+      "description": "Age of exactly 300s is accepted",
+      "secret": "whsec_test_vector_secret_do_not_use",
+      "timestamp": "2026-01-15T11:55:00.000Z",
+      "body": "{\"event_id\":\"evt_v1\",\"threat_type\":\"brute_force\",\"severity\":\"low\",\"confidence\":0.5,\"composite_score\":10,\"ip\":\"203.0.113.7\",\"identity\":{\"user_id\":null,\"session_id\":null},\"geo\":{},\"endpoint\":\"/api/login\",\"method\":\"POST\",\"timestamp\":\"2026-01-15T12:00:00.000Z\",\"nonce\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\"}",
+      "signature": "b77479c7be3f535c7d22379298f91e4b4b97d0d1e98df3033cb8848845254def",
+      "now": "2026-01-15T12:00:00.000Z",
+      "expected_valid": true
+    },
+    {
+      "name": "invalid_just_past_tolerance",
+      "description": "Age of 300.001s is rejected",
+      "secret": "whsec_test_vector_secret_do_not_use",
+      "timestamp": "2026-01-15T11:54:59.999Z",
+      "body": "{\"event_id\":\"evt_v1\",\"threat_type\":\"brute_force\",\"severity\":\"low\",\"confidence\":0.5,\"composite_score\":10,\"ip\":\"203.0.113.7\",\"identity\":{\"user_id\":null,\"session_id\":null},\"geo\":{},\"endpoint\":\"/api/login\",\"method\":\"POST\",\"timestamp\":\"2026-01-15T12:00:00.000Z\",\"nonce\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\"}",
+      "signature": "a642b87a13971047579f6240f3cfa95f02227a1741b5f3d991428f2783d1f0c4",
+      "now": "2026-01-15T12:00:00.000Z",
+      "expected_valid": false
+    },
+    {
+      "name": "invalid_expired",
+      "description": "Age of 600s is rejected even with a correct signature",
+      "secret": "whsec_test_vector_secret_do_not_use",
+      "timestamp": "2026-01-15T11:50:00.000Z",
+      "body": "{\"event_id\":\"evt_v1\",\"threat_type\":\"brute_force\",\"severity\":\"low\",\"confidence\":0.5,\"composite_score\":10,\"ip\":\"203.0.113.7\",\"identity\":{\"user_id\":null,\"session_id\":null},\"geo\":{},\"endpoint\":\"/api/login\",\"method\":\"POST\",\"timestamp\":\"2026-01-15T12:00:00.000Z\",\"nonce\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\"}",
+      "signature": "02dd71be2a878be2f4c71c1053c54b86a4235cffa6a97119eb5b90f27e69469b",
+      "now": "2026-01-15T12:00:00.000Z",
+      "expected_valid": false
+    },
+    {
+      "name": "invalid_flipped_signature",
+      "description": "First hex digit altered",
+      "secret": "whsec_test_vector_secret_do_not_use",
+      "timestamp": "2026-01-15T11:59:30.000Z",
+      "body": "{\"event_id\":\"evt_v1\",\"threat_type\":\"brute_force\",\"severity\":\"low\",\"confidence\":0.5,\"composite_score\":10,\"ip\":\"203.0.113.7\",\"identity\":{\"user_id\":null,\"session_id\":null},\"geo\":{},\"endpoint\":\"/api/login\",\"method\":\"POST\",\"timestamp\":\"2026-01-15T12:00:00.000Z\",\"nonce\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\"}",
+      "signature": "057ad179af1e2bddbc65f33439792225e08d53127501366395a7c3646d51d27d",
+      "now": "2026-01-15T12:00:00.000Z",
+      "expected_valid": false
+    },
+    {
+      "name": "invalid_wrong_secret",
+      "description": "Signed with a different secret",
+      "secret": "whsec_test_vector_secret_do_not_use",
+      "timestamp": "2026-01-15T11:59:30.000Z",
+      "body": "{\"event_id\":\"evt_v1\",\"threat_type\":\"brute_force\",\"severity\":\"low\",\"confidence\":0.5,\"composite_score\":10,\"ip\":\"203.0.113.7\",\"identity\":{\"user_id\":null,\"session_id\":null},\"geo\":{},\"endpoint\":\"/api/login\",\"method\":\"POST\",\"timestamp\":\"2026-01-15T12:00:00.000Z\",\"nonce\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\"}",
+      "signature": "0a2f80f0d1332f495ffaf923fb7419fabdceb015f834a023d58d10a803ea3d10",
+      "now": "2026-01-15T12:00:00.000Z",
+      "expected_valid": false
+    },
+    {
+      "name": "invalid_tampered_body",
+      "description": "Body changed after signing",
+      "secret": "whsec_test_vector_secret_do_not_use",
+      "timestamp": "2026-01-15T11:59:30.000Z",
+      "body": "{\"event_id\":\"evt_v1\",\"threat_type\":\"credential_stuffing\",\"severity\":\"low\",\"confidence\":0.5,\"composite_score\":10,\"ip\":\"203.0.113.7\",\"identity\":{\"user_id\":null,\"session_id\":null},\"geo\":{},\"endpoint\":\"/api/login\",\"method\":\"POST\",\"timestamp\":\"2026-01-15T12:00:00.000Z\",\"nonce\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\"}",
+      "signature": "957ad179af1e2bddbc65f33439792225e08d53127501366395a7c3646d51d27d",
+      "now": "2026-01-15T12:00:00.000Z",
+      "expected_valid": false
+    },
+    {
+      "name": "invalid_timestamp_not_covered",
+      "description": "Signature computed over a different timestamp than the one sent",
+      "secret": "whsec_test_vector_secret_do_not_use",
+      "timestamp": "2026-01-15T11:59:50.000Z",
+      "body": "{\"event_id\":\"evt_v1\",\"threat_type\":\"brute_force\",\"severity\":\"low\",\"confidence\":0.5,\"composite_score\":10,\"ip\":\"203.0.113.7\",\"identity\":{\"user_id\":null,\"session_id\":null},\"geo\":{},\"endpoint\":\"/api/login\",\"method\":\"POST\",\"timestamp\":\"2026-01-15T12:00:00.000Z\",\"nonce\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\"}",
+      "signature": "957ad179af1e2bddbc65f33439792225e08d53127501366395a7c3646d51d27d",
+      "now": "2026-01-15T12:00:00.000Z",
+      "expected_valid": false
+    },
+    {
+      "name": "invalid_truncated_signature",
+      "description": "Signature shorter than 64 hex chars",
+      "secret": "whsec_test_vector_secret_do_not_use",
+      "timestamp": "2026-01-15T11:59:30.000Z",
+      "body": "{\"event_id\":\"evt_v1\",\"threat_type\":\"brute_force\",\"severity\":\"low\",\"confidence\":0.5,\"composite_score\":10,\"ip\":\"203.0.113.7\",\"identity\":{\"user_id\":null,\"session_id\":null},\"geo\":{},\"endpoint\":\"/api/login\",\"method\":\"POST\",\"timestamp\":\"2026-01-15T12:00:00.000Z\",\"nonce\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\"}",
+      "signature": "957ad179af1e2bddbc65f33439792225",
+      "now": "2026-01-15T12:00:00.000Z",
+      "expected_valid": false
+    },
+    {
+      "name": "invalid_non_hex_signature",
+      "description": "Signature is not hex",
+      "secret": "whsec_test_vector_secret_do_not_use",
+      "timestamp": "2026-01-15T11:59:30.000Z",
+      "body": "{\"event_id\":\"evt_v1\",\"threat_type\":\"brute_force\",\"severity\":\"low\",\"confidence\":0.5,\"composite_score\":10,\"ip\":\"203.0.113.7\",\"identity\":{\"user_id\":null,\"session_id\":null},\"geo\":{},\"endpoint\":\"/api/login\",\"method\":\"POST\",\"timestamp\":\"2026-01-15T12:00:00.000Z\",\"nonce\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\"}",
+      "signature": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+      "now": "2026-01-15T12:00:00.000Z",
+      "expected_valid": false
+    },
+    {
+      "name": "invalid_empty_signature",
+      "description": "Empty signature",
+      "secret": "whsec_test_vector_secret_do_not_use",
+      "timestamp": "2026-01-15T11:59:30.000Z",
+      "body": "{\"event_id\":\"evt_v1\",\"threat_type\":\"brute_force\",\"severity\":\"low\",\"confidence\":0.5,\"composite_score\":10,\"ip\":\"203.0.113.7\",\"identity\":{\"user_id\":null,\"session_id\":null},\"geo\":{},\"endpoint\":\"/api/login\",\"method\":\"POST\",\"timestamp\":\"2026-01-15T12:00:00.000Z\",\"nonce\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\"}",
+      "signature": "",
+      "now": "2026-01-15T12:00:00.000Z",
+      "expected_valid": false
+    },
+    {
+      "name": "invalid_timestamp_unparseable",
+      "description": "Timestamp is not a date",
+      "secret": "whsec_test_vector_secret_do_not_use",
+      "timestamp": "not-a-date",
+      "body": "{\"event_id\":\"evt_v1\",\"threat_type\":\"brute_force\",\"severity\":\"low\",\"confidence\":0.5,\"composite_score\":10,\"ip\":\"203.0.113.7\",\"identity\":{\"user_id\":null,\"session_id\":null},\"geo\":{},\"endpoint\":\"/api/login\",\"method\":\"POST\",\"timestamp\":\"2026-01-15T12:00:00.000Z\",\"nonce\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90\"}",
+      "signature": "3727dc93a7b5307f02f425682f8c381cfdb5996ea0e8380d0ea5ce5d613e3a61",
+      "now": "2026-01-15T12:00:00.000Z",
+      "expected_valid": false
+    }
+  ]
+}

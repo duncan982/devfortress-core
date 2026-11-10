@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>net.devfortress</groupId>
+    <artifactId>devfortress-sdk</artifactId>
+    <version>0.1.0</version>
+    <packaging>jar</packaging>
+
+    <name>DevFortress Java SDK</name>
+    <description>DevFortress event client (external mode): request signing, classifier, webhook verification. No runtime dependencies beyond the JDK.</description>
+    <url>https://github.com/duncan982/devfortress-core/tree/main/packages/devfortress-java</url>
+
+    <licenses>
+        <license>
+            <name>BUSL-1.1</name>
+            <url>https://github.com/duncan982/devfortress-core/blob/main/packages/devfortress-java/LICENSE</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Duncan Ndungu Ndegwa</name>
+        </developer>
+    </developers>
+
+    <scm>
+        <url>https://github.com/duncan982/devfortress-core</url>
+        <connection>scm:git:https://github.com/duncan982/devfortress-core.git</connection>
+        <developerConnection>scm:git:https://github.com/duncan982/devfortress-core.git</developerConnection>
+    </scm>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <junit.version>5.11.3</junit.version>
+    </properties>
+
+    <dependencies>
+        <!-- Test only. The main jar has zero runtime dependencies, matching the
+             Go and Ruby SDKs' stdlib-first approach. -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>${project.basedir}</directory>
+                <targetPath>META-INF</targetPath>
+                <includes>
+                    <include>LICENSE</include>
+                </includes>
+            </resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.2</version>
+            </plugin>
+            <!-- TODO 418 — Tier2Gated packaging exclusion. net.devfortress.tier2gated
+                 classes are package-private and compiled into target/classes (so the
+                 same-package test sources under src/test/java/net/devfortress/tier2gated
+                 can exercise them), but must never ship in the published JAR. This is
+                 the Maven-native equivalent of the Node SDK's package.json `files`
+                 negation glob (TODO 295/417): compile everything, exclude the gated
+                 output path from the final artifact. Not reflection-dependent — the
+                 .class files are physically absent from the JAR, not merely
+                 access-restricted.
+
+                 TODO 420 (2026-11-03) moved ConsentAliasLifecycle (B3) and
+                 MultiHopTrustChain (B4) back into this package, reversing TODO 367's
+                 2026-10-16 ungating — that decision assumed Node already shipped B3/B4
+                 public, but Node had already excluded them (commit 4a3e71e3,
+                 2026-10-06) ten days earlier. This glob already covers them; no
+                 further change needed here. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.4.1</version>
+                <configuration>
+                    <excludes>
+                        <exclude>net/devfortress/tier2gated/**</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

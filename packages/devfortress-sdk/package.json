@@ -1,0 +1,135 @@
+{
+  "name": "devfortress-sdk",
+  "version": "4.11.1",
+  "description": "Closed-loop credential isolation SDK — protects API credentials and AI agent identities from exposure and misuse.",
+  "main": "dist/index.js",
+  "browser": "dist/browser.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./browser": {
+      "import": "./dist/browser.js",
+      "require": "./dist/browser.js",
+      "types": "./dist/browser.d.ts"
+    },
+    "./quick": {
+      "import": "./dist/quick.js",
+      "require": "./dist/quick.js",
+      "types": "./dist/quick.d.ts"
+    },
+    "./internal": {
+      "import": "./dist/internal.js",
+      "require": "./dist/internal.js",
+      "types": "./dist/internal.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "connection": "active",
+  "closedLoop": "hybrid",
+  "bin": {
+    "devfortress-init": "bin/devfortress-init.js"
+  },
+  "files": [
+    "dist",
+    "!dist/agent-identity/**",
+    "!dist/ard/**",
+    "!dist/internal.js",
+    "!dist/internal.d.ts",
+    "!dist/consent-alias-lifecycle.js",
+    "!dist/consent-alias-lifecycle.d.ts",
+    "!dist/multi-hop-trust-chain.js",
+    "!dist/multi-hop-trust-chain.d.ts",
+    "!dist/agent-output-exfiltration-detector.js",
+    "!dist/agent-output-exfiltration-detector.d.ts",
+    "!dist/shadow-agent-registry.js",
+    "!dist/shadow-agent-registry.d.ts",
+    "!dist/idor-detector.js",
+    "!dist/idor-detector.d.ts",
+    "!dist/supply-chain-validator.js",
+    "!dist/supply-chain-validator.d.ts",
+    "!dist/tls-cert-pinning-enforcer.js",
+    "!dist/tls-cert-pinning-enforcer.d.ts",
+    "!dist/enumeration-timing-shield.js",
+    "!dist/enumeration-timing-shield.d.ts",
+    "!dist/dns-hijacking-detector.js",
+    "!dist/dns-hijacking-detector.d.ts",
+    "!dist/predictive-attack-trajectory.js",
+    "!dist/predictive-attack-trajectory.d.ts",
+    "!dist/specialization/manifest-internal.js",
+    "!dist/specialization/manifest-internal.d.ts",
+    "bin/devfortress-init.js",
+    "models",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "verify:package": "node scripts/verify-package-integrity.js",
+    "verify:ard-exclusion": "node scripts/assert-ard-exclusion.js",
+    "prepublishOnly": "npm run build && npm run verify:package && npm run verify:ard-exclusion",
+    "smoke-test:published": "bash scripts/smoke-test-published.sh"
+  },
+  "keywords": [
+    "devfortress",
+    "security",
+    "api-security",
+    "application-security",
+    "threat-detection",
+    "monitoring",
+    "automated-response",
+    "webhook",
+    "express",
+    "nodejs",
+    "agent-security",
+    "ai-agents",
+    "closed-loop",
+    "session-privacy"
+  ],
+  "author": "Duncan Ndungu Ndegwa",
+  "license": "BUSL-1.1",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/duncan982/devfortress.git",
+    "directory": "packages/devfortress-sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/duncan982/devfortress/issues"
+  },
+  "homepage": "https://devfortress.net",
+  "sideEffects": false,
+  "dependencies": {
+    "axios": "^1.20.0",
+    "pako": "^2.1.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@swc/core": "^1.14.0",
+    "@swc/jest": "^0.2.39",
+    "@types/express": "^4.17.21 || ^5.0.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^20.0.0",
+    "@types/pako": "^2.0.4",
+    "jest": "^30.2.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "express": "^4.18.0 || ^5.2.0"
+  },
+  "peerDependenciesMeta": {
+    "express": {
+      "optional": true
+    },
+    "onnxruntime-node": {
+      "optional": true
+    }
+  },
+  "optionalDependencies": {
+    "onnxruntime-node": "^1.24.3"
+  }
+}

@@ -43,6 +43,16 @@ function generateFAQSchema(faqs: Array<{ question: string; answer: string }>) {
   };
 }
 
+/**
+ * Multi-language SDK rollout gate — mirrors
+ * packages/core/lib/multilang-sdk-gate.ts's MULTILANG_SDK_LAUNCH_LIVE
+ * constant. Duplicated inline rather than imported via `@core/*` to keep
+ * this page's open-core compatibility (see the file-level comment above).
+ * Flip alongside that file's flag once Duncan confirms the registry
+ * publishes are live — keep both values in sync.
+ */
+const MULTILANG_SDK_LAUNCH_LIVE = false;
+
 /** No-op logger for open-core (closed platform handles error logging). */
 const logError = (message: string, context?: unknown) => {
   if (process.env.NODE_ENV === 'development') {
@@ -69,9 +79,9 @@ const SUBSCRIPTION_PRICING: Record<
   SubscriptionTier,
   { monthlyPrice: number; annualPrice: number }
 > = {
-  [SubscriptionTier.STARTER]: { monthlyPrice: 49, annualPrice: 39 },
-  [SubscriptionTier.PRO]: { monthlyPrice: 99, annualPrice: 79 },
-  [SubscriptionTier.TEAM]: { monthlyPrice: 399, annualPrice: 319 },
+  [SubscriptionTier.STARTER]: { monthlyPrice: 29, annualPrice: 23 },
+  [SubscriptionTier.PRO]: { monthlyPrice: 69, annualPrice: 55 },
+  [SubscriptionTier.TEAM]: { monthlyPrice: 149, annualPrice: 119 },
   [SubscriptionTier.ENTERPRISE]: { monthlyPrice: 0, annualPrice: 0 },
 };
 
@@ -79,6 +89,17 @@ const SUBSCRIPTION_PRICING: Record<
 
 /* ─── Types ─── */
 type BillingCycle = 'monthly' | 'annual';
+type CalcGroup = 'ep' | 'sec' | 'dep' | 'sla' | 'advancedSec';
+
+interface CalcState {
+  ep: number;
+  sec: string;
+  dep: string;
+  sla: string;
+  comp: string[];
+  advancedSec: number;
+  integrationCount: number;
+}
 
 /* ─── Tier base resources (mirrors TIER_BASE_RESOURCES in types.ts) ─── */
 const TIER_RESOURCES = {
@@ -86,7 +107,7 @@ const TIER_RESOURCES = {
     apps: 1,
     agents: 1,
     seats: 1,
-    events: '100K',
+    events: '50K',
     maxApps: 1,
     maxAgents: 1,
     maxSeats: 1,
@@ -95,16 +116,16 @@ const TIER_RESOURCES = {
     apps: 1,
     agents: 1,
     seats: 1,
-    events: '500K',
+    events: '75K',
     maxApps: 5,
     maxAgents: 5,
     maxSeats: 5,
   },
   teams: {
-    apps: 5,
-    agents: 5,
-    seats: 5,
-    events: '2M',
+    apps: 1,
+    agents: 1,
+    seats: 2,
+    events: '100K',
     maxApps: 20,
     maxAgents: 20,
     maxSeats: 20,
@@ -116,14 +137,14 @@ const PRO_ADDONS = [
   { label: '+$30/app/mo', detail: 'Additional app (up to 5 total)' },
   { label: '+$25/agent/mo', detail: 'Additional AI agent (up to 5 total)' },
   { label: '+$20/seat/mo', detail: 'Additional seat (up to 5 total)' },
-  { label: '+$0.20/1K events', detail: 'Overage beyond 500K/mo' },
+  { label: '+$0.20/1K events', detail: 'Overage beyond 75K/mo' },
 ];
 
 const TEAMS_ADDONS = [
   { label: '+$25/app/mo', detail: 'Additional app (up to 20 total)' },
   { label: '+$20/agent/mo', detail: 'Additional AI agent (up to 20 total)' },
   { label: '+$15/seat/mo', detail: 'Additional seat (up to 20 total)' },
-  { label: '+$0.15/1K events', detail: 'Overage beyond 2M/mo' },
+  { label: '+$0.15/1K events', detail: 'Overage beyond 100K/mo' },
   {
     label: '+$80/mo',
     detail: 'Advanced compliance bundle (audit export + CSV reports)',
@@ -139,6 +160,8 @@ interface AddonItem {
   unit: string;
   maxUnits: number;
   proOnly: boolean;
+  /** Overrides the default "Requires Pro or higher" gating label. */
+  gateLabel?: string;
 }
 
 const ADDON_CATALOGUE: AddonItem[] = [
@@ -199,13 +222,24 @@ const ADDON_CATALOGUE: AddonItem[] = [
     proOnly: true,
   },
   {
-    id: 'extra_events',
-    name: 'Extra Events',
-    description: 'Additional 100K SDK events per month',
-    pricePerUnit: 9,
+    id: 'extra_events_pro',
+    name: 'Extra Events (Pro)',
+    description: 'Additional 100K SDK events per month — Pro plan',
+    pricePerUnit: 20,
     unit: '100K events',
     maxUnits: 100,
-    proOnly: false,
+    proOnly: true,
+    gateLabel: 'Requires Pro plan',
+  },
+  {
+    id: 'extra_events_team',
+    name: 'Extra Events (Team)',
+    description: 'Additional 100K SDK events per month — Team plan',
+    pricePerUnit: 15,
+    unit: '100K events',
+    maxUnits: 100,
+    proOnly: true,
+    gateLabel: 'Requires Team plan or higher',
   },
   {
     id: 'priority_support',
@@ -218,6 +252,65 @@ const ADDON_CATALOGUE: AddonItem[] = [
   },
 ];
 
+/* ─── Calculator Constants ─── */
+const EP_BASE = [14000, 24000, 48000, 72000, 96000];
+
+const COMP_ADD: Record<string, number> = {
+  gdpr: 2000,
+  pci: 4000,
+  soc2: 3000,
+  hipaa: 3500,
+  none: 0,
+};
+const SEC_ADD: Record<string, number> = {
+  hmac: 0,
+  mtls: 6000,
+  icl: 8000,
+  mtls_icl: 12000,
+};
+const DEP_ADD: Record<string, number> = { cloud: 0, onprem: 12000 };
+const SLA_ADD: Record<string, number> = { standard: 0, premium: 8000 };
+
+const AGENT_CL_OPTIONS = [
+  { label: 'No AI Agent Security', value: 0 },
+  { label: 'Up to 25 agents — $500/mo', value: 500 },
+  { label: 'Up to 100 agents — $1,500/mo', value: 1500 },
+  { label: 'Up to 500 agents — $5,000/mo', value: 5000 },
+  {
+    label: 'Unlimited agents — Custom (contact sales)',
+    value: 0,
+    isCustom: true,
+  },
+];
+
+const EP_OPTIONS = [
+  { label: 'Up to 50', val: 0 },
+  { label: 'Up to 100', val: 1 },
+  { label: 'Up to 250', val: 2 },
+  { label: 'Up to 500', val: 3 },
+  { label: '500+', val: 4 },
+];
+
+const COMPLIANCE_OPTIONS = [
+  { label: 'GDPR / DPA', val: 'gdpr' },
+  { label: 'PCI-DSS', val: 'pci' },
+  { label: 'SOC2', val: 'soc2' },
+  { label: 'HIPAA', val: 'hipaa' },
+  { label: 'None required', val: 'none' },
+];
+
+const SECURITY_OPTIONS = [
+  { label: 'HMAC (standard)', val: 'hmac', disabled: false },
+  { label: 'mTLS (regulated)', val: 'mtls', disabled: true },
+  { label: 'HMAC + Hybrid security mode', val: 'icl', disabled: false },
+  { label: 'mTLS + Hybrid security mode', val: 'mtls_icl', disabled: true },
+];
+
+const SLA_OPTIONS = [
+  { label: 'Standard — 99.9%', val: 'standard' },
+  { label: 'Premium — 99.95% + dedicated CSM', val: 'premium' },
+];
+
 /* ─── FAQs ─── */
 const faqs = [
   {
@@ -228,7 +321,7 @@ const faqs = [
   {
     question: 'Can Team plans scale without going Enterprise?',
     answer:
-      'Yes. Team add-ons let you scale seats (+$40/mo), apps (+$30/mo), and compliance features (+$80/mo) without a tier change. Most growing teams stay on Team with add-ons until they need mTLS, a dedicated CSM, SLA guarantees, or endpoint-based billing — those are the triggers to move to Enterprise.',
+      'Yes. Team add-ons let you scale seats (+$15/mo), apps (+$25/mo), and compliance features (+$80/mo) without a tier change. Most growing teams stay on Team with add-ons until they need mTLS, a dedicated CSM, SLA guarantees, or endpoint-based billing — those are the triggers to move to Enterprise.',
   },
   {
     question: 'How does DevFortress protect my session tokens and credentials?',
@@ -238,7 +331,7 @@ const faqs = [
   {
     question: 'Do I need mTLS, or is HMAC-SHA256 enough?',
     answer:
-      "HMAC-SHA256 is secure and sufficient for most teams — it signs every webhook so forged requests are impossible. mTLS adds mutual X.509 certificate authentication at the transport layer itself. It's required for PCI-DSS Level 1 and recommended for any regulated industry. It's an optional add-on in Enterprise, not forced on everyone.",
+      "HMAC-SHA256 is secure and sufficient for most teams — it signs every webhook so forged requests are impossible. mTLS adds mutual X.509 certificate authentication at the transport layer itself. It's required for PCI-DSS Level 1 and recommended for any regulated industry. mTLS support is on our roadmap for Enterprise; until it ships, HMAC-SHA256 is what's available today.",
   },
   {
     question: 'Does self-hosted devfortress-core include billing?',
@@ -249,12 +342,12 @@ const faqs = [
     question:
       'What is the difference between external, internal, and hybrid Unified Application Security?',
     answer:
-      'DevFortress offers three security response modes under its Unified Application Security architecture. External mode (Starter alert-only, Pro automated blocking) detects threats on the DevFortress platform and delivers responses via HMAC-signed webhooks. Internal mode runs entirely inside your application process with zero external round-trip latency — threats are blocked inline before a response is sent. Hybrid mode (Pro add-on, Enterprise default) combines both: your application blocks threats instantly using the local engine, while the platform enriches decisions with global threat intelligence asynchronously. If the platform is ever unreachable, protection continues uninterrupted.',
+      'DevFortress offers three security response modes under its Unified Application Security architecture. External mode (Starter: webhook-dispatched, self-executed response; Pro: platform-automated blocking) detects threats on the DevFortress platform and delivers responses via HMAC-signed webhooks. Internal mode runs entirely inside your application process with zero external round-trip latency — threats are blocked inline before a response is sent. Hybrid mode (default from Teams and up) combines both: your application blocks threats instantly using the local engine, while the platform enriches decisions with global threat intelligence asynchronously. If the platform is ever unreachable, protection continues uninterrupted.',
   },
   {
     question: 'What does the implementation fee cover?',
     answer:
-      "Enterprise onboarding is a structured 4-week process: endpoint mapping, SDK installation, mTLS certificate issuance, playbook configuration, and SIEM integration. The one-time implementation fee covers this hands-on work. It's quoted separately based on the complexity of your environment — typically $5,000–$25,000.",
+      "Enterprise onboarding is a structured 4-week process: endpoint mapping and SDK installation. The one-time implementation fee covers this hands-on work. mTLS certificate authentication, SIEM integration and custom response playbooks are on our roadmap for Enterprise; they'll be added to onboarding once available. It's quoted separately based on the complexity of your environment — typically $5,000–$25,000.",
   },
   {
     question: 'How quickly can I get started?',
@@ -310,7 +403,7 @@ const comparisonData: CompareGroup[] = [
         note: 'Base included; Pro add-ons to 5, Teams add-ons to 20',
         starter: '1 (fixed)',
         pro: '1 base (+$30/app, max 5)',
-        teams: '5 base (+$25/app, max 20)',
+        teams: '1 base (+$25/app, max 20)',
         enterprise: { type: 'ent', text: 'Unlimited' },
       },
       {
@@ -318,15 +411,15 @@ const comparisonData: CompareGroup[] = [
         note: 'Base included; Pro add-ons to 5, Teams add-ons to 20',
         starter: '1 (fixed)',
         pro: '1 base (+$25/agent, max 5)',
-        teams: '5 base (+$20/agent, max 20)',
+        teams: '1 base (+$20/agent, max 20)',
         enterprise: { type: 'ent', text: 'Unlimited' },
       },
       {
-        feature: 'Events / month',
-        note: 'Hard cap on Starter; overage billing on Pro and Teams',
-        starter: '100K (hard cap)',
-        pro: '500K (+$0.20/1K overage)',
-        teams: '2M (+$0.15/1K overage)',
+        feature: 'Flagged events / month',
+        note: 'Hard cap on Starter; overage billing on Pro and Teams. Billing counts only flagged/scored events, not raw SDK-observed traffic.',
+        starter: '50K (hard cap)',
+        pro: '75K (+$0.20/1K overage)',
+        teams: '100K (+$0.15/1K overage)',
         enterprise: { type: 'ent', text: 'Unlimited' },
       },
       {
@@ -334,7 +427,7 @@ const comparisonData: CompareGroup[] = [
         note: 'Base included; Pro add-ons to 5, Teams add-ons to 20',
         starter: '1 (fixed)',
         pro: '1 base (+$20/seat, max 5)',
-        teams: '5 base (+$15/seat, max 20)',
+        teams: '2 base (+$15/seat, max 20)',
         enterprise: { type: 'ent', text: 'Unlimited' },
       },
       {
@@ -394,21 +487,30 @@ const comparisonData: CompareGroup[] = [
     rows: [
       {
         feature: 'Response mode',
-        starter: { type: 'partial', text: 'Alert-only (no blocking)' },
+        starter: {
+          type: 'partial',
+          text: 'Webhook-dispatched (self-executed)',
+        },
         pro: { type: 'check-g', text: 'External CL (automated)' },
         teams: { type: 'check-g', text: 'Hybrid CL (default)' },
         enterprise: { type: 'check-g', text: 'All modes (selectable)' },
       },
       {
         feature: 'Session revocation (<2s)',
-        starter: { type: 'cross' },
+        starter: {
+          type: 'partial',
+          text: 'Via signed webhook (self-executed)',
+        },
         pro: { type: 'check' },
         teams: { type: 'check' },
         enterprise: { type: 'check' },
       },
       {
         feature: 'IP block · rate-limit · tarpit',
-        starter: { type: 'cross' },
+        starter: {
+          type: 'partial',
+          text: 'Via signed webhook (self-executed)',
+        },
         pro: { type: 'check' },
         teams: { type: 'check' },
         enterprise: { type: 'check' },
@@ -416,7 +518,10 @@ const comparisonData: CompareGroup[] = [
       {
         feature: 'External closed-loop security mode',
         note: 'Platform detects → webhook delivers → SDK executes → confirmation',
-        starter: { type: 'partial', text: 'Alert only' },
+        starter: {
+          type: 'partial',
+          text: 'Webhook-dispatched (self-executed)',
+        },
         pro: { type: 'check-g', text: 'Primary blocking' },
         teams: { type: 'check-g', text: 'Selectable' },
         enterprise: { type: 'check-g', text: 'Selectable' },
@@ -425,7 +530,7 @@ const comparisonData: CompareGroup[] = [
         feature: 'Internal closed-loop security engine',
         note: 'Zero-latency inline protection — no external round-trip',
         starter: { type: 'cross' },
-        pro: { type: 'partial', text: 'Backup only' },
+        pro: { type: 'cross' },
         teams: { type: 'check-g', text: 'Full engine' },
         enterprise: { type: 'check-g', text: 'Full engine' },
       },
@@ -483,7 +588,7 @@ const comparisonData: CompareGroup[] = [
           type: 'partial',
           text: 'SDK-validated · Dashboard included',
         },
-        enterprise: { type: 'partial', text: 'SDK-validated · Contact sales' },
+        enterprise: { type: 'partial', text: 'Included' },
       },
       {
         feature: 'Session privacy (zero token exposure)',
@@ -519,6 +624,105 @@ const comparisonData: CompareGroup[] = [
     ],
   },
   {
+    group: 'Advanced Industry & Agentic Protection',
+    rows: [
+      {
+        feature: 'LLM Semantic Filtering',
+        note: 'Intent-based prompt injection defense',
+        starter: { type: 'cross' },
+        pro: { type: 'partial', text: 'Coming Soon' },
+        teams: { type: 'partial', text: 'Coming Soon' },
+        enterprise: { type: 'partial', text: 'Coming Soon' },
+      },
+      {
+        feature: 'Dual-LLM Supervisor',
+        note: 'Isolated validation model for advanced agentic workflows',
+        starter: { type: 'cross' },
+        pro: { type: 'cross' },
+        teams: { type: 'cross' },
+        enterprise: { type: 'partial', text: 'Coming Soon' },
+      },
+      {
+        feature: 'MCP Protection',
+        note: 'Zero-trust M2M protocol security for multi-agent systems',
+        starter: { type: 'cross' },
+        pro: { type: 'cross' },
+        teams: { type: 'cross' },
+        enterprise: { type: 'partial', text: 'Coming Soon' },
+      },
+      {
+        feature: 'Web3 & Smart Contract Protection',
+        note: 'Gas limits, value caps, and address whitelisting',
+        starter: { type: 'cross' },
+        pro: { type: 'cross' },
+        teams: { type: 'cross' },
+        enterprise: { type: 'partial', text: 'Coming Soon' },
+      },
+      {
+        feature: 'Supply Chain Watch',
+        note: 'Runtime dependency execution monitoring',
+        starter: { type: 'cross' },
+        pro: { type: 'cross' },
+        teams: { type: 'partial', text: 'Coming Soon' },
+        enterprise: { type: 'partial', text: 'Coming Soon' },
+      },
+      {
+        feature: 'Consent Governance',
+        note: 'Cryptographic data consent binding to alias lifecycle',
+        starter: { type: 'cross' },
+        pro: { type: 'cross' },
+        teams: { type: 'cross' },
+        enterprise: { type: 'partial', text: 'Included' },
+      },
+      {
+        feature: 'Global Rate Limiting',
+        note: 'Distributed multi-dimensional traffic shaping',
+        starter: { type: 'cross' },
+        pro: { type: 'cross' },
+        teams: { type: 'partial', text: 'Coming Soon' },
+        enterprise: { type: 'partial', text: 'Coming Soon' },
+      },
+      {
+        feature: 'SaaS Tenant Isolation',
+        note: 'Cross-tenant anomaly detection & boundaries',
+        starter: { type: 'cross' },
+        pro: { type: 'cross' },
+        teams: { type: 'partial', text: 'Coming Soon' },
+        enterprise: { type: 'partial', text: 'Coming Soon' },
+      },
+      {
+        feature: 'DevOps & Pipeline Security',
+        note: 'Webhook validation and environment secret scanning',
+        starter: { type: 'cross' },
+        pro: { type: 'cross' },
+        teams: { type: 'partial', text: 'Coming Soon' },
+        enterprise: { type: 'partial', text: 'Coming Soon' },
+      },
+    ],
+  },
+  {
+    group: 'Integration & Ecosystem',
+    rows: [
+      MULTILANG_SDK_LAUNCH_LIVE
+        ? {
+            feature: 'Multi-Language SDKs',
+            note: 'Node.js SDK, Python, Go, Java, Ruby, C#, PHP',
+            starter: { type: 'check-g', text: 'Included' },
+            pro: { type: 'check-g', text: 'Included' },
+            teams: { type: 'check-g', text: 'Included' },
+            enterprise: { type: 'check-g', text: 'Included' },
+          }
+        : {
+            feature: 'Multi-Language SDKs',
+            note: 'Node.js SDK available now; Python, Go, Java, Ruby, C#, PHP Coming Soon',
+            starter: { type: 'partial', text: 'Node.js included' },
+            pro: { type: 'partial', text: 'Node.js included' },
+            teams: { type: 'partial', text: 'Node.js included' },
+            enterprise: { type: 'partial', text: 'Node.js included' },
+          },
+    ],
+  },
+  {
     group: 'Compliance & Support',
     rows: [
       {
@@ -549,7 +753,7 @@ const comparisonData: CompareGroup[] = [
         starter: { type: 'cross' },
         pro: { type: 'cross' },
         teams: { type: 'cross' },
-        enterprise: { type: 'partial', text: 'Coming Soon' },
+        enterprise: { type: 'partial', text: 'Included' },
       },
       {
         feature: 'Uptime SLA',
@@ -586,7 +790,7 @@ const comparisonData: CompareGroup[] = [
         enterprise: { type: 'ent', text: 'Unlimited' },
       },
       {
-        feature: 'Platform Intelligence — B1 Cross-Customer Intel',
+        feature: 'Cross-Customer Threat Intelligence',
         note: 'Anonymized cross-customer threat feed, IP reputation enrichment, attack campaign detection',
         starter: { type: 'cross' },
         pro: { type: 'cross' },
@@ -594,15 +798,15 @@ const comparisonData: CompareGroup[] = [
         enterprise: { type: 'partial', text: 'Coming Soon' },
       },
       {
-        feature: 'Platform Intelligence — B2 ML Classifier',
-        note: 'SDK-embedded ML for real-time threat classification, sub-5ms inference, offline capable',
+        feature: 'Sub-5ms local threat scoring',
+        note: 'SDK-embedded machine learning model for real-time threat classification, designed to run entirely in your application process.',
         starter: { type: 'cross' },
-        pro: { type: 'partial', text: 'Own traffic only' },
-        teams: { type: 'check-g', text: 'Own + cross-customer enrichment' },
-        enterprise: { type: 'check-g', text: 'Full + custom models' },
+        pro: { type: 'cross' },
+        teams: { type: 'check-g', text: 'Included' },
+        enterprise: { type: 'check-g', text: 'Included' },
       },
       {
-        feature: 'Platform Intelligence — B3 Consent Lifecycle',
+        feature: 'Consent Lifecycle Management',
         note: 'Consent-scoped alias TTL, automatic revocation on withdrawal, GDPR/CCPA audit trail',
         starter: { type: 'cross' },
         pro: { type: 'cross' },
@@ -610,15 +814,15 @@ const comparisonData: CompareGroup[] = [
         enterprise: { type: 'partial', text: 'Coming Soon' },
       },
       {
-        feature: 'Platform Intelligence — B4 Multi-Hop Agent Trust',
+        feature: 'Multi-Hop Agent Trust',
         note: 'Trust attenuation across AI agent delegation chains, cascading revocation',
         starter: { type: 'cross' },
         pro: { type: 'cross' },
         teams: { type: 'cross' },
-        enterprise: { type: 'partial', text: 'Coming Soon' },
+        enterprise: { type: 'partial', text: 'Included' },
       },
       {
-        feature: 'Platform Intelligence — B10 Shadow Agent Detection',
+        feature: 'Shadow Agent Detection',
         note: 'Distributed agent registry, behavioral fingerprinting, cross-customer shadow agent correlation',
         starter: { type: 'cross' },
         pro: { type: 'cross' },
@@ -626,7 +830,7 @@ const comparisonData: CompareGroup[] = [
         enterprise: { type: 'partial', text: 'Coming Soon' },
       },
       {
-        feature: 'Platform Intelligence — B12 Predictive Trajectories',
+        feature: 'Predictive Attack Trajectories',
         note: 'Bayesian multi-stage attack prediction, pre-emptive countermeasures, cross-customer trajectory graph',
         starter: { type: 'cross' },
         pro: { type: 'cross' },
@@ -638,8 +842,8 @@ const comparisonData: CompareGroup[] = [
         note: 'ML-driven predictions of emerging attack vectors',
         starter: { type: 'cross' },
         pro: { type: 'cross' },
-        teams: { type: 'partial', text: 'Coming Soon' },
-        enterprise: { type: 'partial', text: 'Coming Soon' },
+        teams: { type: 'partial', text: 'Included' },
+        enterprise: { type: 'partial', text: 'Included' },
       },
       {
         feature: 'Security report exports',
@@ -647,7 +851,7 @@ const comparisonData: CompareGroup[] = [
         starter: { type: 'cross' },
         pro: { type: 'partial', text: 'CSV only' },
         teams: { type: 'partial', text: 'CSV only' },
-        enterprise: { type: 'partial', text: 'CSV (PDF Coming Soon)' },
+        enterprise: { type: 'partial', text: 'CSV & PDF' },
       },
       {
         feature: 'Custom insight queries',
@@ -754,6 +958,54 @@ function renderCompareCell(cell: CompareCell) {
 export default function PricingPage() {
 
   const [billing, setBilling] = useState<BillingCycle>('monthly');
+
+  /* ─── Calculator state ─── */
+  const [calcState, setCalcState] = useState<CalcState>({
+    ep: 0,
+    sec: 'hmac',
+    dep: 'cloud',
+    sla: 'standard',
+    comp: [],
+    advancedSec: 0,
+    integrationCount: 5,
+  });
+
+  const calcTotal = useMemo(() => {
+    let total = EP_BASE[calcState.ep] || EP_BASE[0];
+    calcState.comp.forEach(c => {
+      total += COMP_ADD[c] || 0;
+    });
+    total += SEC_ADD[calcState.sec] || 0;
+    total += DEP_ADD[calcState.dep] || 0;
+    total += SLA_ADD[calcState.sla] || 0;
+    const selectedAgentOpt = AGENT_CL_OPTIONS[calcState.advancedSec];
+    if (selectedAgentOpt && selectedAgentOpt.value) {
+      total += selectedAgentOpt.value * 12; // multiply monthly value by 12 for annual total
+    }
+    return total;
+  }, [calcState]);
+
+  const calcMonthly = useMemo(
+    () => Math.round(calcTotal / 12 / 100) * 100,
+    [calcTotal]
+  );
+
+  const handleCalcSelect = useCallback(
+    (group: CalcGroup, val: string | number) => {
+      setCalcState(prev => ({ ...prev, [group]: val }));
+    },
+    []
+  );
+
+  const handleCalcToggleComp = useCallback((val: string) => {
+    setCalcState(prev => {
+      if (val === 'none') return { ...prev, comp: [] };
+      const next = prev.comp.includes(val)
+        ? prev.comp.filter(v => v !== val)
+        : [...prev.comp, val];
+      return { ...prev, comp: next };
+    });
+  }, []);
 
   /* ─── Pricing display ─── */
   const starterPrice =
@@ -904,13 +1156,13 @@ export default function PricingPage() {
                 </div>
                 {billing === 'annual' && (
                   <p className="mb-4 font-mono text-xs text-neutral-500 dark:text-neutral-400">
-                    Billed $468/yr — saves $120
+                    Billed $276/yr — saves $72
                   </p>
                 )}
                 <p className="mb-5 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
                   Solo developers and indie projects. Real-time threat
-                  visibility, alert-only mode, and full session privacy for one
-                  application.
+                  visibility, webhook-dispatched automated response, and full
+                  session privacy for one application.
                 </p>
                 <a
                   href="https://devfortress.net/pricing"
@@ -930,7 +1182,7 @@ export default function PricingPage() {
                 {/* Usage strip */}
                 <div className="mb-3 grid grid-cols-4 overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950">
                   {[
-                    { val: '100K', label: 'events/mo' },
+                    { val: '50K', label: 'events/mo' },
                     { val: '1', label: 'app' },
                     { val: '1', label: 'AI agent' },
                     { val: '1', label: 'seat' },
@@ -992,8 +1244,8 @@ export default function PricingPage() {
                       { text: '7-day event history', icon: 'check' },
                       { text: 'Email support (48h)', icon: 'check' },
                       {
-                        text: 'Session revocation / IP blocking',
-                        icon: 'cross',
+                        text: 'Session revocation / IP blocking — via your own webhook receiver',
+                        icon: 'partial',
                       },
                       { text: 'AI insights', icon: 'cross' },
                       {
@@ -1043,13 +1295,15 @@ export default function PricingPage() {
 
                 <div className="mt-3.5 rounded-lg border border-warning-500/20 bg-warning-50 px-3 py-2.5 text-[11px] leading-relaxed text-warning-700 dark:bg-warning-500/5 dark:text-warning-400">
                   <strong className="font-semibold">
-                    ⚠ Alert-only — no blocking
+                    ◐ Automated response via signed webhook
                   </strong>{' '}
-                  — threats detected and alerted, but not actioned
-                  automatically. Upgrade to Pro for automated session revocation
-                  and IP blocking.{' '}
+                  — DevFortress detects and dispatches a signed action
+                  instruction the moment a threat is confirmed. Your application
+                  executes the block or revoke using our SDK&apos;s webhook
+                  handler.{' '}
                   <strong className="font-semibold">
-                    Avg. human response: 4 hours. Pro responds in &lt;2 seconds.
+                    Upgrade to Pro for direct platform-executed response — no
+                    webhook receiver required.
                   </strong>
                 </div>
               </div>
@@ -1078,7 +1332,7 @@ export default function PricingPage() {
                 </div>
                 {billing === 'annual' && (
                   <p className="mb-4 font-mono text-xs text-neutral-500 dark:text-neutral-400">
-                    Billed $948/yr — saves $240
+                    Billed $660/yr — saves $168
                   </p>
                 )}
                 <p className="mb-5 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
@@ -1105,7 +1359,7 @@ export default function PricingPage() {
                 {/* Usage strip */}
                 <div className="mb-3 grid grid-cols-4 overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950">
                   {[
-                    { val: '500K', label: 'events/mo' },
+                    { val: '75K', label: 'events/mo' },
                     { val: '1→5', label: 'apps' },
                     { val: '1→5', label: 'AI agents' },
                     { val: '1→5', label: 'seats' },
@@ -1130,68 +1384,72 @@ export default function PricingPage() {
 
                 {/* Features */}
                 <ul className="space-y-1.5">
-                  {[
-                    {
-                      text: 'Session revocation (<2s) — automated',
-                      icon: 'check' as const,
-                      bold: true,
-                    },
-                    {
-                      text: 'IP blocking · rate-limit · tarpit',
-                      icon: 'check' as const,
-                      bold: true,
-                    },
-                    {
-                      text: 'External closed-loop security mode — automated blocking',
-                      icon: 'check' as const,
-                    },
-                    {
-                      text: 'Post-auth detection (token replay, privilege escalation)',
-                      icon: 'check' as const,
-                    },
-                    {
-                      text: 'AbuseIPDB blacklist sync every 6h',
-                      icon: 'check' as const,
-                    },
-                    {
-                      text: 'Composite threat score drives inline blocking',
-                      icon: 'check' as const,
-                    },
-                    {
-                      text: '1 AI agent included (+$25/agent, up to 5)',
-                      icon: 'check' as const,
-                      badgeGreen: 'Included',
-                    },
-                    {
-                      text: 'API Key & Payload Protection',
-                      icon: 'cross' as const,
-                    },
-                    {
-                      text: 'AI security insights',
-                      icon: 'check' as const,
-                      badge: '50/mo',
-                    },
-                    {
-                      text: 'Security report exports (CSV)',
-                      icon: 'check' as const,
-                    },
-                    {
-                      text: 'Internal CL engine (backup only)',
-                      icon: 'partial' as const,
-                    },
-                    {
-                      text: 'Security audit trail',
-                      icon: 'check' as const,
-                    },
-                    {
-                      text: '30-day event history',
-                      icon: 'check' as const,
-                    },
-                    {
-                      text: 'Email support (24h)',
-                      icon: 'check' as const,
-                    },
-                  ].map(f => (
+                  {(
+                    [
+                      {
+                        text: 'Session revocation (<2s) — automated',
+                        icon: 'check' as const,
+                        bold: true,
+                      },
+                      {
+                        text: 'IP blocking · rate-limit · tarpit',
+                        icon: 'check' as const,
+                        bold: true,
+                      },
+                      {
+                        text: 'External closed-loop security mode — automated blocking',
+                        icon: 'check' as const,
+                      },
+                      {
+                        text: 'Post-auth detection (token replay, privilege escalation)',
+                        icon: 'check' as const,
+                      },
+                      {
+                        text: 'AbuseIPDB blacklist sync every 6h',
+                        icon: 'check' as const,
+                      },
+                      {
+                        text: 'Composite threat score drives inline blocking',
+                        icon: 'check' as const,
+                      },
+                      {
+                        text: '1 AI agent included (+$25/agent, up to 5)',
+                        icon: 'check' as const,
+                        badgeGreen: 'Included',
+                      },
+                      {
+                        text: 'API Key & Payload Protection',
+                        icon: 'cross' as const,
+                      },
+                      {
+                        text: 'AI security insights',
+                        icon: 'check' as const,
+                        badge: '50/mo',
+                      },
+                      {
+                        text: 'Security report exports (CSV)',
+                        icon: 'check' as const,
+                      },
+                      {
+                        text: 'Security audit trail',
+                        icon: 'check' as const,
+                      },
+                      {
+                        text: '30-day event history',
+                        icon: 'check' as const,
+                      },
+                      {
+                        text: 'Email support (24h)',
+                        icon: 'check' as const,
+                      },
+                    ] as {
+                      text: string;
+                      icon: 'check' | 'cross' | 'partial';
+                      bold?: boolean;
+                      badge?: string;
+                      badgeGreen?: string;
+                    }[]
+                  ).map(f => (
                     <li
                       key={f.text}
                       className="flex items-start gap-2.5 py-1.5 text-sm leading-snug text-neutral-700 dark:text-neutral-200"
@@ -1266,11 +1524,11 @@ export default function PricingPage() {
                 </div>
                 {billing === 'annual' && (
                   <p className="mb-4 font-mono text-xs text-neutral-500 dark:text-neutral-400">
-                    Billed $3,828/yr — saves $960
+                    Billed $1,428/yr — saves $360
                   </p>
                 )}
                 <p className="mb-5 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
-                  For growing product teams. Starts with 5 apps, 5 AI agents, 5
+                  For growing product teams. Starts with 1 app, 1 AI agent, 2
                   seats — scale with add-ons up to 20 each. Hybrid closed-loop
                   mode by default. Unlocks Platform Intelligence and API Key
                   &amp; Payload Protection.
@@ -1293,10 +1551,10 @@ export default function PricingPage() {
                 {/* Usage strip */}
                 <div className="mb-3 grid grid-cols-4 overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950">
                   {[
-                    { val: '2M', label: 'events/mo' },
-                    { val: '5→20', label: 'apps' },
-                    { val: '5→20', label: 'AI agents' },
-                    { val: '5→20', label: 'seats' },
+                    { val: '100K', label: 'events/mo' },
+                    { val: '1→20', label: 'apps' },
+                    { val: '1→20', label: 'AI agents' },
+                    { val: '2→20', label: 'seats' },
                   ].map((u, i) => (
                     <div
                       key={u.label}
@@ -1328,7 +1586,7 @@ export default function PricingPage() {
                       bold: true,
                     },
                     {
-                      text: 'Predictive threat intelligence (Coming Soon)',
+                      text: 'Predictive threat intelligence',
                     },
                     {
                       text: 'Custom threat score thresholds',
@@ -1366,11 +1624,11 @@ export default function PricingPage() {
                       bold: false,
                     },
                     {
-                      text: 'Platform Intelligence — B2 SDK-Embedded ML',
+                      text: 'Sub-5ms local threat scoring',
                       bold: true,
                     },
                     {
-                      text: 'Platform Intelligence — B1/B3/B12 (Coming Soon)',
+                      text: 'Cross-customer intelligence (Coming Soon)',
                       bold: false,
                     },
                   ].map(f => (
@@ -1423,9 +1681,9 @@ export default function PricingPage() {
                   /month · Annual contract · Invoice/PO
                 </p>
                 <p className="mb-5 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
-                  For regulated industries and large organisations. Air-gap
-                  mode, mTLS, custom playbooks, compliance evidence, dedicated
-                  SLA, and full onboarding.
+                  For regulated industries and large organisations. Dedicated
+                  CSM and structured onboarding. Custom playbooks, compliance
+                  reports, dedicated SLA, air-gap mode and mTLS are Coming Soon.
                 </p>
                 <a
                   href="mailto:support@devfortress.net?subject=Enterprise%20inquiry"
@@ -1457,9 +1715,10 @@ export default function PricingPage() {
                     // 'AI Agent CL — usage-based pricing',
                     'AI Agent CL — unlimited, usage-based pricing',
                     'API Key & Payload Protection',
-                    '🔜 Air-gap mode (Coming Soon)',
                     '🔜 mTLS certificate authentication (Coming Soon)',
                     '🔜 SIEM — Splunk, Datadog, Sentinel (Coming Soon)',
+                    '🔜 Air-gap mode (Coming Soon)',
+                    '🔜 SSO / SAML (Coming Soon)',
                     '🔜 Compliance PDF reports (Coming Soon)',
                     '🔜 On-premise deployment (Coming Soon)',
                     '🔜 99.95% uptime SLA (Coming Soon)',
@@ -1554,6 +1813,243 @@ export default function PricingPage() {
               </a>
             </div>
 
+            {/* ─── Quote Calculator ─── */}
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 text-center">
+              Enterprise only — for Starter / Pro / Teams pricing, see tier
+              cards above ↑
+            </p>
+            <div className="mx-auto mb-16 max-w-[820px] rounded-2xl border border-success-200 bg-white/90 p-8 shadow-xl backdrop-blur-sm dark:border-success-900/30 dark:bg-neutral-900/80 sm:p-10">
+              <h3 className="mb-1.5 text-lg font-bold text-neutral-900 dark:text-white">
+                Enterprise Quote Calculator
+              </h3>
+              <p className="mb-8 text-sm text-neutral-600 dark:text-neutral-400">
+                Indicative pricing — final quote confirmed after a 30-minute
+                scoping call.
+              </p>
+
+              {/* Row 1: Endpoints */}
+              <div className="mb-6">
+                <p className="mb-2.5 font-mono text-[10px] uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+                  API Endpoints to Monitor
+                </p>
+                <div className="flex flex-wrap gap-2.5">
+                  {EP_OPTIONS.map(opt => (
+                    <button
+                      key={opt.val}
+                      onClick={() => handleCalcSelect('ep', opt.val)}
+                      className={`rounded-lg border px-4 py-2.5 text-sm font-medium transition-all ${
+                        calcState.ep === opt.val
+                          ? 'border-success-500 bg-success-500 text-white shadow-md'
+                          : 'border-neutral-300 text-neutral-500 hover:border-success-500 hover:text-neutral-700 dark:border-neutral-700 dark:text-neutral-400 dark:hover:border-success-500 dark:hover:text-neutral-200'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Row 2: Compliance (multi-select) */}
+              <div className="mb-6">
+                <p className="mb-2.5 font-mono text-[10px] uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+                  Compliance Requirements{' '}
+                  <span className="normal-case tracking-normal text-neutral-400 dark:text-neutral-600">
+                    (select all that apply)
+                  </span>
+                </p>
+                <div className="flex flex-wrap gap-2.5">
+                  {COMPLIANCE_OPTIONS.map(opt => {
+                    const isSelected =
+                      opt.val === 'none'
+                        ? calcState.comp.length === 0
+                        : calcState.comp.includes(opt.val);
+                    return (
+                      <button
+                        key={opt.val}
+                        onClick={() => handleCalcToggleComp(opt.val)}
+                        className={`rounded-lg border px-4 py-2.5 text-sm font-medium transition-all ${
+                          isSelected
+                            ? 'border-success-500 bg-success-500/15 text-success-700 dark:text-success-400'
+                            : 'border-neutral-300 text-neutral-500 hover:border-success-500 dark:border-neutral-700 dark:text-neutral-400 dark:hover:border-success-500'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Row 3: Security */}
+              <div className="mb-6">
+                <p className="mb-2.5 font-mono text-[10px] uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+                  Security Requirements
+                </p>
+                <div className="flex flex-wrap gap-2.5">
+                  {SECURITY_OPTIONS.map(opt => (
+                    <button
+                      key={opt.val}
+                      disabled={opt.disabled}
+                      onClick={() =>
+                        !opt.disabled && handleCalcSelect('sec', opt.val)
+                      }
+                      title={
+                        opt.disabled
+                          ? 'mTLS is on our roadmap — not yet available to price in'
+                          : undefined
+                      }
+                      className={`rounded-lg border px-4 py-2.5 text-sm font-medium transition-all ${
+                        opt.disabled
+                          ? 'cursor-not-allowed border-neutral-200 text-neutral-400 opacity-60 dark:border-neutral-800 dark:text-neutral-600'
+                          : calcState.sec === opt.val
+                            ? 'border-success-500 bg-success-500 text-white shadow-md'
+                            : 'border-neutral-300 text-neutral-500 hover:border-success-500 dark:border-neutral-700 dark:text-neutral-400 dark:hover:border-success-500'
+                      }`}
+                    >
+                      {opt.label}
+                      {opt.disabled && (
+                        <span className="ml-1.5 font-mono text-[10px] uppercase tracking-widest text-warning-500 dark:text-warning-400">
+                          Coming Soon
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Row 4: Deployment */}
+              <div className="mb-6">
+                <p className="mb-2.5 font-mono text-[10px] uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+                  Deployment Model
+                </p>
+                <div className="flex flex-wrap gap-2.5">
+                  <button
+                    onClick={() => handleCalcSelect('dep', 'cloud')}
+                    className={`rounded-lg border px-4 py-2.5 text-sm font-medium transition-all ${
+                      calcState.dep === 'cloud'
+                        ? 'border-success-500 bg-success-500 text-white shadow-md'
+                        : 'border-neutral-300 text-neutral-500 hover:border-success-500 dark:border-neutral-700 dark:text-neutral-400 dark:hover:border-success-500'
+                    }`}
+                  >
+                    Cloud-hosted (SaaS)
+                  </button>
+                  <button
+                    onClick={() => handleCalcSelect('dep', 'on-premise')}
+                    className={`rounded-lg border px-4 py-2.5 text-sm font-medium transition-all ${
+                      calcState.dep === 'on-premise'
+                        ? 'border-success-500 bg-success-500 text-white shadow-md'
+                        : 'border-neutral-300 text-neutral-500 hover:border-success-500 dark:border-neutral-700 dark:text-neutral-400 dark:hover:border-success-500'
+                    }`}
+                  >
+                    On-premise / Private cloud
+                  </button>
+                </div>
+              </div>
+
+              {/* Row 5: SLA */}
+              <div className="mb-6">
+                <p className="mb-2.5 font-mono text-[10px] uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+                  SLA Tier
+                </p>
+                <div className="flex flex-wrap gap-2.5">
+                  {SLA_OPTIONS.map(opt => (
+                    <button
+                      key={opt.val}
+                      onClick={() => handleCalcSelect('sla', opt.val)}
+                      className={`rounded-lg border px-4 py-2.5 text-sm font-medium transition-all ${
+                        calcState.sla === opt.val
+                          ? 'border-success-500 bg-success-500 text-white shadow-md'
+                          : 'border-neutral-300 text-neutral-500 hover:border-success-500 dark:border-neutral-700 dark:text-neutral-400 dark:hover:border-success-500'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Row 6: Advanced Security Add-on (STEALTH) */}
+              <div className="mb-8">
+                <p className="mb-2.5 font-mono text-[10px] uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+                  AI Agent Security Add-on{' '}
+                  <span className="ml-1 rounded bg-violet-500/15 px-1.5 py-px font-mono text-[9px] tracking-wider text-violet-600 dark:text-violet-400">
+                    NEW
+                  </span>
+                </p>
+                <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
+                  Enterprise AI Agent Security scales by agent count. Includes
+                  per-agent credential isolation, behavioral baselines, scope
+                  enforcement, shadow agent detection, agent exfiltration
+                  detection, and multi-hop trust chain management. This
+                  calculator is for Enterprise-scale deployments only. For other
+                  tiers: Starter includes 1 agent; Pro includes 1 agent with
+                  add-ons to 5 at $25/agent/mo; Teams includes 5 agents with
+                  add-ons to 20 at $20/agent/mo — see tier cards above.
+                </p>
+                <div className="flex flex-wrap gap-2.5">
+                  {AGENT_CL_OPTIONS.map((opt, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleCalcSelect('advancedSec', i)}
+                      className={`rounded-lg border px-4 py-2.5 text-sm font-medium transition-all ${
+                        calcState.advancedSec === i
+                          ? 'border-violet-500 bg-violet-500 text-white shadow-md'
+                          : 'border-neutral-300 text-neutral-500 hover:border-violet-500 dark:border-neutral-700 dark:text-neutral-400 dark:hover:border-violet-500'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Result */}
+              <div className="flex flex-wrap items-center justify-between gap-5 rounded-2xl border border-success-300/30 bg-success-50 px-8 py-7 dark:border-success-500/20 dark:bg-success-500/5">
+                <div>
+                  <p className="mb-1.5 font-mono text-[10px] uppercase tracking-widest text-success-600 dark:text-success-400">
+                    Indicative Annual Price
+                  </p>
+                  {AGENT_CL_OPTIONS[calcState.advancedSec]?.isCustom ? (
+                    <p className="text-[42px] font-extrabold leading-none tracking-tight text-neutral-900 dark:text-white">
+                      Contact Sales
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-[42px] font-extrabold leading-none tracking-tight text-neutral-900 dark:text-white">
+                        ${calcTotal.toLocaleString()}
+                      </p>
+                      <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                        ~${calcMonthly.toLocaleString()}/month · billed annually
+                      </p>
+                      <p className="mt-2 text-[11px] italic text-neutral-400 dark:text-neutral-600">
+                        + one-time implementation fee — quoted separately
+                      </p>
+                    </>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2.5">
+                  <a
+                    href="mailto:admin@devfortress.net"
+                    className="whitespace-nowrap rounded-xl bg-success-500 px-8 py-3.5 text-center text-sm font-semibold text-white shadow-md transition-colors hover:bg-success-600 hover:shadow-lg"
+                  >
+                    Contact Sales →
+                  </a>
+                  <a
+                    href="mailto:admin@devfortress.net"
+                    className="rounded-xl border border-neutral-300 px-8 py-3.5 text-center text-xs font-medium text-neutral-700 transition-all hover:border-success-500 dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-success-500"
+                  >
+                    admin@devfortress.net
+                  </a>
+                </div>
+              </div>
+
+              <p className="mt-4 text-center text-[11px] text-neutral-400 dark:text-neutral-600">
+                Prices shown in USD. Quotes are indicative — final pricing
+                confirmed after scoping call. Volume discounts available for
+                multi-year contracts.
+              </p>
+            </div>
+
             {/* All Enterprise plans include */}
             <div className="mx-auto mb-16 max-w-[820px]">
               <h3 className="mb-6 text-center text-base font-bold text-neutral-900 dark:text-white">
@@ -1640,20 +2136,20 @@ export default function PricingPage() {
                   <th className="w-[14%] border-b border-neutral-200 px-4 py-3.5 text-center text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
                     Starter
                     <br />
-                    <span className="text-[10px] font-light">$49/mo</span>
+                    <span className="text-[10px] font-light">$29/mo</span>
                   </th>
                   <th className="w-[14%] border-b border-neutral-200 px-4 py-3.5 text-center text-[11px] font-bold uppercase tracking-wider text-primary-500 dark:border-neutral-800">
                     Pro
                     <br />
                     <span className="text-[10px] font-light text-neutral-500 dark:text-neutral-400">
-                      $99/mo
+                      $69/mo
                     </span>
                   </th>
                   <th className="w-[14%] border-b border-neutral-200 px-4 py-3.5 text-center text-[11px] font-bold uppercase tracking-wider text-violet-500 dark:border-neutral-800">
                     Teams
                     <br />
                     <span className="text-[10px] font-light text-neutral-500 dark:text-neutral-400">
-                      $399/mo
+                      $149/mo
                     </span>
                   </th>
                   <th className="w-[20%] border-b border-neutral-200 px-4 py-3.5 text-center text-[11px] font-bold uppercase tracking-wider text-success-500 dark:border-neutral-800">
@@ -1803,7 +2299,7 @@ export default function PricingPage() {
               {
                 emoji: '🔑',
                 title: 'API Key & Payload Protection',
-                desc: 'Replace real API keys with short-lived aliases. Payload signing, selective field encryption, and inbound response verification. Real keys never leave your infrastructure. Teams+ only. Coming Soon.',
+                desc: 'Replace real API keys with short-lived aliases. Payload signing, selective field encryption, and inbound response verification. Real keys never leave your infrastructure. Teams+ only.',
               },
               {
                 emoji: '💳',
@@ -1813,12 +2309,17 @@ export default function PricingPage() {
               {
                 emoji: '🏛️',
                 title: 'Regulated Industries',
-                desc: 'PCI-DSS, SOC2, GDPR, HIPAA compliance evidence. Air-gap mode, mTLS, SIEM integration, and 1-year audit trail for healthcare, finance, and government.',
+                desc: 'PCI-DSS, SOC2, GDPR, HIPAA compliance evidence and a 1-year audit trail for healthcare, finance, and government. Air-gap mode, mTLS, and SIEM integration are on our roadmap for Enterprise.',
               },
               {
                 emoji: '🏗️',
                 title: 'SaaS & Multi-Tenant Platforms',
                 desc: 'Per-tenant isolation, cross-tenant abuse detection, and API rate enforcement. Credential isolation and closed-loop session revocation protect shared infrastructure without exposing tenant boundaries.',
+              },
+              {
+                emoji: '⚙️',
+                title: 'DevOps & CI/CD Pipeline Security',
+                desc: 'Protect webhook endpoints, pipeline APIs, and internal tooling from injection attacks, credential leakage, and supply chain abuse. Closed-loop automated response for build and deploy infrastructure.',
               },
             ].map(card => (
               <div

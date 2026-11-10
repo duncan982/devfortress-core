@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "devfortress-sdk-python"
+version = "0.3.0"
+description = "DevFortress event reporting client for Python (external mode): request signing, classification, webhook verification, credential isolation, and agent-behavior monitoring for Flask and FastAPI applications."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "BUSL-1.1" }
+authors = [{ name = "Duncan Ndungu Ndegwa" }]
+dependencies = ["requests>=2.28", "cryptography>=41"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
+]
+
+[project.optional-dependencies]
+fastapi = ["starlette>=0.27"]
+flask = ["flask>=2.2"]
+test = ["pytest>=7", "pytest-asyncio>=0.21", "fastapi>=0.100", "httpx>=0.24", "flask>=2.2"]
+
+[project.urls]
+Repository = "https://github.com/duncan982/devfortress-core/tree/main/packages/devfortress-python"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+exclude = [
+  "devfortress.agent_identity",
+  "devfortress.agent_identity.*",
+  "devfortress.tier2_gated",
+  "devfortress.tier2_gated.*",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["live: needs the local platform on localhost:3001 and local Postgres"]
+asyncio_mode = "auto"
