@@ -6,9 +6,7 @@ These are suggestions, not commitments — open an issue first if you'd like to 
 
 ## Good first issues
 
-- **SDK Quick Start in the README.** The Node.js SDK's README could use a
-  clearer, copy-pasteable Quick Start section so a new integrator can get a
-  working call wired up without reading the full API reference first.
+- **SDK Quick Start in the README.** The Node.js SDK's README could use a clearer, copy-pasteable Quick Start section so a new integrator can get a working call wired up without reading the full API reference first.
 
 ## Feature-parity audit across SDK ports
 
