@@ -4,7 +4,7 @@ Laravel adapter for DevFortress (external mode). Pre-release, not published.
 
 It reports security-relevant responses (auth failures, 4xx and 5xx errors, injection-looking
 paths and query strings) to your DevFortress project. It needs
-[`devfortress/sdk-php`](../devfortress-php) and supports Laravel 12 and 13
+[`devfortress/devfortress-sdk`](../devfortress-php) and supports Laravel 12 and 13
 (PHP 8.2+ for Laravel 12, PHP 8.3+ for Laravel 13).
 
 ## Install

@@ -27,6 +27,19 @@ module DevFortress
     DEFAULT_BASE_URL = "https://www.devfortress.net"
     DEFAULT_TIMEOUT = 15
     DEFAULT_RETRIES = 3
+    MAX_BASE_URL_LENGTH = 2048
+
+    # Strip trailing slashes without a regex. `%r{/+\z}` is unanchored at
+    # the start, so on input that never matches (no trailing slash) the
+    # engine retries the same backtrack at every `/` run in the string —
+    # polynomial on a long run of slashes followed by a non-slash
+    # character. A plain loop is O(n) regardless. Mirrors
+    # packages/devfortress-sdk/src/alias-verify.ts.
+    def self.strip_trailing_slashes(value)
+      value = value.dup
+      value.chop! while value.end_with?("/")
+      value
+    end
 
     # Verify an alias's observed context against its recorded binding.
     # Resolves for 200 and 403 responses (the platform's normal verdicts).
@@ -37,7 +50,10 @@ module DevFortress
       raise ArgumentError, "verify_alias_binding: alias_id is required" if alias_id.nil? || alias_id.empty?
       raise ArgumentError, "verify_alias_binding: alias_key is required" if alias_key.nil? || alias_key.empty?
 
-      base = (base_url || DEFAULT_BASE_URL).sub(%r{/+\z}, "")
+      raw_base = base_url || DEFAULT_BASE_URL
+      raise ArgumentError, "verify_alias_binding: base_url exceeds maximum allowed length" if raw_base.length > MAX_BASE_URL_LENGTH
+
+      base = strip_trailing_slashes(raw_base)
       transport ||= Transport.new
       sleeper ||= ->(seconds) { sleep(seconds) if seconds.positive? }
       url = "#{base}/api/aliases/#{URI.encode_www_form_component(alias_id)}/verify"

@@ -2227,15 +2227,6 @@ model RedisFallback {
   @@index([expires_at], name: "idx_redis_fallback_expires_at")
 }
 
-model KraReport {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  period    String   @unique
-  liability Json
-  csv       String
-  createdAt DateTime @default(now())
-
-  @@index([period], name: "idx_kra_report_period")
-}
 
 model CustomRule {
   id             String   @id @default(uuid())

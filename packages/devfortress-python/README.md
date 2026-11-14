@@ -1,4 +1,4 @@
-# devfortress-sdk-python
+# devfortress-sdk (Python)
 
 Event reporting client for DevFortress (external mode). Pre-release, not published.
 

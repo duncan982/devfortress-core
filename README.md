@@ -20,11 +20,11 @@ registry:
 | Language            | Package                                   | Registry        | Status      |
 | ------------------- | ----------------------------------------- | --------------- | ----------- |
 | Node.js             | `devfortress-sdk`                         | npm             | Live        |
-| Python              | `devfortress-sdk-python`                  | PyPI            | Coming soon |
+| Python              | `devfortress-sdk`                         | PyPI            | Coming soon |
 | Go                  | `devfortress-go`                          | Go module proxy | Coming soon |
 | Ruby                | `devfortress-sdk`                         | RubyGems        | Coming soon |
 | Ruby (Rails)        | `devfortress-sdk-rails`                   | RubyGems        | Coming soon |
-| PHP                 | `devfortress/sdk-php`                     | Packagist       | Coming soon |
+| PHP                 | `devfortress/devfortress-sdk`             | Packagist       | Coming soon |
 | PHP (Laravel)       | `devfortress/sdk-laravel`                 | Packagist       | Coming soon |
 | Java                | `net.devfortress:devfortress-sdk`         | Maven Central   | Coming soon |
 | Java (Spring Boot)  | `net.devfortress:devfortress-spring-boot` | Maven Central   | Coming soon |

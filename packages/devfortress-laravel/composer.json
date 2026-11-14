@@ -16,7 +16,7 @@
   ],
   "require": {
     "php": "^8.2",
-    "devfortress/sdk-php": "^0.1",
+    "devfortress/devfortress-sdk": "^0.1",
     "illuminate/contracts": "^12.0 || ^13.0",
     "illuminate/http": "^12.0 || ^13.0",
     "illuminate/support": "^12.0 || ^13.0"
@@ -33,7 +33,7 @@
       "options": {
         "symlink": true,
         "versions": {
-          "devfortress/sdk-php": "0.1.0"
+          "devfortress/devfortress-sdk": "0.1.0"
         }
       }
     }

@@ -46,6 +46,31 @@ export interface RedirectValidationResult {
   signals: string[];
 }
 
+/** Hard cap on redirect URIs scanned by {@link OAuthRedirectValidator.validate}. */
+const MAX_REDIRECT_URI_LENGTH = 2048;
+
+/**
+ * True if `uri` contains a `//authority` segment with embedded userinfo
+ * (`//user@host`), the classic open-redirect/credential-stuffing trick.
+ * Linear scan, no backtracking — bounded by the distance to the next `/`
+ * or `@` from each `//` occurrence.
+ */
+function hasEmbeddedAuthorityCredentials(uri: string): boolean {
+  let searchFrom = 0;
+  while (true) {
+    const doubleSlash = uri.indexOf('//', searchFrom);
+    if (doubleSlash === -1) return false;
+    const authorityStart = doubleSlash + 2;
+    const nextSlash = uri.indexOf('/', authorityStart);
+    const authority =
+      nextSlash === -1
+        ? uri.slice(authorityStart)
+        : uri.slice(authorityStart, nextSlash);
+    if (authority.includes('@')) return true;
+    searchFrom = doubleSlash + 2;
+  }
+}
+
 export class OAuthRedirectValidator {
   private readonly config: Required<OAuthRedirectConfig>;
   private readonly allowedHosts: Set<string>;
@@ -72,6 +97,19 @@ export class OAuthRedirectValidator {
   }
 
   validate(redirectUri: string, state?: string): RedirectValidationResult {
+    // Defense in depth: cap input length before any pattern scanning below —
+    // redirect URIs this long are never legitimate, and bounding length here
+    // keeps every subsequent check (Levenshtein, URI-scheme scan) linear
+    // regardless of what a caller passes in.
+    if (redirectUri.length > MAX_REDIRECT_URI_LENGTH) {
+      return {
+        valid: false,
+        reason: 'Redirect URI exceeds maximum allowed length',
+        riskScore: 100,
+        signals: ['redirect_uri_too_long'],
+      };
+    }
+
     const signals: string[] = [];
     let riskScore = 0;
 
@@ -161,8 +199,14 @@ export class OAuthRedirectValidator {
       riskScore += 20;
     }
 
-    // 5. Open redirect patterns
-    if (/\/\/(.*?)@/.test(redirectUri) || redirectUri.includes('\\')) {
+    // 5. Open redirect patterns (embedded credentials in the authority, e.g.
+    // `https://real-host@evil.com`). Checked without a regex: a lazy `.*?`
+    // between an unanchored `//` and `@` is polynomial on crafted input
+    // (many `//` occurrences, each re-scanning for a missing `@`).
+    if (
+      hasEmbeddedAuthorityCredentials(redirectUri) ||
+      redirectUri.includes('\\')
+    ) {
       signals.push('Open redirect pattern detected');
       riskScore += 40;
     }

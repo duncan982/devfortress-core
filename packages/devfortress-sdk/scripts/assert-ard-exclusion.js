@@ -20,10 +20,15 @@ const PATENT_GATES_PATH = path.resolve(
   'patent-gates.ts'
 );
 
-const REQUIRED_EXCLUSIONS = [
+// above). mpesa has no such flag — it's always excluded from the published
+// tarball, filing status aside — so its check is independent and
+// silently stops enforcing the mpesa exclusion too (that's the exact bug
+// this guard now exists to prevent; TODO 466/df-TK-Week-12).
+const ARD_REQUIRED_EXCLUSIONS = [
   'dist/agent-identity/**',
   'dist/internal.js',
 ];
+const MPESA_REQUIRED_EXCLUSIONS = ['dist/mpesa/**'];
 
 if (!fs.existsSync(PATENT_GATES_PATH)) {
   console.error(
@@ -42,31 +47,50 @@ if (!match) {
 }
 
 
-  console.log(
-  );
-  process.exit(0);
-}
-
 const pkg = JSON.parse(
   fs.readFileSync(path.join(PACKAGE_ROOT, 'package.json'), 'utf8')
 );
 const files = pkg.files || [];
 
-const missing = REQUIRED_EXCLUSIONS.filter(
+let failed = false;
+
+  console.log(
+  );
+} else {
+    pattern => !files.includes(`!${pattern}`)
+  );
+    console.error(
+    );
+      console.error(`  - "!${m}"`);
+    }
+    console.error(
+      `\nAdd the missing negated glob(s) to "files" before publishing, or wait until ARD_FILING_CONFIRMED flips to true.\n`
+    );
+    failed = true;
+  } else {
+    console.log(
+    );
+  }
+}
+
+const missingMpesa = MPESA_REQUIRED_EXCLUSIONS.filter(
   pattern => !files.includes(`!${pattern}`)
 );
-
-if (missing.length > 0) {
+if (missingMpesa.length > 0) {
   console.error(
   );
-  for (const m of missing) {
+  for (const m of missingMpesa) {
     console.error(`  - "!${m}"`);
   }
   console.error(
-    `\nAdd the missing negated glob(s) to "files" before publishing, or wait until ARD_FILING_CONFIRMED flips to true.\n`
+    `\nAdd the missing negated glob(s) to "files" before publishing.\n`
   );
-  process.exit(1);
+  failed = true;
+} else {
+  console.log(
+  );
 }
 
-console.log(
-);
+if (failed) {
+  process.exit(1);
+}

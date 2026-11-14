@@ -13,7 +13,6 @@ module DevFortress
     ].freeze
 
     XSS = [
-      %r{<script[^>]*>[\s\S]*?</script>}i,
       /javascript:/i,
       /onerror\s*=\s*/i,
       /onload\s*=\s*/i,
@@ -23,6 +22,30 @@ module DevFortress
       %r{\.\.[/\\]},
       %r{/etc/passwd}i,
     ].freeze
+
+    # True if +text+ contains a <script> tag.
+    #
+    # Primary check is a plain linear scan for "<script" eventually
+    # followed by "</script>" — same reach as the
+    # `%r{<script[^>]*>[\s\S]*?</script>}` regex this replaces (including
+    # the classic `<scr<script>ipt>` nesting trick), but with no
+    # backtracking. When Loofah is loaded (Rails apps already have it via
+    # rails-html-sanitizer/actionview), malformed markup that survives the
+    # scan (a "<script" with no matching close) is confirmed by checking
+    # that Loofah's real HTML parser actually stripped something — not
+    # just the literal substring in plain prose. Falls back to the scan
+    # alone when Loofah isn't loaded: this gem is deliberately
+    # stdlib-only with no runtime gem dependency (see the gemspec),
+    # matching the Go/PHP SDKs.
+    def self.has_script_tag?(text)
+      lower = text.downcase
+      open_idx = lower.index("<script")
+      return true if open_idx && lower.index("</script>", open_idx)
+      return false unless lower.include?("<script")
+      return true unless defined?(Loofah)
+
+      Loofah.fragment(text).text != text
+    end
 
     # Names of the suspicious patterns found in +text+.
     #
@@ -38,7 +61,7 @@ module DevFortress
 
       found = []
       found << "sql_injection" if hit?(SQL, candidates)
-      found << "xss" if hit?(XSS, candidates)
+      found << "xss" if hit?(XSS, candidates) || candidates.any? { |c| has_script_tag?(c) }
       found << "path_traversal" if hit?(TRAVERSAL, candidates)
       found
     end

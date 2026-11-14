@@ -3,7 +3,7 @@ module github.com/duncan982/devfortress-core/packages/devfortress-go/gin
 go 1.26.0
 
 require (
-	github.com/duncan982/devfortress-core/packages/devfortress-go v0.0.0-00010101000000-000000000000
+	github.com/duncan982/devfortress-core/packages/devfortress-go v0.0.0-20261110193018-979f8df8b994
 	github.com/gin-gonic/gin v1.12.0
 )
 
@@ -38,7 +38,3 @@ require (
 	golang.org/x/text v0.43.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 )
-
-// TODO 341: remove before publishing the gin module — see
-// packages/devfortress-go/README.md and the tracker.
-replace github.com/duncan982/devfortress-core/packages/devfortress-go => ../

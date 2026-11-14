@@ -30,6 +30,12 @@ declare global {
 }
 const prisma = globalThis.__prismaSeed ?? new PrismaClient();
 
+/** Show only the last 4 characters of a secret, for operator confirmation. */
+function maskSecret(value: string): string {
+  if (value.length <= 4) return '*'.repeat(value.length);
+  return '*'.repeat(value.length - 4) + value.slice(-4);
+}
+
 async function main() {
   console.log(`\nSeeding open-core Supabase user: ${DEV_EMAIL}\n`);
 
@@ -98,7 +104,12 @@ async function main() {
   console.log(`  ✅ Prisma User row upserted: ${prismaUser.id}`);
   console.log(`\n  Login credentials:`);
   console.log(`    Email    : ${DEV_EMAIL}`);
-  console.log(`    Password : ${DEV_PASSWORD}`);
+  // Never print the raw secret: the operator already set it in .env.local.
+  // Masked confirmation lets them verify which password is active without
+  // putting the plaintext value in scrollback/CI logs.
+  console.log(
+    `    Password : ${maskSecret(DEV_PASSWORD)} (set via NEXT_PUBLIC_DEV_USER_PASSWORD in .env.local)`
+  );
   console.log(`    URL      : http://localhost:3001/auth/signin\n`);
 
   await prisma.$disconnect();

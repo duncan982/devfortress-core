@@ -13,6 +13,21 @@ import { SDK_VERSION } from './version';
 const DEFAULT_BASE_URL = 'https://www.devfortress.net';
 const DEFAULT_TIMEOUT = 15000;
 const DEFAULT_RETRIES = 3;
+/** Hard cap on a caller-supplied `baseUrl` before any processing. */
+const MAX_BASE_URL_LENGTH = 2048;
+
+/**
+ * Strip trailing slashes without a regex. `/\/+$/` is unanchored at the
+ * start, so on input that never matches (no trailing slash) the engine
+ * retries the same backtrack at every `/` run in the string — polynomial
+ * on a long run of slashes followed by a non-slash character. A plain
+ * loop is O(n) regardless.
+ */
+function stripTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47 /* '/' */) end--;
+  return value.slice(0, end);
+}
 
 export type AliasOperationClass =
   | 'read'
@@ -95,7 +110,13 @@ export async function verifyAliasBinding(
   if (!aliasId) throw new Error('verifyAliasBinding: aliasId is required');
   if (!aliasKey) throw new Error('verifyAliasBinding: aliasKey is required');
 
-  const baseUrl = (options.baseUrl || DEFAULT_BASE_URL).replace(/\/+$/, '');
+  const rawBaseUrl = options.baseUrl || DEFAULT_BASE_URL;
+  if (rawBaseUrl.length > MAX_BASE_URL_LENGTH) {
+    throw new Error(
+      'verifyAliasBinding: baseUrl exceeds maximum allowed length'
+    );
+  }
+  const baseUrl = stripTrailingSlashes(rawBaseUrl);
   const retries = options.retries || DEFAULT_RETRIES;
   const url = `${baseUrl}/api/aliases/${encodeURIComponent(aliasId)}/verify`;
 

@@ -534,8 +534,26 @@ func (c *Client) enqueue(ctx context.Context, events []Event) {
 	}
 }
 
+// maxPreparedEventFields caps the map-size hint computed in prepare() below.
+const maxPreparedEventFields = 1_000_000
+
+// preparedEventSize returns a safe make() size hint for merging defaults
+// and event, clamped to maxPreparedEventFields. Checked against the cap
+// before adding (not `a + b + 1` directly), so two huge inputs can't wrap
+// int into a negative size and reach make() unexamined — make() panics on
+// a negative size rather than failing safely.
+func preparedEventSize(defaults, event int) int {
+	if defaults < 0 || event < 0 {
+		return 0
+	}
+	if defaults >= maxPreparedEventFields || event >= maxPreparedEventFields-1 {
+		return maxPreparedEventFields
+	}
+	return defaults + event + 1
+}
+
 func (c *Client) prepare(event Event) Event {
-	item := make(Event, len(c.defaults)+len(event)+1)
+	item := make(Event, preparedEventSize(len(c.defaults), len(event)))
 	for k, v := range c.defaults {
 		item[k] = v
 	}

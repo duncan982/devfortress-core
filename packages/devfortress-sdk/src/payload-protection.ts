@@ -261,7 +261,11 @@ const INJECTION_PATTERNS = [
   /<script[\s>]/i,
   /javascript:/i,
   /on(?:error|load|click|mouseover)=/i,
-  /SELECT\s+.*\s+FROM\s+/i,
+  // Bounded gap (not `\s+.*\s+`, which is polynomial: `.*` can itself match
+  // whitespace, so the engine retries every split between it and the
+  // trailing `\s+` on input that never resolves to FROM). The `{1,500}`
+  // caps backtracking to a constant regardless of input length.
+  /SELECT\s+[\s\S]{1,500}?\s+FROM\s+/i,
   /UNION\s+(?:ALL\s+)?SELECT/i,
   /INSERT\s+INTO/i,
   /DROP\s+TABLE/i,
@@ -281,6 +285,12 @@ const INJECTION_PATTERNS = [
   /%2e%2e%2f/i,
   /\/etc\/(?:passwd|shadow)/i,
 ];
+
+/** Hard cap on bytes scanned per response by {@link INJECTION_PATTERNS}. */
+const MAX_INJECTION_SCAN_LENGTH = 100_000;
+
+/** Path segments that would reach Object.prototype via bracket assignment. */
+const UNSAFE_PATH_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype']);
 
 /**
  * Patent Pending — KIPI KE/P/2026/005972
@@ -556,9 +566,16 @@ export class PayloadProtectionService {
       typeof responsePayload === 'string'
         ? responsePayload
         : JSON.stringify(responsePayload);
+    // Defense in depth: bound what the regex scan below ever sees, even
+    // after the pattern-level fix, so an unexpectedly huge third-party
+    // response can't inflate scan time.
+    const scanStr =
+      payloadStr.length > MAX_INJECTION_SCAN_LENGTH
+        ? payloadStr.slice(0, MAX_INJECTION_SCAN_LENGTH)
+        : payloadStr;
 
     for (const pattern of INJECTION_PATTERNS) {
-      if (pattern.test(payloadStr)) {
+      if (pattern.test(scanStr)) {
         injectionIndicators.push(pattern.source);
       }
     }
@@ -954,6 +971,16 @@ export class PayloadProtectionService {
     value: unknown
   ): void {
     const parts = path.split('.');
+    // fieldPath here comes from encryptedFields metadata that travelled
+    // with an inbound (untrusted) third-party payload — a malicious
+    // "__proto__"/"constructor"/"prototype" segment would otherwise reach
+    // Object.prototype via the bracket assignment below. Fails closed,
+    // matching decryptSensitiveFields' own fail-closed contract.
+    if (parts.some(part => UNSAFE_PATH_SEGMENTS.has(part))) {
+      throw new Error(
+        `[PayloadProtection] Refusing to set nested value at unsafe path "${path}" — contains a prototype-polluting segment`
+      );
+    }
     let current: Record<string, unknown> = obj;
     for (let i = 0; i < parts.length - 1; i++) {
       if (!current[parts[i]] || typeof current[parts[i]] !== 'object') {

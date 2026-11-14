@@ -813,6 +813,7 @@ export class DevFortressCore {
     //
     // FEATURE_ANOMALY_GATED_METERING=false is an instant kill switch back to
     // pre-existing behavior (relay everything), following the same pattern
+    // as FEATURE_PLATFORM_INTEL across B3-B9/B11. Checked per-call (not
     // cached at construction) so it can be toggled without a redeploy.
     //
     // NOTE: tier-gate.ts's `iclMaxTier` capability (Starter:1, Pro:2,

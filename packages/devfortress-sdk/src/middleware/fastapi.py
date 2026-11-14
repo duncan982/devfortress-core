@@ -37,6 +37,12 @@ try:
 except ImportError:
     HAS_URLLIB = False
 
+try:
+    import bleach
+    HAS_BLEACH = True
+except ImportError:
+    HAS_BLEACH = False
+
 
 # SQL Injection patterns
 SQL_PATTERNS = [
@@ -48,11 +54,35 @@ SQL_PATTERNS = [
 
 # XSS patterns
 XSS_PATTERNS = [
-    re.compile(r"<script[^>]*>[\s\S]*?</script>", re.IGNORECASE),
     re.compile(r"javascript:", re.IGNORECASE),
     re.compile(r"onerror\s*=\s*", re.IGNORECASE),
     re.compile(r"onload\s*=\s*", re.IGNORECASE),
 ]
+
+
+def _has_script_tag(text: str) -> bool:
+    """True if `text` contains a <script> tag.
+
+    Primary check is a plain linear scan for "<script" eventually
+    followed by "</script>" — same reach as the
+    ``<script[^>]*>[\\s\\S]*?</script>`` regex this replaces (including
+    the classic ``<scr<script>ipt>`` nesting trick), but with no
+    backtracking. When bleach is installed, malformed markup that
+    survives the scan (a "<script" with no matching close) is confirmed
+    by checking that bleach's real HTML parser actually stripped
+    something — not just the literal substring in plain prose. Falls
+    back to the scan alone when bleach isn't installed (this file has
+    no packaging manifest of its own to declare it as a hard dependency,
+    matching HAS_HTTPX/HAS_URLLIB above)."""
+    lower = text.lower()
+    open_idx = lower.find("<script")
+    if open_idx != -1 and lower.find("</script>", open_idx) != -1:
+        return True
+    if "<script" not in lower:
+        return False
+    if not HAS_BLEACH:
+        return True
+    return bleach.clean(text, tags=[], strip=True) != text
 
 # Path traversal patterns
 TRAVERSAL_PATTERNS = [
@@ -224,7 +254,7 @@ class DevFortressMiddleware(BaseHTTPMiddleware):
 
         if any(p.search(check_str) for p in SQL_PATTERNS):
             patterns_found.append("sql_injection")
-        if any(p.search(check_str) for p in XSS_PATTERNS):
+        if _has_script_tag(check_str) or any(p.search(check_str) for p in XSS_PATTERNS):
             patterns_found.append("xss")
         if any(p.search(check_str) for p in TRAVERSAL_PATTERNS):
             patterns_found.append("path_traversal")

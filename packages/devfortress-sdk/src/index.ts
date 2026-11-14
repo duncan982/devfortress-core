@@ -380,29 +380,12 @@ export type {
 // EnumerationTimingShield (B9), DNSHijackingDetector (B11), and
 // PredictiveAttackTrajectory (B12) remain in internal.ts — see that file's
 // header comment for why. Do not re-add exports for these eight here.
-
-// v4.9 — S36: M-Pesa Webhook Protection Module (Kenya Fintech)
-export {
-  validateMpesaCallback,
-  validateStkCallback,
-  validateC2BCallback,
-  validateB2CCallback,
-  isDuplicateReceipt,
-  markReceiptSeen,
-  isAllowedMpesaIp,
-  getSafaricomIpList,
-  checkMpesaAnomalies,
-  enableMpesaProtection,
-} from './mpesa';
-export type {
-  MpesaStkCallback,
-  MpesaC2BCallback,
-  MpesaB2CCallback,
-  MpesaAnomalyInput,
-  MpesaAnomalyResult,
-  MpesaProtectionConfig,
-  MpesaProtectionResult,
-} from './mpesa';
+//
+// The M-Pesa Webhook Protection module (v4.9 — S36) also moved to
+// internal.ts, not for patent-boundary reasons but because it's
+// Kenya-specific logic that must not ship in the public npm package — see
+// DF-Kenya-Specific-Audit-Report-13-11-26.md. Do not re-add mpesa exports
+// here; use the internal entry point instead.
 
 // v4.9 — S38: Low-Bandwidth Transport (2G/3G optimized)
 export {

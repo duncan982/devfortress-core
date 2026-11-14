@@ -77,6 +77,7 @@ export class ShadowAgentRegistry {
   register(
     agent: Omit<RegisteredAgent, 'registeredAt' | 'lastHeartbeat' | 'active'>
   ): RegisteredAgent {
+    if (process.env.FEATURE_PLATFORM_INTEL === 'false') {
       return { ...agent, registeredAt: 0, lastHeartbeat: 0, active: false };
     }
 
@@ -103,6 +104,7 @@ export class ShadowAgentRegistry {
 
   /** Check if a request source is a registered agent or a shadow */
   detect(fingerprint: string, indicators: string[]): ShadowAgentDetection {
+    if (process.env.FEATURE_PLATFORM_INTEL === 'false') {
       return {
         detected: false,
         agentFingerprint: fingerprint,

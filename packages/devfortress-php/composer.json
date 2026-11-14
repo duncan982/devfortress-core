@@ -1,5 +1,5 @@
 {
-  "name": "devfortress/sdk-php",
+  "name": "devfortress/devfortress-sdk",
   "description": "DevFortress event reporting client for PHP (external mode).",
   "type": "library",
   "license": "BUSL-1.1",

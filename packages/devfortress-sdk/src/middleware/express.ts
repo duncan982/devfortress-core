@@ -3,6 +3,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
+import sanitizeHtml from 'sanitize-html';
 import { DevFortressClient } from '../client';
 import type {
   DevFortressMiddlewareOptions,
@@ -221,6 +222,37 @@ function getClientIp(req: Request): string {
 }
 
 /**
+ * True if `text` contains a `<script>` open tag eventually followed by a
+ * closing tag — same reach as the `<script[^>]*>[\s\S]*?<\/script>/`
+ * regex this replaces (including the classic `<scr<script>ipt>` nesting
+ * trick), but via a plain linear scan instead of an unbounded lazy-span
+ * match. sanitize-html is layered on top as an independent check for
+ * malformed markup a plain scan could miss — it distinguishes "a
+ * `<script>` element's content was dropped" from "an unrelated tag was
+ * stripped", which a naive strip-everything comparison can't (a plain
+ * "did sanitizing change the text" check would false-positive on any
+ * HTML tag at all, e.g. `<b>bold</b> no script here`).
+ */
+function containsScriptTag(text: string): boolean {
+  const lower = text.toLowerCase();
+  const openIdx = lower.indexOf('<script');
+  if (openIdx !== -1 && lower.indexOf('</script>', openIdx) !== -1) {
+    return true;
+  }
+  const scriptDropped = sanitizeHtml(text, {
+    allowedTags: [],
+    allowedAttributes: {},
+    nonTextTags: ['script'],
+  });
+  const scriptKept = sanitizeHtml(text, {
+    allowedTags: [],
+    allowedAttributes: {},
+    nonTextTags: [],
+  });
+  return scriptDropped !== scriptKept;
+}
+
+/**
  * Detect suspicious patterns in request
  */
 function detectSuspiciousPatterns(req: Request): string[] {
@@ -236,9 +268,11 @@ function detectSuspiciousPatterns(req: Request): string[] {
     /(;\s*--)/,
   ];
 
-  // XSS patterns
+  // XSS patterns. `<script>` detection is handled separately below via
+  // sanitize-html's real parser — a hand-rolled `<script[^>]*>[\s\S]*?<\/script>/`
+  // regex is a bad-tag-filter: broken/nested tags or a missing closing tag
+  // evade it the same way they'd evade a naive sanitizer.
   const xssPatterns = [
-    /<script[^>]*>[\s\S]*?<\/script>/i,
     /<iframe[^>]*>[\s\S]*?<\/iframe>/i,
     /javascript:/i,
     /onerror\s*=\s*/i,
@@ -269,7 +303,10 @@ function detectSuspiciousPatterns(req: Request): string[] {
   }
 
   // Check XSS
-  if (xssPatterns.some(pattern => pattern.test(requestString))) {
+  if (
+    containsScriptTag(requestString) ||
+    xssPatterns.some(pattern => pattern.test(requestString))
+  ) {
     patterns.push('xss');
   }
 

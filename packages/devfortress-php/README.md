@@ -1,17 +1,27 @@
-# devfortress/sdk-php
+# devfortress/devfortress-sdk
 
-Event reporting client for DevFortress (external mode). Pre-release, not published.
+PHP SDK for DevFortress — event reporting client (external mode). Pre-release, not published.
+
+> **This repository is a read-only mirror.** Its content is pushed here automatically
+> from [`packages/devfortress-php`](https://github.com/duncan982/devfortress-core/tree/main/packages/devfortress-php)
+> in the [`devfortress-core`](https://github.com/duncan982/devfortress-core) monorepo. Please open
+> issues and pull requests there, not against this mirror — changes made directly here will be
+> overwritten or conflict on the next mirror push.
 
 Requires PHP 8.2 or newer with `ext-curl`, `ext-json` and `ext-hash`. There are no runtime Composer dependencies.
 
 ## Install
 
-Not on Packagist yet. Until it is, use a Composer path repository:
+```bash
+composer require devfortress/devfortress-sdk
+```
+
+Not on Packagist yet. Until it is, use a Composer path repository instead:
 
 ```json
 {
   "repositories": [{ "type": "path", "url": "../devfortress-php" }],
-  "require": { "devfortress/sdk-php": "@dev" }
+  "require": { "devfortress/devfortress-sdk": "@dev" }
 }
 ```
 
@@ -117,6 +127,11 @@ The signing and webhook tests read shared test-vector files (set `DEVFORTRESS_CO
 
 ## Versioning (Packagist)
 
-This package lives inside the `devfortress-core` monorepo alongside the other language SDKs, not in its own standalone repo. Packagist reads versions from git tags, so a monorepo needs those tags disambiguated per package — **tag releases for this package as `php-v1.0.0`, `php-v1.1.0`, etc., never a bare `v1.0.0`** (a bare tag would be ambiguous against the other SDKs' releases in the same repo).
+Source development happens inside the `devfortress-core` monorepo alongside the other
+language SDKs, under `packages/devfortress-php`. A subtree mirror-push workflow publishes
+that subtree, unchanged, to [`duncan982/devfortress-php`](https://github.com/duncan982/devfortress-php) —
+a dedicated repo with `composer.json` at its root, which is what Packagist actually tracks.
+Release tags are cut on the mirror repo itself (`v1.0.0`, `v1.1.0`, etc. — no path prefix
+needed there, unlike the Go SDK's nested-module tagging).
 
 License: BUSL-1.1

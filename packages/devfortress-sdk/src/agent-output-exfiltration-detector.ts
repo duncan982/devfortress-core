@@ -78,6 +78,7 @@ export class AgentOutputExfiltrationDetector {
   }
 
   analyze(output: AgentOutput): ExfiltrationResult {
+    if (process.env.FEATURE_PLATFORM_INTEL === 'false') {
       return {
         detected: false,
         threatType: 'none',

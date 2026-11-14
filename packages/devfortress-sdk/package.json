@@ -37,6 +37,7 @@
     "dist",
     "!dist/agent-identity/**",
     "!dist/ard/**",
+    "!dist/mpesa/**",
     "!dist/internal.js",
     "!dist/internal.d.ts",
     "!dist/consent-alias-lifecycle.js",
@@ -106,6 +107,7 @@
   "dependencies": {
     "axios": "^1.20.0",
     "pako": "^2.1.0",
+    "sanitize-html": "^2.18.2",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -115,6 +117,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^20.0.0",
     "@types/pako": "^2.0.4",
+    "@types/sanitize-html": "^2.16.2",
     "jest": "^30.2.0",
     "typescript": "^5.0.0"
   },

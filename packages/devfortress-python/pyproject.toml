@@ -3,14 +3,14 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "devfortress-sdk-python"
+name = "devfortress-sdk"
 version = "0.3.0"
 description = "DevFortress event reporting client for Python (external mode): request signing, classification, webhook verification, credential isolation, and agent-behavior monitoring for Flask and FastAPI applications."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "BUSL-1.1" }
 authors = [{ name = "Duncan Ndungu Ndegwa" }]
-dependencies = ["requests>=2.28", "cryptography>=41"]
+dependencies = ["requests>=2.28", "cryptography>=41", "bleach>=6.1"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "Operating System :: OS Independent",

@@ -48,7 +48,7 @@ return [
 
     /*
      | Secret for verifying inbound DevFortress webhooks (see WebhookVerifier in
-     | devfortress/sdk-php). Read it here, not with env() elsewhere: env() returns
+     | devfortress/devfortress-sdk). Read it here, not with env() elsewhere: env() returns
      | null outside config files once the configuration is cached.
      */
     'webhook_secret' => env('DEVFORTRESS_WEBHOOK_SECRET'),

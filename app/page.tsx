@@ -1,30 +1,92 @@
 // Version: v9.0.0 - IP-Protected Homepage: Credential Isolation, Agent Security, No Mechanism Disclosure
 import Link from 'next/link';
 import { Metadata } from 'next';
-import {
-  organizationSchema,
-  webApplicationSchema,
-  renderJsonLd,
-} from '@core/lib/seo/structured-data';
-import {
-  AuthAwareHomeContent,
-  AuthAwareFeatureLink,
-  AuthAwareGetStartedButton,
-} from '@core/components/home/auth-aware-content';
 import { ValidationBadge } from './components/ValidationBadge';
-import sdkPackageJson from 'devfortress-sdk/package.json';
 
-const SDK_VERSION = sdkPackageJson.version;
+// devfortress-core has no @core/lib/seo/structured-data or
+// @core/components/home/auth-aware-content modules (private-repo only, and
+// this page is independently maintained here rather than synced from
+// source — see scripts/sync-open-core-local.sh's app/page.tsx stash/restore
+// comment in the private repo). Inlined equivalents below: the schema
+// objects are plain, non-sensitive schema.org JSON-LD; the auth-aware
+// components degrade to their always-unauthenticated fallback, since this
+// checkout has no session-provider hook to light up the authenticated
+// branch with.
+const organizationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'DevFortress',
+  url: 'https://devfortress.net',
+  logo: 'https://devfortress.net/logo.png',
+  description:
+    'Enterprise-grade API security platform with AI-powered generation, threat intelligence, and automated defense systems.',
+  sameAs: [
+    'https://twitter.com/devfortress',
+    'https://github.com/devfortress',
+    'https://linkedin.com/company/devfortress',
+  ],
+  contactPoint: {
+    '@type': 'ContactPoint',
+    contactType: 'Customer Support',
+    email: 'support@devfortress.net',
+    url: 'https://devfortress.net/contact',
+  },
+};
 
-// DRAFT — multi-language launch badge copy. NOT wired into the render path:
-// the hero badge further down (currently reading "Unified Application
-// Security — SDK v{SDK_VERSION} · Patent Pending") still renders its own
-// inline JSX unchanged. Swap that JSX to use this variant once the
-// Python/PHP/Ruby/Java/Go/.NET registry publishes are confirmed live (see
-// packages/core/lib/multilang-sdk-gate.ts), then delete this comment block.
-// const HOMEPAGE_BADGE_TEXT_MULTILANG_DRAFT = (
-//   <>Unified Application Security — SDK v{SDK_VERSION} · Now in 7 Languages · Patent Pending</>
-// );
+const webApplicationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'DevFortress Platform',
+  url: 'https://devfortress.net',
+  description:
+    'Build secure APIs with AI assistance, deploy honeypots for threat intelligence, and continuously improve security posture.',
+  applicationCategory: 'DeveloperApplication',
+  operatingSystem: 'Web Browser',
+  offers: { '@type': 'Offer', price: '69', priceCurrency: 'USD' },
+};
+
+function renderJsonLd(data: unknown) {
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
+  );
+}
+
+function AuthAwareHomeContent() {
+  return null;
+}
+
+function AuthAwareFeatureLink({
+  unauthenticatedHref,
+  unauthenticatedLabel,
+  className,
+}: {
+  authenticatedHref: string;
+  authenticatedLabel: string;
+  unauthenticatedHref: string;
+  unauthenticatedLabel: string;
+  className?: string;
+  showSignUpHint?: boolean;
+}) {
+  return (
+    <Link href={unauthenticatedHref} className={className}>
+      {unauthenticatedLabel}
+    </Link>
+  );
+}
+
+function AuthAwareGetStartedButton() {
+  return (
+    <Link
+      href="/login"
+      className="rounded-lg bg-primary-600 px-6 py-3 font-semibold text-white hover:bg-primary-700"
+    >
+      Get Started
+    </Link>
+  );
+}
 
 /** Page metadata for the home page, including SEO and Open Graph data. */
 export const metadata: Metadata = {
@@ -87,7 +149,7 @@ export default async function Home() {
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
                 </span>
-                Unified Application Security — SDK v{SDK_VERSION} · Patent
+                Unified Application Security — Multi-Language SDKs · Patent
                 Pending
               </div>
               <h1 className="max-w-4xl text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
@@ -999,22 +1061,6 @@ export default async function Home() {
                 strict operational scope limits in real-time.
               </p>
             </div>
-
-              <div className="flex flex-col items-center rounded-xl border border-blue-200 bg-blue-50/50 p-6 text-center shadow-sm dark:border-blue-800 dark:bg-blue-900/10">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-2xl dark:bg-blue-900/30">
-                  🤖
-                </div>
-                <h3 className="mt-4 font-semibold">
-                  AI Agent Identity Protection
-                </h3>
-                <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-                  Your AI agents never see your users&apos; real name, email, or
-                  location. DevFortress substitutes alias identities — so a
-                  compromised AI provider yields nothing. Per-agent consent,
-                  session attestation, closed-loop revocation.
-                </p>
-              </div>
-            )}
 
             {/* API Key & Payload Protection */}
             <div className="flex flex-col items-center rounded-xl border border-neutral-200 bg-white p-6 text-center shadow-sm dark:border-neutral-800 dark:bg-neutral-900/50">
