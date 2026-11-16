@@ -1,7 +1,7 @@
 // Version: v9.0.0 - IP-Protected Homepage: Credential Isolation, Agent Security, No Mechanism Disclosure
 import Link from 'next/link';
 import { Metadata } from 'next';
-import { ValidationBadge } from './components/ValidationBadge';
+// ./components/ValidationBadge does not exist in this repo (open-core only).
 
 // devfortress-core has no @core/lib/seo/structured-data or
 // @core/components/home/auth-aware-content modules (private-repo only, and
@@ -184,7 +184,6 @@ export default async function Home() {
                   📖 Read the Book: Credential Isolation Closed-Loop Security
                   <span className="text-blue-400/60">→</span>
                 </a>
-                <ValidationBadge />
                 <AuthAwareHomeContent />
               </div>
             </div>

@@ -193,6 +193,7 @@ model ApiProject {
   organization       Organization?       @relation(fields: [organizationId], references: [id])
   repository         Repository?         @relation("ProjectRepository", fields: [repositoryId], references: [id])
   team               Team?               @relation(fields: [teamId], references: [id])
+  ardProvisionings   ArdProvisioning[]
   auditLogs          AuditLog[]
   blockedIps         BlockedIp[]
   clAuditTrails      ClAuditTrail[]
@@ -207,6 +208,27 @@ model ApiProject {
   teamAccess         TeamProjectAccess[]
 }
 
+/// ARD Hard-Gate provisioning history (Dispatch 3). One row per issuance —
+/// not inlined onto ApiProject — so re-issuances stay auditable across time
+/// instead of overwriting a single set of columns. See
+/// docs/internal/ard-hard-gate-design-proposal.md §4.
+model ArdProvisioning {
+  id                      String     @id @default(cuid())
+  apiProjectId            String
+  apiProject              ApiProject @relation(fields: [apiProjectId], references: [id])
+  variant                 String // 'hosted' | 'self_hosted'
+  tierAtIssuance          String // snapshot of the DB-backed tier used for the check
+  capabilityJti           String     @unique // matches the jti claim inside the signed capability
+  issuedAt                DateTime   @default(now())
+  expiresAt               DateTime
+  revokedAt               DateTime?
+  manualOverride          Boolean    @default(false)
+  overrideGrantedByUserId String?
+  overrideReason          String?
+  createdAt               DateTime   @default(now())
+
+  @@index([apiProjectId])
+}
 
 model OperatorKey {
   id           String   @id @default(cuid())
@@ -1625,6 +1647,7 @@ model CredentialAlias {
   @@index([rotatedFromId])
 }
 
+// PATENT-GATE: B4 — Filing 4 (KE/P/2026/005973) — Wave 4 only
 // Postgres-backed store for the multi-hop trust chain mechanism,
 // replacing its previous in-memory-only Map so chains survive process restarts.
 model TrustChainRecord {
@@ -2227,6 +2250,15 @@ model RedisFallback {
   @@index([expires_at], name: "idx_redis_fallback_expires_at")
 }
 
+model KraReport {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  period    String   @unique
+  liability Json
+  csv       String
+  createdAt DateTime @default(now())
+
+  @@index([period], name: "idx_kra_report_period")
+}
 
 model CustomRule {
   id             String   @id @default(uuid())
