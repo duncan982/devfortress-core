@@ -1,15 +1,13 @@
 # devfortress-sdk-go
 
-Event reporting client for DevFortress (external mode). Pre-release, not published.
+Event reporting client for DevFortress (external mode).
 
-Requires Go 1.26 or newer. There are no runtime dependencies outside the standard library. A `gin` adapter (module `github.com/duncan982/devfortress-sdk-go/gin`) is nested under `gin/`.
+Requires Go 1.26 or newer. There are no runtime dependencies outside the standard library. A `gin` adapter (module `github.com/duncan982/devfortress-core/packages/devfortress-go/gin`) is nested under `gin/`.
 
 ## Install
 
-Not published to a module proxy yet. Until it is, use a `replace` directive:
-
 ```
-replace github.com/duncan982/devfortress-sdk-go => ../devfortress-go
+go get github.com/duncan982/devfortress-core/packages/devfortress-go@v1.0.0
 ```
 
 ## The DevFortress Textbook
@@ -116,3 +114,5 @@ The signing and webhook tests read the shared cross-language vector files from `
 This module's path is `github.com/duncan982/devfortress-core/packages/devfortress-go` — it lives inside the `devfortress-core` monorepo as a nested module, not a standalone repo. The Go module proxy requires a nested module's release tags to be prefixed with its own path within the repo — **tag releases for this module as `packages/devfortress-go/v1.0.0`, `packages/devfortress-go/v1.1.0`, etc., never a bare `v1.0.0`** (a bare tag would be read as a release of the repo root, not this module, and `go get` would fail to resolve the intended version).
 
 License: BUSL-1.1
+
+pkg.go.dev shows this package as `License: UNKNOWN` and does not render its documentation page. This is a deliberate pkg.go.dev policy, not an issue with this package or its LICENSE file: pkg.go.dev's license classifier only marks OSI-approved licenses as "redistributable," and BUSL-1.1 is intentionally not OSI-approved. See the `LICENSE` file in this directory for the actual terms. The package installs and works normally via `go get` regardless of what pkg.go.dev's docs page shows.
