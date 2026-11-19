@@ -20,15 +20,15 @@ registry:
 | Language            | Package                                   | Registry        | Status      |
 | ------------------- | ----------------------------------------- | --------------- | ----------- |
 | Node.js             | `devfortress-sdk`                         | npm             | Live        |
-| Python              | `devfortress-sdk`                         | PyPI            | Coming soon |
-| Go                  | `devfortress-go`                          | Go module proxy | Coming soon |
-| Ruby                | `devfortress-sdk`                         | RubyGems        | Coming soon |
+| Python              | `devfortress-sdk`                         | PyPI            | Live        |
+| Go                  | `devfortress-go`                          | Go module proxy | Live        |
+| Ruby                | `devfortress-sdk`                         | RubyGems        | Live        |
 | Ruby (Rails)        | `devfortress-sdk-rails`                   | RubyGems        | Coming soon |
-| PHP                 | `devfortress/devfortress-sdk`             | Packagist       | Coming soon |
+| PHP                 | `devfortress/devfortress-sdk`             | Packagist       | Live        |
 | PHP (Laravel)       | `devfortress/sdk-laravel`                 | Packagist       | Coming soon |
-| Java                | `net.devfortress:devfortress-sdk`         | Maven Central   | Coming soon |
+| Java                | `net.devfortress:devfortress-sdk`         | Maven Central   | Live        |
 | Java (Spring Boot)  | `net.devfortress:devfortress-spring-boot` | Maven Central   | Coming soon |
-| .NET                | `DevFortress.Sdk`                         | NuGet           | Coming soon |
+| .NET                | `DevFortress.Sdk`                         | NuGet           | Live        |
 | .NET (ASP.NET Core) | `DevFortress.AspNetCore`                  | NuGet           | Coming soon |
 
 ### Node.js
@@ -54,6 +54,46 @@ export async function middleware(request: NextRequest) {
   await df.observe(request);
   return NextResponse.next();
 }
+```
+
+### Python
+
+```bash
+pip install devfortress-sdk
+```
+
+### Go
+
+```bash
+go get github.com/duncan982/devfortress-core/packages/devfortress-go@v1.0.0
+```
+
+### Ruby
+
+```bash
+gem install devfortress-sdk
+```
+
+### PHP
+
+```bash
+composer require devfortress/devfortress-sdk
+```
+
+### .NET
+
+```bash
+dotnet add package DevFortress.Sdk
+```
+
+### Java
+
+```xml
+<dependency>
+  <groupId>net.devfortress</groupId>
+  <artifactId>devfortress-sdk</artifactId>
+  <version>0.1.0</version>
+</dependency>
 ```
 
 Full documentation: [devfortress.net/docs](https://devfortress.net/docs)

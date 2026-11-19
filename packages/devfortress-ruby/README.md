@@ -1,15 +1,19 @@
 # devfortress-sdk (Ruby)
 
-Event reporting client for DevFortress (external mode). Pre-release, not published.
+Event reporting client for DevFortress (external mode).
 
 Requires Ruby 3.0 or newer. There are no runtime dependencies outside the standard library (`net/http`, `openssl`, `digest`, `json`, `securerandom`, `ipaddr`). A Rack middleware adapter (`devfortress-sdk-rails`, gem name proposed — Duncan's call) lives at `../devfortress-ruby-rails`.
 
 ## Install
 
-Not published to RubyGems yet. Until it is, reference the local path in your `Gemfile`:
-
 ```ruby
-gem "devfortress-sdk", path: "../devfortress-ruby"
+gem "devfortress-sdk"
+```
+
+or:
+
+```
+gem install devfortress-sdk
 ```
 
 ## The DevFortress Textbook

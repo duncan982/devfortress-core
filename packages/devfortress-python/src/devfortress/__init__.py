@@ -103,7 +103,17 @@ try:
     )
 except ImportError:
     pass
+from .password_spray_detector import (
+    AuthFailureEvent,
+    PasswordSprayDetector,
+    SprayDetectionResult,
+)
 from .quick import get_instance, init
+from .registration_pattern_detector import (
+    RegistrationEvent,
+    RegistrationPatternDetector,
+    RegistrationResult,
+)
 from .sensitive_action_monitor import (
     SensitiveActionEvent,
     SensitiveActionMonitor,
@@ -239,6 +249,14 @@ __all__ = [
     # tamper-evident; see unified_audit_trail.py's module docstring.
     "UnifiedAuditTrail",
     "UnifiedAuditEntry",
+    # Password spray detection
+    "PasswordSprayDetector",
+    "AuthFailureEvent",
+    "SprayDetectionResult",
+    # Registration pattern detection
+    "RegistrationPatternDetector",
+    "RegistrationEvent",
+    "RegistrationResult",
     # AbuseIPDB threat-intel enrichment (TODO 375)
     "check_ip",
     "report_ip",

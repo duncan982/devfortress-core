@@ -220,11 +220,11 @@ export default function FeaturesPage() {
               </div>
             </div>
             <div className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-              <span className="text-2xl">🔜</span>
+              <span className="text-2xl">✅</span>
               <div>
                 <p className="font-semibold">Python/FastAPI</p>
                 <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                  Coming Soon
+                  pip install devfortress-sdk
                 </p>
               </div>
             </div>

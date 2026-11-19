@@ -54,6 +54,7 @@ model User {
   notifications         NotificationPreference?
   organizationsOwned    Organization[]          @relation("OrganizationOwner")
   organizations         OrganizationMember[]
+  refundRequests        RefundRequest[]
   repositories          Repository[]            @relation("RepositoryOwner")
   scanSchedules         ScanSchedule[]
   secrets               Secret[]                @relation("UserSecrets")
@@ -153,6 +154,7 @@ model Organization {
   honeypots          Honeypot[]
   owner              User                 @relation("OrganizationOwner", fields: [ownerId], references: [id])
   members            OrganizationMember[]
+  refundRequests     RefundRequest[]
   repositories       Repository[]
   subscriptions      Subscription[]
   teams              Team[]
@@ -193,7 +195,6 @@ model ApiProject {
   organization       Organization?       @relation(fields: [organizationId], references: [id])
   repository         Repository?         @relation("ProjectRepository", fields: [repositoryId], references: [id])
   team               Team?               @relation(fields: [teamId], references: [id])
-  ardProvisionings   ArdProvisioning[]
   auditLogs          AuditLog[]
   blockedIps         BlockedIp[]
   clAuditTrails      ClAuditTrail[]
@@ -208,27 +209,6 @@ model ApiProject {
   teamAccess         TeamProjectAccess[]
 }
 
-/// ARD Hard-Gate provisioning history (Dispatch 3). One row per issuance —
-/// not inlined onto ApiProject — so re-issuances stay auditable across time
-/// instead of overwriting a single set of columns. See
-/// docs/internal/ard-hard-gate-design-proposal.md §4.
-model ArdProvisioning {
-  id                      String     @id @default(cuid())
-  apiProjectId            String
-  apiProject              ApiProject @relation(fields: [apiProjectId], references: [id])
-  variant                 String // 'hosted' | 'self_hosted'
-  tierAtIssuance          String // snapshot of the DB-backed tier used for the check
-  capabilityJti           String     @unique // matches the jti claim inside the signed capability
-  issuedAt                DateTime   @default(now())
-  expiresAt               DateTime
-  revokedAt               DateTime?
-  manualOverride          Boolean    @default(false)
-  overrideGrantedByUserId String?
-  overrideReason          String?
-  createdAt               DateTime   @default(now())
-
-  @@index([apiProjectId])
-}
 
 model OperatorKey {
   id           String   @id @default(cuid())
@@ -402,6 +382,12 @@ model LiveThreatEvent {
   @@index([ip])
   @@index([authPhase])
   @@index([actionTaken])
+  // Composite indexes matching /api/events/blocked's isIPBlocked() heuristic
+  // queries exactly (projectId + ip + the filtered column + timestamp range)
+  // — the prior single-column indexes left Postgres bitmap-ANDing four
+  // separate indexes per request on this hot, every-request SDK path.
+  @@index([projectId, ip, severity, timestamp])
+  @@index([projectId, ip, eventType, timestamp])
 }
 
 model AnomalyTrainingData {
@@ -502,6 +488,50 @@ model Subscription {
   organizationId    String?
   organization      Organization?      @relation(fields: [organizationId], references: [id])
   user              User?              @relation(fields: [userId], references: [id])
+  refundRequests    RefundRequest[]
+}
+
+enum RefundRequestType {
+  DISCRETIONARY
+  STATUTORY
+}
+
+enum RefundRequestStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+}
+
+// Usage-based cancellation refunds (DF-Refund-Cost-Audit-18-11-26.md).
+// Amounts are USD floats, matching SUBSCRIPTION_PRICING/CREDIT_PACKS convention
+// elsewhere in this schema/codebase (not minor-unit cents).
+// usageBreakdown snapshots the per-resource deduction math at request time —
+// kept even if tier pricing changes later, since this is an audit record.
+model RefundRequest {
+  id                    String              @id @default(cuid())
+  userId                String?
+  organizationId        String?
+  subscriptionId        String
+  transactionId         String
+  paddleAdjustmentId    String?             @unique
+  type                  RefundRequestType
+  status                RefundRequestStatus @default(PENDING_APPROVAL)
+  amountPaidUsd         Float
+  usageDeductionUsd     Float
+  refundableUsd         Float
+  usageBreakdown        Json
+  estimatedPaddleFeeUsd Float?
+  retainedFeeUsd        Float?
+  requestedAt           DateTime            @default(now())
+  resolvedAt            DateTime?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  subscription          Subscription        @relation(fields: [subscriptionId], references: [id])
+  user                  User?               @relation(fields: [userId], references: [id])
+  organization          Organization?       @relation(fields: [organizationId], references: [id])
+
+  @@index([subscriptionId])
+  @@index([status])
 }
 
 model SyncState {
@@ -1647,7 +1677,6 @@ model CredentialAlias {
   @@index([rotatedFromId])
 }
 
-// PATENT-GATE: B4 — Filing 4 (KE/P/2026/005973) — Wave 4 only
 // Postgres-backed store for the multi-hop trust chain mechanism,
 // replacing its previous in-memory-only Map so chains survive process restarts.
 model TrustChainRecord {
@@ -2250,15 +2279,6 @@ model RedisFallback {
   @@index([expires_at], name: "idx_redis_fallback_expires_at")
 }
 
-model KraReport {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  period    String   @unique
-  liability Json
-  csv       String
-  createdAt DateTime @default(now())
-
-  @@index([period], name: "idx_kra_report_period")
-}
 
 model CustomRule {
   id             String   @id @default(uuid())

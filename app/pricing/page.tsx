@@ -51,7 +51,7 @@ function generateFAQSchema(faqs: Array<{ question: string; answer: string }>) {
  * Flip alongside that file's flag once Duncan confirms the registry
  * publishes are live — keep both values in sync.
  */
-const MULTILANG_SDK_LAUNCH_LIVE = false;
+const MULTILANG_SDK_LAUNCH_LIVE = true;
 
 /** No-op logger for open-core (closed platform handles error logging). */
 const logError = (message: string, context?: unknown) => {
@@ -706,7 +706,7 @@ const comparisonData: CompareGroup[] = [
       MULTILANG_SDK_LAUNCH_LIVE
         ? {
             feature: 'Multi-Language SDKs',
-            note: 'Node.js SDK, Python, Go, Java, Ruby, C#, PHP',
+            note: 'Node.js, Python, Go, Ruby, PHP, Java and .NET SDKs available now',
             starter: { type: 'check-g', text: 'Included' },
             pro: { type: 'check-g', text: 'Included' },
             teams: { type: 'check-g', text: 'Included' },

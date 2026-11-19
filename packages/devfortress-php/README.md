@@ -1,6 +1,6 @@
 # devfortress/devfortress-sdk
 
-PHP SDK for DevFortress — event reporting client (external mode). Pre-release, not published.
+PHP SDK for DevFortress — event reporting client (external mode).
 
 > **This repository is a read-only mirror.** Its content is pushed here automatically
 > from [`packages/devfortress-php`](https://github.com/duncan982/devfortress-core/tree/main/packages/devfortress-php)
@@ -14,15 +14,6 @@ Requires PHP 8.2 or newer with `ext-curl`, `ext-json` and `ext-hash`. There are 
 
 ```bash
 composer require devfortress/devfortress-sdk
-```
-
-Not on Packagist yet. Until it is, use a Composer path repository instead:
-
-```json
-{
-  "repositories": [{ "type": "path", "url": "../devfortress-php" }],
-  "require": { "devfortress/devfortress-sdk": "@dev" }
-}
 ```
 
 ## The DevFortress Textbook

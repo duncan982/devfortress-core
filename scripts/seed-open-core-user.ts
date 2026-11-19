@@ -30,10 +30,14 @@ declare global {
 }
 const prisma = globalThis.__prismaSeed ?? new PrismaClient();
 
-/** Show only the last 4 characters of a secret, for operator confirmation. */
+/**
+ * Confirms a secret is set without ever logging any of its real characters.
+ * Length-only feedback (no trailing chars) — CodeQL (js/clear-text-logging)
+ * correctly flags any derived value that still contains original characters,
+ * so this must not slice or substring the real value at all.
+ */
 function maskSecret(value: string): string {
-  if (value.length <= 4) return '*'.repeat(value.length);
-  return '*'.repeat(value.length - 4) + value.slice(-4);
+  return '*'.repeat(value.length);
 }
 
 async function main() {

@@ -2,6 +2,12 @@
 CREATE SCHEMA IF NOT EXISTS "public";
 
 -- CreateEnum
+CREATE TYPE "RefundRequestType" AS ENUM ('DISCRETIONARY', 'STATUTORY');
+
+-- CreateEnum
+CREATE TYPE "RefundRequestStatus" AS ENUM ('PENDING_APPROVAL', 'APPROVED', 'REJECTED');
+
+-- CreateEnum
 CREATE TYPE "UserRole" AS ENUM ('OWNER', 'ADMIN', 'DEVELOPER', 'VIEWER');
 
 -- CreateEnum
@@ -316,24 +322,6 @@ CREATE TABLE "ApiProject" (
 );
 
 -- CreateTable
-CREATE TABLE "ArdProvisioning" (
-    "id" TEXT NOT NULL,
-    "apiProjectId" TEXT NOT NULL,
-    "variant" TEXT NOT NULL,
-    "tierAtIssuance" TEXT NOT NULL,
-    "capabilityJti" TEXT NOT NULL,
-    "issuedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "expiresAt" TIMESTAMP(3) NOT NULL,
-    "revokedAt" TIMESTAMP(3),
-    "manualOverride" BOOLEAN NOT NULL DEFAULT false,
-    "overrideGrantedByUserId" TEXT,
-    "overrideReason" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "ArdProvisioning_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "OperatorKey" (
     "id" TEXT NOT NULL,
     "operatorId" TEXT NOT NULL,
@@ -579,6 +567,30 @@ CREATE TABLE "Subscription" (
     "organizationId" TEXT,
 
     CONSTRAINT "Subscription_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "RefundRequest" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT,
+    "organizationId" TEXT,
+    "subscriptionId" TEXT NOT NULL,
+    "transactionId" TEXT NOT NULL,
+    "paddleAdjustmentId" TEXT,
+    "type" "RefundRequestType" NOT NULL,
+    "status" "RefundRequestStatus" NOT NULL DEFAULT 'PENDING_APPROVAL',
+    "amountPaidUsd" DOUBLE PRECISION NOT NULL,
+    "usageDeductionUsd" DOUBLE PRECISION NOT NULL,
+    "refundableUsd" DOUBLE PRECISION NOT NULL,
+    "usageBreakdown" JSONB NOT NULL,
+    "estimatedPaddleFeeUsd" DOUBLE PRECISION,
+    "retainedFeeUsd" DOUBLE PRECISION,
+    "requestedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "resolvedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "RefundRequest_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -1723,17 +1735,6 @@ CREATE TABLE "RedisFallback" (
 );
 
 -- CreateTable
-CREATE TABLE "KraReport" (
-    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "period" TEXT NOT NULL,
-    "liability" JSONB NOT NULL,
-    "csv" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "KraReport_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "CustomRule" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
@@ -1793,12 +1794,6 @@ CREATE UNIQUE INDEX "ApiProject_surveillanceApiKey_key" ON "ApiProject"("surveil
 CREATE UNIQUE INDEX "ApiProject_surveillanceKeyId_key" ON "ApiProject"("surveillanceKeyId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ArdProvisioning_capabilityJti_key" ON "ArdProvisioning"("capabilityJti");
-
--- CreateIndex
-CREATE INDEX "ArdProvisioning_apiProjectId_idx" ON "ArdProvisioning"("apiProjectId");
-
--- CreateIndex
 CREATE UNIQUE INDEX "OperatorKey_operatorId_key" ON "OperatorKey"("operatorId");
 
 -- CreateIndex
@@ -1856,6 +1851,12 @@ CREATE INDEX "LiveThreatEvent_authPhase_idx" ON "LiveThreatEvent"("authPhase");
 CREATE INDEX "LiveThreatEvent_actionTaken_idx" ON "LiveThreatEvent"("actionTaken");
 
 -- CreateIndex
+CREATE INDEX "LiveThreatEvent_projectId_ip_severity_timestamp_idx" ON "LiveThreatEvent"("projectId", "ip", "severity", "timestamp");
+
+-- CreateIndex
+CREATE INDEX "LiveThreatEvent_projectId_ip_eventType_timestamp_idx" ON "LiveThreatEvent"("projectId", "ip", "eventType", "timestamp");
+
+-- CreateIndex
 CREATE INDEX "FlywheelInsight_ownerId_idx" ON "FlywheelInsight"("ownerId");
 
 -- CreateIndex
@@ -1875,6 +1876,15 @@ CREATE INDEX "CreditTransaction_organizationId_idx" ON "CreditTransaction"("orga
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Subscription_providerReference_key" ON "Subscription"("providerReference");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "RefundRequest_paddleAdjustmentId_key" ON "RefundRequest"("paddleAdjustmentId");
+
+-- CreateIndex
+CREATE INDEX "RefundRequest_subscriptionId_idx" ON "RefundRequest"("subscriptionId");
+
+-- CreateIndex
+CREATE INDEX "RefundRequest_status_idx" ON "RefundRequest"("status");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "NotificationPreference_userId_key" ON "NotificationPreference"("userId");
@@ -2477,12 +2487,6 @@ CREATE INDEX "RateLimitBucket_windowStart_idx" ON "RateLimitBucket"("windowStart
 CREATE INDEX "idx_redis_fallback_expires_at" ON "RedisFallback"("expires_at");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "KraReport_period_key" ON "KraReport"("period");
-
--- CreateIndex
-CREATE INDEX "idx_kra_report_period" ON "KraReport"("period");
-
--- CreateIndex
 CREATE INDEX "CustomRule_userId_idx" ON "CustomRule"("userId");
 
 -- CreateIndex
@@ -2529,9 +2533,6 @@ ALTER TABLE "ApiProject" ADD CONSTRAINT "ApiProject_repositoryId_fkey" FOREIGN K
 
 -- AddForeignKey
 ALTER TABLE "ApiProject" ADD CONSTRAINT "ApiProject_teamId_fkey" FOREIGN KEY ("teamId") REFERENCES "Team"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "ArdProvisioning" ADD CONSTRAINT "ArdProvisioning_apiProjectId_fkey" FOREIGN KEY ("apiProjectId") REFERENCES "ApiProject"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Repository" ADD CONSTRAINT "Repository_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -2616,6 +2617,15 @@ ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_organizationId_fkey" FOR
 
 -- AddForeignKey
 ALTER TABLE "Subscription" ADD CONSTRAINT "Subscription_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RefundRequest" ADD CONSTRAINT "RefundRequest_subscriptionId_fkey" FOREIGN KEY ("subscriptionId") REFERENCES "Subscription"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RefundRequest" ADD CONSTRAINT "RefundRequest_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RefundRequest" ADD CONSTRAINT "RefundRequest_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "SyncState" ADD CONSTRAINT "SyncState_repositoryId_fkey" FOREIGN KEY ("repositoryId") REFERENCES "Repository"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
