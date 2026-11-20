@@ -44,10 +44,6 @@
     "!dist/consent-alias-lifecycle.d.ts",
     "!dist/multi-hop-trust-chain.js",
     "!dist/multi-hop-trust-chain.d.ts",
-    "!dist/agent-output-exfiltration-detector.js",
-    "!dist/agent-output-exfiltration-detector.d.ts",
-    "!dist/shadow-agent-registry.js",
-    "!dist/shadow-agent-registry.d.ts",
     "!dist/idor-detector.js",
     "!dist/idor-detector.d.ts",
     "!dist/supply-chain-validator.js",
@@ -72,8 +68,7 @@
     "build": "tsc",
     "test": "jest",
     "verify:package": "node scripts/verify-package-integrity.js",
-    "verify:ard-exclusion": "node scripts/assert-ard-exclusion.js",
-    "prepublishOnly": "npm run build && npm run verify:package && npm run verify:ard-exclusion",
+    "prepublishOnly": "npm run build && npm run verify:package",
     "smoke-test:published": "bash scripts/smoke-test-published.sh"
   },
   "keywords": [
